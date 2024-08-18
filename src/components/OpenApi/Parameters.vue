@@ -39,7 +39,7 @@ const transformParamsToSchema = (params: Parameter[]): SchemaType => {
 </script>
 
 <template>
-  <div class="space-y-10">
+  <div class="space-y-[--sections-gap]">
     <div v-for="(params, group) of groupedParameters">
       <div class="flex gap-1.5 items-baseline">
         <SectionTitle class="capitalize">

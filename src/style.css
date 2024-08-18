@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --primary-color: theme('colors.gray.800');
+
+    --sections-gap: theme('spacing.12');
+}

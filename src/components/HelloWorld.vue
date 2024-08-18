@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Paths from "./OpenApi/Paths.vue";
 import { ref } from 'vue'
+import Pages from "./Layouts/Pages.vue";
 
 defineProps<{ msg: string }>()
 
@@ -10293,11 +10294,10 @@ const shopify = {
 </script>
 
 <template>
-  <div class="w-full max-w-[600px] p-6 bg-white">
-    <Paths
-        base="https://api.spotify.com/v1"
-        :components="shopify.components"
-        :paths="{'/audiobooks/{id}': shopify.paths['/audiobooks/{id}']}"
-    />
-  </div>
+  <Pages
+      base="https://api.spotify.com/v1"
+      :components="shopify.components"
+      :paths="shopify.paths"
+  />
+
 </template>

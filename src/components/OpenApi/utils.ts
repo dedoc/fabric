@@ -4,6 +4,9 @@ export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, 
     if (schema?.$ref) {
         return schema.$ref.split('/').at(-1) ?? ''
     }
+    if (schema?.allOf) {
+        return getSchemaTypePreview(schema.allOf[0], schema.allOf[0])
+    }
     if (unreferencedSchema?.$ref) {
         return unreferencedSchema.$ref.split('/').at(-1) ?? ''
     }

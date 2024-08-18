@@ -4,7 +4,8 @@
 
 <template>
   <div class="font-medium text-gray-900 text-lg relative">
-    <div class="absolute w-[5px] h-7 rounded-r-full bg-gray-100 left-[-24px]"></div>
+<!--    <div class="absolute w-[5px] h-7 rounded-r-full bg-gray-100 left-[-24px]"></div>-->
+    <div class="absolute text-gray-200 left-[-24px]">#</div>
     <slot></slot>
   </div>
 </template>

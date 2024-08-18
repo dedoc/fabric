@@ -20,9 +20,6 @@ const props = withDefaults(defineProps<{
   level: 1,
 })
 
-// will work only for components references
-const resolvedSchema = computed(() => resolveSchema(props.schema))
-
 function resolveSchema (schema: Schema): Schema|undefined {
   if (! schema.$ref) {
     return schema
@@ -35,11 +32,37 @@ function resolveSchema (schema: Schema): Schema|undefined {
     }
     result = result[pathItem]
   })
-  if (! result.$ref && ! result.type) {
+  if (! result.$ref && ! result.type && ! result.allOf) {
     return undefined
   }
   return result as Schema
 }
+
+function mergeAllOffSchemas (schema: Schema): Schema {
+  if (! schema.allOf) {
+    return schema
+  }
+
+  const unreferencedSchemas = schema.allOf.map(resolveSchema)
+
+  return mergeAllOffSchemas(unreferencedSchemas.slice(1).reduce((acc, schema) => {
+    return {
+      ...acc,
+      ...(acc?.required || schema?.required ? { required: (acc?.required ?? []).concat(schema?.required ?? []) } : {}),
+      ...(acc?.properties || schema?.properties ? { properties: { ...(acc?.properties ?? {}), ...(schema?.properties ?? {}) } } : {}),
+    }
+  }, { ...(unreferencedSchemas[0])  }))
+}
+
+// will work only for components references
+const resolvedSchema = computed(() => {
+  let unreferencedSchema = resolveSchema(props.schema)
+  if (! unreferencedSchema) {
+    console.error({ schema: props.schema })
+    throw new Error('Cannot unreference schema')
+  }
+  return mergeAllOffSchemas(unreferencedSchema)
+})
 
 const normalizedExamples = computed(() => {
   return resolvedSchema.value?.examples?.map(example => {
@@ -54,6 +77,8 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
 
 <template>
   <div v-if="resolvedSchema" class="flex flex-col gap-2">
+<!--    <pre class="text-xs">{{resolvedSchema}}</pre>-->
+<!--    <pre class="text-xs">{{schema}}</pre>-->
     <div v-if="!shouldHideMainType" class="flex items-baseline gap-2">
       <div class="flex items-baseline gap-2">
         <div v-if="propertyTitle" class="text-sm font-medium text-gray-900">{{ propertyTitle }}</div>
