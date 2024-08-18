@@ -1,0 +1,119 @@
+<script setup lang="ts">
+import type {Components, Schema} from "./types.ts";
+import {computed, ref} from "vue";
+import SchemaAttribute from "./SchemaAttribute.vue";
+import {getSchemaTypePreview} from "./utils.ts";
+import Description from "./Description.vue";
+import ToggleButton from "./Partials/ToggleButton.vue";
+
+const props = withDefaults(defineProps<{
+  shouldHideMainType?: boolean, // used to hide top type for schemas
+  shouldDisablePropertiesPadding?: boolean, // used to make properties not padded from left for top level objects
+  propertyTitle?: string, // when schema is rendered for object property
+  propertyRequired?: boolean, // when schema is rendered for object property
+  components: Components,
+  schema: Schema,
+  arePropertiesInitiallyVisible?: boolean,
+  level: number,
+}>(), {
+  arePropertiesInitiallyVisible: true,
+  level: 1,
+})
+
+// will work only for components references
+const resolvedSchema = computed(() => resolveSchema(props.schema))
+
+function resolveSchema (schema: Schema): Schema|undefined {
+  if (! schema.$ref) {
+    return schema
+  }
+  const path = schema.$ref.split('/').slice(2)
+  let result = props.components
+  path.forEach((pathItem) => {
+    if (! result) {
+      return
+    }
+    result = result[pathItem]
+  })
+  if (! result.$ref && ! result.type) {
+    return undefined
+  }
+  return result as Schema
+}
+
+const normalizedExamples = computed(() => {
+  return resolvedSchema.value?.examples?.map(example => {
+    return typeof example === 'string' ? {value: example} : example
+  }) ?? []
+})
+
+const arePropertiesVisible = ref(props.arePropertiesInitiallyVisible)
+
+const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || resolvedSchema.value?.items))
+</script>
+
+<template>
+  <div v-if="resolvedSchema" class="flex flex-col gap-2">
+    <div v-if="!shouldHideMainType" class="flex items-baseline gap-2">
+      <div class="flex items-baseline gap-2">
+        <div v-if="propertyTitle" class="text-sm font-medium text-gray-900">{{ propertyTitle }}</div>
+        <div class="text-[#8A8A8A] text-sm">{{ getSchemaTypePreview(resolvedSchema, schema) }}{{ resolvedSchema.format ? `<${resolvedSchema.format}>` : '' }}</div>
+      </div>
+      <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
+    </div>
+    <Description v-if="resolvedSchema.description" class="text-gray-700 leading-5 text-sm" :content="resolvedSchema.description"/>
+    <div v-if="
+      resolvedSchema.minLength !== undefined
+      || resolvedSchema.maxLength !== undefined
+    " class="flex gap-1">
+      <div v-if="resolvedSchema.minLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minLength }} characters</div>
+      <div v-if="resolvedSchema.maxLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maxLength }} characters</div>
+    </div>
+    <div v-if="resolvedSchema.default != undefined || normalizedExamples.length" class="flex flex-col gap-2">
+      <SchemaAttribute
+          v-if="resolvedSchema.default != undefined"
+          title="Default"
+          :value="resolvedSchema.default === '' ? '\'\'' : resolvedSchema.default"
+      />
+      <SchemaAttribute
+          v-for="example of normalizedExamples"
+          title="Example"
+          :value="example.value"
+          :description="example.description"
+      />
+    </div>
+    <div v-if="canHideNestedProperties">
+      <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
+    </div>
+    <template v-if="arePropertiesVisible">
+      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-5','border-gray-100']">
+        <template v-for="(propertySchema, name, i) of resolvedSchema.properties">
+          <Schema
+              :propertyTitle="name as string"
+              :propertyRequired="(resolvedSchema.required ?? []).includes(name as string)"
+              :components="components"
+              :schema="propertySchema"
+              :level="level + 1"
+              :arePropertiesInitiallyVisible="level <= 0 && (! (resolvedSchema['x-hiddenProperties'] ?? []).includes(name))"
+          />
+          <div v-if="i !== Object.keys(resolvedSchema.properties).length - 1" class="h-px bg-gray-100 my-3"></div>
+        </template>
+      </div>
+      <div v-if="resolvedSchema.type === 'array' && resolvedSchema.items">
+        <Schema
+            :components="components"
+            :schema="resolvedSchema.items"
+            :shouldHideMainType="true"
+            :level="level + 1"
+        />
+      </div>
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.common-ligatures {
+  --ot-liga: common-ligatures;
+  font-variant-ligatures: var(--ot-liga) var(--ot-dlig) var(--ot-calt);
+}
+</style>
