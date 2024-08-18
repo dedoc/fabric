@@ -9,12 +9,17 @@ export type Schema = {
     items?: Schema,
     description?: string,
     default?: any,
+    // @deprecated use examples instead
+    example?: any,
     examples?: (string|Example)[],
     required?: string[],
     format?: string,
     // string specific attributes
     minLength?: number,
     maxLength?: number,
+    // number specific attributes
+    minimum?: number,
+    maximum?: number,
     // properties that are hidden by default
     'x-hiddenProperties'?: string[]
 }

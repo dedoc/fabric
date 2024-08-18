@@ -14,10 +14,6 @@ defineProps<{
 
 <template>
   <div class="mt-5 space-y-10">
-<!--    <div class="flex gap-2 items-baseline">-->
-<!--      <div class="font-medium text-gray-800">Request</div>-->
-<!--      <div v-for="(mediaType, type) of requestBody?.content ?? {}" class="text-gray-400 text-xs">{{ type }}</div>-->
-<!--    </div>-->
     <Parameters v-if="parameters" :components="components" :parameters="parameters"/>
     <RequestBody v-if="requestBody" :components="components" :request-body="requestBody"/>
   </div>

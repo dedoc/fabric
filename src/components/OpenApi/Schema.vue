@@ -65,14 +65,26 @@ const resolvedSchema = computed(() => {
 })
 
 const normalizedExamples = computed(() => {
-  return resolvedSchema.value?.examples?.map(example => {
-    return typeof example === 'string' ? {value: example} : example
+  const examples = [
+      ...([resolvedSchema.value?.example].filter(e => typeof e !== 'undefined') as any[]),
+      ...(resolvedSchema.value?.examples ?? []),
+  ]
+  const res = examples.map(example => {
+    return typeof example === 'object' && example !== null && ('value' in example) ? example : {value: example}
   }) ?? []
+
+  console.log({res})
+
+  return res
 })
 
 const arePropertiesVisible = ref(props.arePropertiesInitiallyVisible)
 
-const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || resolvedSchema.value?.items))
+function isPrimitiveSchema (schema: Schema): boolean {
+  return schema.type === 'string' || schema.type === 'number' || schema.type === 'boolean' || schema.type === 'integer'
+}
+
+const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || (resolvedSchema.value?.items && ! isPrimitiveSchema(resolvedSchema.value?.items))))
 </script>
 
 <template>
@@ -90,9 +102,13 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     <div v-if="
       resolvedSchema.minLength !== undefined
       || resolvedSchema.maxLength !== undefined
+      || resolvedSchema.minimum !== undefined
+      || resolvedSchema.maximum !== undefined
     " class="flex gap-1">
       <div v-if="resolvedSchema.minLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minLength }} characters</div>
       <div v-if="resolvedSchema.maxLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maxLength }} characters</div>
+      <div v-if="resolvedSchema.minimum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minimum }}</div>
+      <div v-if="resolvedSchema.maximum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maximum }}</div>
     </div>
     <div v-if="resolvedSchema.default != undefined || normalizedExamples.length" class="flex flex-col gap-2">
       <SchemaAttribute

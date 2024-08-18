@@ -19,7 +19,7 @@ defineProps<{
           :components="components"
           :mediaType="mediaType"
       >
-        <template #header v-bind="{ type, schemaNamePreview }">
+        <template #header="{ schemaNamePreview }">
           <SectionTitle>
             <div class="flex justify-between">
               <div class="flex gap-2 items-baseline">

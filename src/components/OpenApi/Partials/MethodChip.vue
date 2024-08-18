@@ -9,7 +9,7 @@ const twClasses = computed(() => {
   return {
     get: 'text-green-700',
     post: 'text-blue-700',
-    put: 'text-orange-700',
+    put: 'text-violet-700',
     delete: 'text-red-700',
     options: 'text-purple-700',
     head: 'text-gray-700',
