@@ -57,6 +57,7 @@ export type Operation = {
     summary?: string,
     description?: string,
     operationId?: string,
+    tags?: string[], // @todo may be tag objects as well
     parameters?: (Reference|Parameter)[],
     requestBody?: RequestBody,
     responses?: Responses,

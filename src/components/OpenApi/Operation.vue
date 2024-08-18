@@ -23,7 +23,7 @@ const operationSummary = computed(() => {
 <template>
   <div class="space-y-[--sections-gap]">
     <div class="space-y-3">
-      <div v-if="operationSummary" class="font-semibold text-xl/[160%]">{{ operationSummary }}</div>
+      <div v-if="operationSummary" class="font-semibold text-2xl/[160%]">{{ operationSummary }}</div>
       <div class="flex items-baseline gap-2.5 text-base">
         <MethodChip :method="method"/>
         <div class="text-gray-500"><span class="text-gray-400">{{ base }}</span>{{ path }}</div>
