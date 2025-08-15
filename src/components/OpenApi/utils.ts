@@ -1,4 +1,11 @@
-import type {Components, Schema as SchemaType} from "./types.ts";
+import type {Components, Operation, Paths, Schema as SchemaType} from "./types.ts";
+
+export type InlineOperation = {
+    id: string,
+    method: string,
+    path: string,
+    operation: Operation,
+}
 
 export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, schema: SchemaType|undefined = undefined): string {
     if (schema?.$ref) {
@@ -24,7 +31,31 @@ export function unreference<T>(reference: string, components: Components): T|und
         if (! result) {
             return
         }
+        /** @ts-ignore */
         result = result[pathItem]
     })
-    return result as T
+    return result as T|undefined
+}
+
+export function getOperationId (method: string, path: string, operation: Operation) {
+    const operationId = operation.operationId ?? `${method.toLowerCase()}-${path.replace(/\//g, '-').replace(/\{/g, '').replace(/\}/g, '')}`
+
+    return 'operations/' + encodeURIComponent(operationId)
+}
+
+export function getOperationTitle (path: string, operation: Operation) {
+    return operation.summary ?? operation.operationId ?? path
+}
+
+export function getInlineOperations (paths: Paths): InlineOperation[] {
+    return Object.entries(paths).reduce<InlineOperation[]>((acc, [path, pathItem]) => {
+        return acc.concat(Object.entries(pathItem).map(([method, operation]) => {
+            return {
+                id: getOperationId(method, path, operation),
+                method,
+                path,
+                operation,
+            }
+        }))
+    }, [])
 }

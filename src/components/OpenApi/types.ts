@@ -60,8 +60,11 @@ export type Operation = {
     tags?: string[], // @todo may be tag objects as well
     parameters?: (Reference|Parameter)[],
     requestBody?: RequestBody,
+    security?: SecurityRequirement[],
     responses?: Responses,
 }
+
+export type SecurityRequirement = Record<string, string[]>
 
 export type Parameter = {
     name: string,
