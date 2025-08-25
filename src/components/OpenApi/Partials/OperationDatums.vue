@@ -8,30 +8,29 @@ const props = defineProps<{
 }>()
 
 const document = inject(documentKey)
+if (! document) {
+  throw new Error('document must be provided')
+}
 
 const security = computed(() => {
   if (typeof props.operation.security !== 'undefined') {
     return props.operation.security
   }
-
-  return document?.value?.security ?? []
+  return document.value.security ?? []
 })
 
+const hasDatums = computed(() => !! security.value.length)
 </script>
 
 <template>
-  <pre class="text-xs">{{security}}</pre>
-  <div>
-    <div v-if="!('security' in operation)" class="p-3 rounded-lg flex gap-2 text-sm items-center border">
+  <div v-if="hasDatums">
+    <div v-for="s of security" class="flex gap-1 text-sm text-gray-500 items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3.5 text-gray-400">
+        <path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" />
+      </svg>
       <div>
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3.5 15.5L5 16H14V8.5H5L3.5 9.5V15.5Z" fill="#0F1729" fill-opacity="0.3"/>
-          <path
-              d="M12.375 7.875V5.0625C12.375 3.19854 10.864 1.6875 9 1.6875C7.13604 1.6875 5.625 3.19854 5.625 5.0625V7.875M5.0625 16.3125H12.9375C13.8695 16.3125 14.625 15.557 14.625 14.625V9.5625C14.625 8.63052 13.8695 7.875 12.9375 7.875H5.0625C4.13052 7.875 3.375 8.63052 3.375 9.5625V14.625C3.375 15.557 4.13052 16.3125 5.0625 16.3125Z"
-              stroke="#0F172A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        Auth: Bearer token
       </div>
-      <div>Security: Bearer Auth</div>
     </div>
   </div>
 </template>

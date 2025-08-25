@@ -55,6 +55,7 @@ export type Responses = {
 
 export type Response = {
     description: string,
+    headers?: Record<string, Header|Reference>,
     content?: Record<string, MediaType>,
 }
 
@@ -153,5 +154,6 @@ export type Components = {
 }
 
 export type Document = {
-    components: Components,
+    security?: SecurityRequirement[],
+    components?: Components,
 }

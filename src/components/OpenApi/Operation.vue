@@ -30,8 +30,7 @@ const operationSummary = computed(() => {
         <div class="text-gray-500"><span class="text-gray-400">{{ base }}</span>{{ path }}</div>
       </div>
       <Description v-if="operation.description" class="text-gray-900 !mt-4 leading-6 text-base" :content="operation.description"/>
-      <OperationDatums :operation="operation"/>
-<!--      <pre class="text-xs">{{ operation }}</pre>-->
+      <OperationDatums :operation="operation" class="!mt-4"/>
     </div>
 
     <Request

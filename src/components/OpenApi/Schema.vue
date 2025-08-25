@@ -88,7 +88,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
 </script>
 
 <template>
-  <div v-if="resolvedSchema" class="flex flex-col gap-2">
+  <div v-if="resolvedSchema" class="flex flex-col gap-1.5">
 <!--    <pre class="text-xs">{{resolvedSchema}}</pre>-->
 <!--    <pre class="text-xs">{{schema}}</pre>-->
     <div v-if="!shouldHideMainType" class="flex items-baseline gap-2">
