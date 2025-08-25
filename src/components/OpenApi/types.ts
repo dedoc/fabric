@@ -28,10 +28,19 @@ export type Example = {
     summary?: string,
     description?: string,
     value?: any,
+    externalValue?: string,
+}
+
+export type Encoding = {
+    contentType?: string,
+    headers?: { [name: string]: Header|Reference },
 }
 
 export type MediaType = {
     schema?: Schema,
+    example?: any,
+    examples?: { [name: string]: Example|Reference },
+    encoding?: { [name: string]: Encoding },
 }
 
 export type RequestBody = {
@@ -76,6 +85,20 @@ export type Parameter = {
     schema?: Schema,
 }
 
+export type Header = {
+    description?: string,
+    required?: boolean,
+    deprecated?: boolean,
+} & ({
+    style?: string,
+    explode?: string,
+    schema?: Schema,
+    example?: any,
+    examples?: { [name: string]: Example|Reference },
+} | {
+    content?: { [name: string]: MediaType },
+})
+
 export type PathItem = {
     post?: Operation,
 }
@@ -84,8 +107,51 @@ export type Paths = {
     [path: string]: PathItem,
 }
 
+export type OAuthFlow = {
+    authorizationUrl?: string,
+    tokenUrl?: string,
+    refreshUrl?: string,
+    scopes: { [name: string]: string },
+}
+
+export type OAuthFlows = {
+    implicit?: OAuthFlow,
+    password?: OAuthFlow,
+    clientCredentials?: OAuthFlow,
+    authorizationCode?: OAuthFlow,
+}
+
+export type SecurityScheme = {
+    description?: string,
+} & ({
+    type: 'apiKey',
+    name: string,
+    in: 'query'|'header'|'cookie',
+} | {
+    type: 'http',
+    scheme: string,
+    bearerFormat?: string,
+} | {
+    type: 'oauth2',
+    flows: OAuthFlows,
+} | {
+    type: 'openIdConnect',
+    openIdConnectUrl?: string,
+})
+
 export type Components = {
-    schemas?: {
-        [name: string]: Schema,
-    },
+    schemas?: { [name: string]: Schema },
+    responses?: { [name: string]: Response|Reference },
+    parameters?: { [name: string]: Parameter|Reference },
+    examples?: { [name: string]: Example|Reference },
+    requestBodies?: { [name: string]: RequestBody|Reference },
+    headers?: { [name: string]: Header|Reference },
+    securitySchemes?: { [name: string]: SecurityScheme|Reference },
+    links?: { [name: string]: any|Reference },
+    callbacks?: { [name: string]: any|Reference },
+    pathItems?: { [name: string]: any|PathItem },
+}
+
+export type Document = {
+    components: Components,
 }
