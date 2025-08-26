@@ -6,6 +6,7 @@ export type Schema = {
     properties?: {
         [name: string]: Schema,
     },
+    enum?: any[],
     items?: Schema,
     description?: string,
     default?: any,

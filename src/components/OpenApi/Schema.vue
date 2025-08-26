@@ -61,8 +61,19 @@ const resolvedSchema = computed(() => {
     console.error({ schema: props.schema })
     throw new Error('Cannot unreference schema')
   }
-  return mergeAllOffSchemas(unreferencedSchema)
+  return mergeReferencedAndResolvedSchemas(props.schema, mergeAllOffSchemas(unreferencedSchema))
 })
+
+function mergeReferencedAndResolvedSchemas (possiblyReferencedSchema: Schema, unreferencedSchema: Schema) {
+  if (! possiblyReferencedSchema.$ref) {
+    return unreferencedSchema
+  }
+  const { $ref, ...overrides } = possiblyReferencedSchema
+  return {
+    ...unreferencedSchema,
+    ...overrides
+  }
+}
 
 const normalizedExamples = computed(() => {
   const examples = [
@@ -98,7 +109,8 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       </div>
       <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
     </div>
-    <Description v-if="resolvedSchema.description" class="text-gray-700 leading-5 text-sm" :content="resolvedSchema.description"/>
+    <Description v-if="resolvedSchema.description" class="text-gray-700 leading-5 prose-sm" :content="resolvedSchema.description"/>
+
     <div v-if="
       resolvedSchema.minLength !== undefined
       || resolvedSchema.maxLength !== undefined
@@ -110,6 +122,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       <div v-if="resolvedSchema.minimum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minimum }}</div>
       <div v-if="resolvedSchema.maximum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maximum }}</div>
     </div>
+
     <div v-if="resolvedSchema.default != undefined || normalizedExamples.length" class="flex flex-col gap-2">
       <SchemaAttribute
           v-if="resolvedSchema.default != undefined"
@@ -123,11 +136,19 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
           :description="example.description"
       />
     </div>
+
+    <div v-if="resolvedSchema.enum != undefined && resolvedSchema.enum.length" class="flex flex-col gap-2">
+      <SchemaAttribute
+          title="Enum"
+          :value="resolvedSchema.enum.join(', ')"
+      />
+    </div>
+
     <div v-if="canHideNestedProperties">
       <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
     </div>
     <template v-if="arePropertiesVisible">
-      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-5','border-gray-100']">
+      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-4','border-gray-100']">
         <template v-for="(propertySchema, name, i) of resolvedSchema.properties">
           <Schema
               :propertyTitle="name as string"

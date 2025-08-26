@@ -26,7 +26,7 @@ const schemaNamePreview = computed(() => getSchemaTypePreview(props.mediaType.sc
         </div>
       </div>
     </slot>
-    <div v-if="mediaType.schema" class="mt-3">
+    <div v-if="mediaType.schema" class="mt-4">
       <Schema
           :components="components"
           :schema="mediaType.schema"

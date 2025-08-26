@@ -31,6 +31,6 @@ const isExpanded = ref(! props.secondary)
 <!--      </template>-->
       <ToggleButton v-if="props.secondary" class="ml-auto shrink-0" v-model:expanded="isExpanded" label="body"/>
     </ResponseHeader>
-    <ResponseContent v-if="isExpanded" class="mt-4" :unreferencedResponse="unreferencedResponse" :components="components"/>
+    <ResponseContent v-if="isExpanded" class="mt-3" :unreferencedResponse="unreferencedResponse" :components="components"/>
   </div>
 </template>
