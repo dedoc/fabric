@@ -1,5 +1,7 @@
 export type Schema = {
     allOf?: Schema[],
+    anyOf?: Schema[],
+    oneOf?: Schema[],
     title?: string,
     $ref?: string,
     type?: string|string[],
@@ -7,6 +9,7 @@ export type Schema = {
         [name: string]: Schema,
     },
     enum?: any[],
+    prefixItems?: Schema[],
     items?: Schema,
     description?: string,
     default?: any,

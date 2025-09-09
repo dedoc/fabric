@@ -105,7 +105,11 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     <div v-if="!shouldHideMainType" class="flex items-baseline gap-2">
       <div class="flex items-baseline gap-2">
         <div v-if="propertyTitle" class="text-sm font-medium text-gray-900">{{ propertyTitle }}</div>
-        <div class="text-[#8A8A8A] text-sm">{{ getSchemaTypePreview(resolvedSchema, schema) }}{{ resolvedSchema.format ? `<${resolvedSchema.format}>` : '' }}</div>
+
+        <div class="text-[#8A8A8A] text-sm">
+          {{ getSchemaTypePreview(resolvedSchema, schema) }}
+          {{ (schema.anyOf ?? []).map(s => getSchemaTypePreview(s)).join(' | ') }}
+        </div>
       </div>
       <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
     </div>
@@ -144,11 +148,11 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       />
     </div>
 
-    <div v-if="canHideNestedProperties">
+    <div v-if="canHideNestedProperties" class="relative z-10">
       <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
     </div>
     <template v-if="arePropertiesVisible">
-      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-4','border-gray-100']">
+      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-4','border-gray-100 -mt-8 pt-8']">
         <template v-for="(propertySchema, name, i) of resolvedSchema.properties">
           <Schema
               :propertyTitle="name as string"

@@ -33,7 +33,8 @@ const transformParamsToSchema = (params: Parameter[]): SchemaType => {
         ...p.schema,
       }
       return acc
-    }, {})
+    }, {}),
+    required: params.filter(p => p.required).map(p => p.name),
   }
 }
 </script>

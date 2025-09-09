@@ -18,10 +18,61 @@ export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, 
         return unreferencedSchema.$ref.split('/').at(-1) ?? ''
     }
     if (unreferencedSchema?.type === 'array') {
+        // tuple
+        if (! unreferencedSchema.items && unreferencedSchema.prefixItems) {
+            return `[${unreferencedSchema.prefixItems.map(i => getSchemaTypePreview(i)).join(', ')}]`
+        }
         return getSchemaTypePreview(unreferencedSchema?.items) + '[]'
     }
     const type = unreferencedSchema?.type ?? ''
-    return Array.isArray(type) ? type.join(' or ') : type
+    return Array.isArray(type) ? type.map(t => getPrimitiveSchemaTypePreview(t, unreferencedSchema)).join(' | ') : getPrimitiveSchemaTypePreview(type, unreferencedSchema)
+}
+
+function getPrimitiveSchemaTypePreview(type: string, schema: SchemaType|undefined): string {
+    if (! schema) {
+        return type
+    }
+
+    if (type === 'string') {
+        let result = type
+        if (schema.format) {
+            result += `<${schema.format}>`
+        }
+        if (
+            (typeof schema.minLength !== 'undefined')
+            || (typeof schema.maxLength !== 'undefined')
+        ) {
+            if (schema.minLength === schema.maxLength) {
+                result += `[${schema.minLength}]`
+            } else {
+                result += `[${schema.minLength ?? ''}..${schema.maxLength ?? ''}]`
+            }
+        }
+        return result
+    }
+
+    if (type === 'number' || type === 'integer') {
+        let result = type
+
+        if (typeof schema.minimum !== 'undefined' || typeof schema.maximum !== 'undefined') {
+            let min = schema.minimum;
+            let max = schema.maximum;
+
+            // optionally handle exclusive minimum/maximum
+            // if (schema.exclusiveMinimum === true) min = (min ?? 0) + 1; // simple adjustment
+            // if (schema.exclusiveMaximum === true) max = (max ?? 0) - 1;
+
+            if (min === max) {
+                result += `[${min}]`;
+            } else {
+                result += `[${min ?? ''}..${max ?? ''}]`;
+            }
+        }
+
+        return result
+    }
+
+    return type
 }
 
 export function unreference<T>(reference: string, components: Components): T|undefined {
@@ -38,7 +89,7 @@ export function unreference<T>(reference: string, components: Components): T|und
 }
 
 export function getOperationId (method: string, path: string, operation: Operation) {
-    const operationId = operation.operationId ?? `${method.toLowerCase()}-${path.replace(/\//g, '-').replace(/\{/g, '').replace(/\}/g, '')}`
+    const operationId = operation.operationId ?? `${method.toLowerCase()}-${path.replace(/\//g, '-').replace(/\{/g, '').replace(/}/g, '')}`
 
     return 'operations/' + encodeURIComponent(operationId)
 }
