@@ -144,7 +144,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     <div v-if="resolvedSchema.enum != undefined && resolvedSchema.enum.length" class="flex flex-col gap-2">
       <SchemaAttribute
           title="Enum"
-          :value="resolvedSchema.enum.join(', ')"
+          :value="resolvedSchema.enum"
       />
     </div>
 
