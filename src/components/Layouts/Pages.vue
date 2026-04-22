@@ -87,10 +87,10 @@ const navigation = computed<NavigationType[]>(() => buildNavigationTree(operatio
 <div v-else class="flex relative">
   <div class="sticky shrink-0 top-0 h-screen overflow-y-auto w-[260px] p-2 hidden sm:block">
     <div class="p-2">
-      <div class="mb-4 font-bold text-xl text-gray-800">
-        <img class="w-auto h-7 relative object-contain block dark:hidden" src="https://mintlify.s3.us-west-1.amazonaws.com/cachet/logo/light.svg" alt="light logo">
-      </div>
-<!--      <div class="mb-4 font-bold text-xl text-gray-800">{{ props.document.info.title ?? '' }}</div>-->
+      <!-- <div class="mb-4 font-bold text-xl text-gray-800"> -->
+        <!-- <img class="w-auto h-7 relative object-contain block dark:hidden" src="https://mintlify.s3.us-west-1.amazonaws.com/cachet/logo/light.svg" alt="light logo"> -->
+      <!-- </div> -->
+      <div class="mb-4 font-bold text-xl text-gray-800">{{ props.document.info.title ?? '' }}</div>
       <div class="relative">
         <input class="w-full p-1 px-2.5 text-sm  border rounded-md focus:outline-none" type="text" placeholder="Search...">
         <!-- hotkey: ⌘+k -->

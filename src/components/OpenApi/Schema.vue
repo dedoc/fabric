@@ -165,15 +165,15 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
           <div v-if="i !== Object.keys(resolvedSchema.properties).length - 1" class="h-px bg-gray-100 my-3"></div>
         </template>
       </div>
-      <div v-if="resolvedSchema.type === 'array' && resolvedSchema.items">
-        <Schema
-            :components="components"
-            :schema="resolvedSchema.items"
-            :shouldHideMainType="true"
-            :level="level + 1"
-        />
-      </div>
     </template>
+    <div v-if="(arePropertiesVisible || !canHideNestedProperties) && resolvedSchema.type === 'array' && resolvedSchema.items">
+      <Schema
+          :components="components"
+          :schema="resolvedSchema.items"
+          :shouldHideMainType="true"
+          :level="level + 1"
+      />
+    </div>
   </div>
 </template>
 
