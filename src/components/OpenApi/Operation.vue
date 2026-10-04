@@ -30,12 +30,12 @@ const operationSummary = computed(() => {
         <MethodChip :method="method" class="shrink-0"/>
         <div class="text-gray-500"><span class="text-gray-400">{{ base }}</span>{{ path }}</div>
       </div>
+      <OperationDatums :operation="operation"/>
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
       <div class="flex flex-col gap-4 empty:hidden">
         <Description v-if="operation.description" class="mt-0 text-sm !text-neutral-500 leading-normal" :content="operation.description"/>
-        <OperationDatums :operation="operation"/>
       </div>
       <Request
           v-if="operation.parameters || operation.requestBody"

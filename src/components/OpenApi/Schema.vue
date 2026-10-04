@@ -2,12 +2,14 @@
 import type {Components, Schema} from "./types.ts";
 import {computed, ref} from "vue";
 import SchemaAttribute from "./SchemaAttribute.vue";
-import {getSchemaTypePreview} from "./utils.ts";
+import SchemaTypePreview from "./SchemaTypePreview.vue";
+import {unreference} from "./utils.ts";
 import Description from "./Description.vue";
 import ToggleButton from "./Partials/ToggleButton.vue";
 
 const props = withDefaults(defineProps<{
   shouldHideMainType?: boolean, // used to hide top type for schemas
+  shouldHideDescription?: boolean,
   shouldDisablePropertiesPadding?: boolean, // used to make properties not padded from left for top level objects
   propertyTitle?: string, // when schema is rendered for object property
   propertyRequired?: boolean, // when schema is rendered for object property
@@ -24,18 +26,7 @@ function resolveSchema (schema: Schema): Schema|undefined {
   if (! schema.$ref) {
     return schema
   }
-  const path = schema.$ref.split('/').slice(2)
-  let result = props.components
-  path.forEach((pathItem) => {
-    if (! result) {
-      return
-    }
-    result = result[pathItem]
-  })
-  if (! result.$ref && ! result.type && ! result.allOf) {
-    return undefined
-  }
-  return result as Schema
+  return unreference<Schema>(schema.$ref, props.components)
 }
 
 function mergeAllOffSchemas (schema: Schema): Schema {
@@ -84,8 +75,6 @@ const normalizedExamples = computed(() => {
     return typeof example === 'object' && example !== null && ('value' in example) ? example : {value: example}
   }) ?? []
 
-  console.log({res})
-
   return res
 })
 
@@ -107,13 +96,14 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
         <div v-if="propertyTitle" class="text-sm font-medium text-gray-900">{{ propertyTitle }}</div>
 
         <div class="text-[#8A8A8A] text-sm">
-          {{ getSchemaTypePreview(resolvedSchema, schema) }}
-          {{ (schema.anyOf ?? []).map(s => getSchemaTypePreview(s)).join(' | ') }}
+          <SchemaTypePreview :schema="resolvedSchema" :original="schema" :components="components" />
+          <template v-for="(alternative, index) of (schema.anyOf ?? resolvedSchema.anyOf ?? [])" :key="`anyOf-${index}`"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template>
+          <template v-for="(alternative, index) of (schema.oneOf ?? resolvedSchema.oneOf ?? [])" :key="`oneOf-${index}`"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template>
         </div>
       </div>
       <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
     </div>
-    <Description v-if="resolvedSchema.description" class="text-gray-700 leading-5 prose-sm" :content="resolvedSchema.description"/>
+    <Description v-if="resolvedSchema.description && !shouldHideDescription" class="text-gray-700 leading-5 prose-sm" :content="resolvedSchema.description"/>
 
     <div v-if="
       resolvedSchema.minLength !== undefined

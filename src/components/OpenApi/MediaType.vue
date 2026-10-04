@@ -2,6 +2,7 @@
 import type {Components, MediaType} from "./types.ts";
 import {computed} from "vue";
 import Schema from "./Schema.vue";
+import SchemaTypePreview from "./SchemaTypePreview.vue";
 import {getSchemaTypePreview} from "./utils.ts";
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ const schemaNamePreview = computed(() => getSchemaTypePreview(props.mediaType.sc
       <div class="flex justify-between">
         <div class="flex gap-2 items-baseline">
           <div class="font-medium text-gray-900 text-base">Body</div>
-          <div v-if="schemaNamePreview" class="text-[#8A8A8A] text-sm">{{ schemaNamePreview }}</div>
+          <div v-if="schemaNamePreview" class="text-[#8A8A8A] text-sm"><SchemaTypePreview :schema="mediaType.schema" :components="components" /></div>
         </div>
         <div class="text-[#8A8A8A] text-sm">
           {{ type }}

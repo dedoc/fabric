@@ -3,7 +3,7 @@ import {InjectionKey, onMounted, provide, ref} from 'vue'
 import Pages from "./Layouts/Pages.vue";
 import {documentKey} from "../utils/symbols.ts";
 
-defineProps<{ msg: string }>()
+withDefaults(defineProps<{ msg: string, showSchemas?: boolean }>(), {showSchemas: true})
 
 const document = ref(null)
 
@@ -34,5 +34,6 @@ provide(documentKey, document)
       :base="document.servers[0].url"
       :components="document.components"
       :paths="document.paths"
+      :showSchemas="showSchemas"
   />
 </template>
