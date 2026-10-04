@@ -19,6 +19,17 @@ test('preserves supplied examples, including falsy values', () => {
   assert.equal(createSchemaExample({example: false, default: true}), false)
 })
 
+test('uses const values, including falsy values and referenced properties', () => {
+  for (const value of ['Pong!', null, false, 0, '', {message: 'Pong!'}, ['Pong!']]) {
+    assert.deepEqual(createSchemaExample({const: value, default: 'fallback'}), value)
+  }
+  const components = {schemas: {Message: {type: 'string', const: 'Pong!'}}}
+  assert.deepEqual(createSchemaExample(resolveExampleSchema({properties: {
+    message: {$ref: '#/components/schemas/Message'},
+  }}, components)), {message: 'Pong!'})
+  assert.equal(createSchemaExample({const: 'Pong!', example: 'provided'}), 'provided')
+})
+
 test('prefers nested examples, defaults and enum values', () => {
   assert.deepEqual(createSchemaExample({properties: {
     name: {type: 'string', example: 'sample'}, status: {enum: ['completed', 'pending']}, count: {default: 5},

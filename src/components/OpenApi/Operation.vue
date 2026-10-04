@@ -23,7 +23,7 @@ const operationSummary = computed(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-6 max-md:gap-8 max-md:pt-7 min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] min-[1200px]:gap-8">
+  <div class="grid grid-cols-1 gap-x-6 max-md:pt-7 min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] min-[1200px]:gap-x-8" :class="operation.description ? 'gap-y-6 max-md:gap-y-8 min-[1200px]:gap-y-8' : 'gap-y-[--sections-gap]'">
     <div class="col-start-1 min-w-0 space-y-3">
       <div v-if="operationSummary" class="text-[26px] font-medium leading-[1.3] md:text-[30px]">{{ operationSummary }}</div>
       <div class="flex items-baseline gap-2.5 text-lg">
@@ -34,9 +34,7 @@ const operationSummary = computed(() => {
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <div class="flex flex-col gap-4 empty:hidden">
-        <Description v-if="operation.description" class="mt-0 text-sm !text-neutral-500 leading-normal" :content="operation.description"/>
-      </div>
+      <Description v-if="operation.description" class="mt-0 text-sm !text-neutral-500 leading-normal" :content="operation.description"/>
       <Request
           v-if="operation.parameters || operation.requestBody"
           :components="components"

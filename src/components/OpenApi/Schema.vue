@@ -79,12 +79,13 @@ const normalizedExamples = computed(() => {
 })
 
 const arePropertiesVisible = ref(props.arePropertiesInitiallyVisible)
+const alternatives = computed(() => resolvedSchema.value.anyOf ?? resolvedSchema.value.oneOf ?? [])
 
 function isPrimitiveSchema (schema: Schema): boolean {
   return schema.type === 'string' || schema.type === 'number' || schema.type === 'boolean' || schema.type === 'integer'
 }
 
-const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || (resolvedSchema.value?.items && ! isPrimitiveSchema(resolvedSchema.value?.items))))
+const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || alternatives.value.length > 0 || (resolvedSchema.value?.items && ! isPrimitiveSchema(resolvedSchema.value?.items))))
 </script>
 
 <template>
@@ -97,8 +98,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
 
         <div class="text-[#8A8A8A] text-sm">
           <SchemaTypePreview :schema="resolvedSchema" :original="schema" :components="components" />
-          <template v-for="(alternative, index) of (schema.anyOf ?? resolvedSchema.anyOf ?? [])" :key="`anyOf-${index}`"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template>
-          <template v-for="(alternative, index) of (schema.oneOf ?? resolvedSchema.oneOf ?? [])" :key="`oneOf-${index}`"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template>
+          <template v-if="schema.$ref && alternatives.length">{{ ' ' }}<template v-for="(alternative, index) of alternatives" :key="index"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template></template>
         </div>
       </div>
       <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
@@ -131,6 +131,8 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       />
     </div>
 
+    <SchemaAttribute v-if="resolvedSchema.const !== undefined" title="Const" :value="resolvedSchema.const" />
+
     <div v-if="resolvedSchema.enum != undefined && resolvedSchema.enum.length" class="flex flex-col gap-2">
       <SchemaAttribute
           title="Enum"
@@ -156,6 +158,9 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
         </template>
       </div>
     </template>
+    <div v-if="arePropertiesVisible && alternatives.length" class="space-y-4">
+      <Schema v-for="(alternative, index) of alternatives" :key="index" :components="components" :schema="alternative" :level="level + 1" :arePropertiesInitiallyVisible="false" />
+    </div>
     <div v-if="(arePropertiesVisible || !canHideNestedProperties) && resolvedSchema.type === 'array' && resolvedSchema.items">
       <Schema
           :components="components"

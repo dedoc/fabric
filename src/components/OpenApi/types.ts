@@ -9,6 +9,7 @@ export type Schema = {
         [name: string]: Schema,
     },
     enum?: any[],
+    const?: any,
     prefixItems?: Schema[],
     items?: Schema,
     description?: string,

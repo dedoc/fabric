@@ -32,6 +32,16 @@ test('renders a referenced oneOf schema without a top-level type', async () => {
   assert.match(html.replace(/<[^>]*>/g, ''), /string \| integer \| number \| string\[\]/)
 })
 
+test('renders const constraints, including falsy and structured values', async () => {
+  for (const value of ['Pong!', null, false, 0, '', {message: 'Pong!'}]) {
+    const html = await renderReference({const: value})
+    const text = html.replace(/<[^>]*>/g, '')
+    assert.match(text, /Const/)
+    const formatted = value === '' ? '&#39;&#39;' : typeof value === 'object' ? JSON.stringify(value) : String(value)
+    assert.ok(text.replaceAll('&quot;', '"').includes(formatted))
+  }
+})
+
 test('accepts other referenced schemas without a top-level type', async () => {
   for (const target of [{}, {anyOf: [{type: 'string'}, {type: 'number'}]}, {description: 'Free-form value.', example: {key: 'value'}}]) {
     const html = await renderReference(target)
@@ -97,4 +107,18 @@ test('type parts preserve arrays, tuples and escaped component names', () => {
   assert.deepEqual(getSchemaTypeParts({type: 'array', items: {$ref: '#/components/schemas/Person'}}), [{text: 'Person', schemaName: 'Person'}, {text: '[]'}])
   assert.deepEqual(getSchemaTypeParts({type: 'array', prefixItems: [{$ref: '#/components/schemas/Person'}, {type: 'string'}]}), [{text: '['}, {text: 'Person', schemaName: 'Person'}, {text: ', '}, {text: 'string'}, {text: ']'}])
   assert.deepEqual(getSchemaTypeParts({$ref: '#/components/schemas/Person~1Details'}), [{text: 'Person~1Details', schemaName: 'Person/Details'}])
+})
+
+test('shows array union types and renders each included resource variant', async () => {
+  const components = {schemas: {
+    ComponentGroup: {type: 'object', properties: {id: {type: 'string'}}},
+    Incident: {type: 'object', properties: {id: {type: 'string'}}},
+  }}
+  const schema = {type: 'array', items: {anyOf: [{$ref: '#/components/schemas/ComponentGroup'}, {$ref: '#/components/schemas/Incident'}]}}
+  assert.equal(getSchemaTypeParts(schema).map(part => part.text).join(''), '(ComponentGroup | Incident)[]')
+  const html = await renderToString(createSSRApp({render: () => h(Schema, {schema, components, propertyTitle: 'included', level: 1})}))
+  const text = html.replace(/<[^>]*>/g, '')
+  assert.match(text, /\(ComponentGroup \| Incident\)\[\]/)
+  assert.ok((text.match(/ComponentGroup/g) ?? []).length >= 2)
+  assert.ok((text.match(/Incident/g) ?? []).length >= 2)
 })

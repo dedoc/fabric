@@ -35,6 +35,7 @@ export function createSchemaExample(schema: Schema | undefined): unknown {
       // Match the viewer's support for both raw values and Example objects.
       return example !== null && typeof example === 'object' && 'value' in example ? example.value : example
     }
+    if (current.const !== undefined) return current.const
     if (current.default !== undefined) return current.default
     if (current.enum?.length) return current.enum[0]
     if (ancestors.has(current)) return null

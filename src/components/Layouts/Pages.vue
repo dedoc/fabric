@@ -131,15 +131,15 @@ onUnmounted(() => {
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
           <input class="min-w-0 w-full bg-transparent text-[13px] outline-none" v-model="search" type="search" placeholder="Search reference…" aria-label="Search reference">
         </label>
-        <div class="mb-3 text-[13px] font-medium">Reference</div>
-        <nav aria-label="API reference">
+        <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
+        <nav aria-label="API reference" class="-mx-2">
           <Navigation v-for="item of filteredNavigation" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
           <p v-if="!filteredNavigation.length" class="p-4 text-[13px] text-neutral-500">No matching operations.</p>
         </nav>
         <template v-if="showSchemas && schemas.length">
-          <div class="mb-3 mt-6 text-[13px] font-medium">Schemas</div>
-          <nav aria-label="Schemas">
-            <button v-for="item of filteredSchemas" :key="item.id" type="button" class="block w-full truncate rounded-md p-2 text-left text-sm text-gray-700 hover:bg-gray-50" :class="{'bg-gray-50 text-gray-900': item.id === selectedPageId}" :aria-current="item.id === selectedPageId ? 'page' : undefined" :title="item.name" @click="handlePageSelect(item.id)">{{ item.name }}</button>
+          <div class="-mx-2 mb-3 mt-6 px-2 text-[13px] font-medium">Schemas</div>
+          <nav aria-label="Schemas" class="-mx-2">
+            <button v-for="item of filteredSchemas" :key="item.id" type="button" class="block w-full truncate rounded-[--navigation-item-radius] py-[--navigation-item-padding-y] px-2 text-left text-sm text-gray-700 hover:bg-[--navigation-item-highlight]" :class="{'bg-[--navigation-item-highlight] text-gray-900': item.id === selectedPageId}" :aria-current="item.id === selectedPageId ? 'page' : undefined" :title="item.name" @click="handlePageSelect(item.id)">{{ item.name }}</button>
             <p v-if="!filteredSchemas.length" class="p-4 text-[13px] text-neutral-500">No matching schemas.</p>
           </nav>
         </template>

@@ -17,12 +17,18 @@ export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, 
     if (unreferencedSchema?.$ref) {
         return unreferencedSchema.$ref.split('/').at(-1) ?? ''
     }
+    const alternatives = unreferencedSchema?.anyOf ?? unreferencedSchema?.oneOf
+    if (alternatives?.length) {
+        return alternatives.map(alternative => getSchemaTypePreview(alternative)).join(' | ')
+    }
     if (unreferencedSchema?.type === 'array') {
         // tuple
         if (! unreferencedSchema.items && unreferencedSchema.prefixItems) {
             return `[${unreferencedSchema.prefixItems.map(i => getSchemaTypePreview(i)).join(', ')}]`
         }
-        return getSchemaTypePreview(unreferencedSchema?.items) + '[]'
+        const itemType = getSchemaTypePreview(unreferencedSchema?.items)
+        const item = unreferencedSchema.items
+        return `${!item?.$ref && (item?.anyOf?.length || item?.oneOf?.length) ? `(${itemType})` : itemType}[]`
     }
     const type = unreferencedSchema?.type ?? ''
     return Array.isArray(type) ? type.map(t => getPrimitiveSchemaTypePreview(t, unreferencedSchema)).join(' | ') : getPrimitiveSchemaTypePreview(type, unreferencedSchema)

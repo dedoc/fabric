@@ -14,7 +14,7 @@ defineProps<{
   <div>
     <div
         v-for="(mediaType, type) of requestBody.content"
-        class="mt-5"
+        class="mt-5 first:mt-0"
     >
       <MediaType
           :components="components"

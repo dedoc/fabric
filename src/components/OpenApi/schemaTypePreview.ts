@@ -11,13 +11,21 @@ export function getSchemaTypeParts(schema?: Schema, original?: Schema): SchemaTy
     const name = reference.split('/').at(-1) ?? ''
     return [{text: name, schemaName: reference.startsWith('#/components/schemas/') ? name.replace(/~1/g, '/').replace(/~0/g, '~') : undefined}]
   }
+  const alternatives = schema?.anyOf ?? schema?.oneOf
+  if (alternatives?.length) {
+    return alternatives.flatMap((alternative, index) => [
+      ...(index ? [{text: ' | '}] : []), ...getSchemaTypeParts(alternative),
+    ])
+  }
   if (schema?.type === 'array') {
     if (!schema.items && schema.prefixItems) {
       return [{text: '['}, ...schema.prefixItems.flatMap((item, index) => [
         ...(index ? [{text: ', '}] : []), ...getSchemaTypeParts(item),
       ]), {text: ']'}]
     }
-    return [...getSchemaTypeParts(schema.items), {text: '[]'}]
+    const item = schema.items
+    const isUnion = !item?.$ref && !!(item?.anyOf?.length || item?.oneOf?.length)
+    return [...(isUnion ? [{text: '('}] : []), ...getSchemaTypeParts(item), {text: isUnion ? ')[]' : '[]'}]
   }
   return [{text: getSchemaTypePreview(schema, original)}]
 }

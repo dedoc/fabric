@@ -35,8 +35,8 @@ async function copy() {
 </script>
 
 <template>
-  <aside class="col-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2" aria-label="Schema examples">
-    <section class="flex max-h-[calc(100dvh-48px)] min-h-0 flex-col overflow-hidden rounded-xl border border-[#eeeeef] text-xs min-[1200px]:sticky min-[1200px]:top-6">
+  <aside class="col-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2 min-[1200px]:h-0 min-[1200px]:min-h-full" aria-label="Schema examples">
+    <section class="flex max-h-[calc(100dvh-48px)] min-h-0 flex-col overflow-hidden rounded-xl border border-[#eeeeef] text-xs min-[1200px]:sticky min-[1200px]:top-6 min-[1200px]:max-h-[min(100%,calc(100dvh-48px))]">
       <div class="flex min-h-11 shrink-0 items-center gap-2 border-b border-[#eeeeef] px-3 py-2 md:px-4">
         <div class="flex min-w-0 flex-auto items-center gap-1 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Schema example format">
           <button v-for="(tab, index) of tabs" :id="`${panelId}-${tab.id}`" :key="tab.id" type="button" role="tab" :aria-selected="selectedTab === tab.id" :aria-controls="`${panelId}-panel`" :tabindex="selectedTab === tab.id ? 0 : -1" class="shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs" :class="selectedTab === tab.id ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-500 hover:text-neutral-900'" @click="selectedTab = tab.id" @keydown="selectTab(index, $event)">{{ tab.label }}</button>

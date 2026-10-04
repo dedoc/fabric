@@ -13,8 +13,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="mt-5 space-y-10">
-    <Parameters v-if="parameters" :components="components" :parameters="parameters"/>
+  <div class="space-y-10">
+    <Parameters v-if="parameters?.length" :components="components" :parameters="parameters"/>
     <RequestBody v-if="requestBody" :components="components" :request-body="requestBody"/>
   </div>
 </template>

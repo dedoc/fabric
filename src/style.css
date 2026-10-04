@@ -6,4 +6,8 @@
     --primary-color: theme('colors.gray.800');
 
     --sections-gap: theme('spacing.12');
+
+    --navigation-item-padding-y: theme('spacing[1.5]');
+    --navigation-item-highlight: theme('colors.gray.100 / 75%');
+    --navigation-item-radius: theme('borderRadius.lg');
 }
