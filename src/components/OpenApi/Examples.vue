@@ -63,7 +63,7 @@ async function copy(code: string, panel: string) {
     <div class="flex flex-col gap-4 min-[1200px]:sticky min-[1200px]:top-6 min-[1200px]:max-h-[calc(100dvh-48px)]">
       <section class="flex max-h-[40dvh] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-[#eeeeef] text-xs" aria-label="Request example">
         <div class="flex min-h-11 shrink-0 items-center gap-2 border-b border-[#eeeeef] px-3 py-2 md:px-4">
-          <div class="flex min-w-0 items-center gap-2"><MethodChip :method="method" /><span class="truncate text-neutral-500" :title="path">{{ path }}</span></div>
+          <div class="flex min-w-0 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-neutral-500" :title="path">{{ path }}</span></div>
           <span v-if="requestView === 'schema'" class="shrink-0 text-neutral-600">JSON</span>
           <select v-else v-model="requestLanguage" class="min-w-0 max-w-[62px] shrink-0 cursor-pointer bg-transparent text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500" aria-label="Request example language"><option value="bash">Bash</option><option value="json">JSON</option></select>
           <select class="ml-auto min-w-0 max-w-[90px] cursor-pointer bg-transparent text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500" v-model="requestView" aria-label="Request example or schema"><option value="example">Example</option><option value="schema">Schema</option></select>

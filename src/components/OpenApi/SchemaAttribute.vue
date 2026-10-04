@@ -1,15 +1,18 @@
 <script setup lang="ts">
-type AttributeValue = string | number | boolean | null
+type AttributeValue = string | number | boolean | null | AttributeValue[] | {[key: string]: AttributeValue}
 
 const props = defineProps<{
   title: string,
-  value: AttributeValue | AttributeValue[],
+  value: AttributeValue,
   description?: string,
 }>()
 
 function formatValue(value: AttributeValue): string {
   if (value === '') {
     return '\'\''
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value)
   }
   return String(value)
 }
