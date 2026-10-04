@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {Components, Operation} from "./types";
 import Request from "./Request.vue";
+import Examples from "./Examples.vue";
 import {computed} from "vue";
 import Description from "./Description.vue";
 import Responses from "./Responses.vue";
@@ -22,27 +23,32 @@ const operationSummary = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-[--sections-gap]">
-    <div class="space-y-3">
-      <div v-if="operationSummary" class="font-semibold text-3xl/[160%]">{{ operationSummary }}</div>
-      <div class="flex items-baseline gap-2.5 text-base">
+  <div class="grid grid-cols-1 gap-6 max-md:gap-8 max-md:pt-7 min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] min-[1200px]:gap-8">
+    <div class="col-start-1 min-w-0 space-y-3">
+      <div v-if="operationSummary" class="text-[26px] font-medium leading-[1.3] md:text-[30px]">{{ operationSummary }}</div>
+      <div class="flex items-baseline gap-2.5 text-lg">
         <MethodChip :method="method" class="shrink-0"/>
         <div class="text-gray-500"><span class="text-gray-400">{{ base }}</span>{{ path }}</div>
       </div>
-      <Description v-if="operation.description" class="text-gray-900 !mt-4 leading-6 text-base" :content="operation.description"/>
-      <OperationDatums :operation="operation" class="!mt-4"/>
     </div>
 
-    <Request
-        v-if="operation.parameters || operation.requestBody"
+    <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
+      <div class="flex flex-col gap-4 empty:hidden">
+        <Description v-if="operation.description" class="mt-0 text-sm !text-neutral-500 leading-normal" :content="operation.description"/>
+        <OperationDatums :operation="operation"/>
+      </div>
+      <Request
+          v-if="operation.parameters || operation.requestBody"
+          :components="components"
+          :parameters="operation.parameters"
+          :requestBody="operation.requestBody"
+      />
+      <Responses
+        v-if="operation.responses"
+        :responses="operation.responses"
         :components="components"
-        :parameters="operation.parameters"
-        :requestBody="operation.requestBody"
-    />
-    <Responses
-      v-if="operation.responses"
-      :responses="operation.responses"
-      :components="components"
-    />
+      />
+    </div>
+    <Examples :base="base" :components="components" :path="path" :method="method" :operation="operation" />
   </div>
 </template>
