@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
 import {createServer as createHttpServer} from 'node:http'
 import {createServer} from 'vite'
-import {createSSRApp, h, provide, ref} from 'vue'
+import {createRenderer, createSSRApp, h, provide, ref} from 'vue'
 import {renderToString} from 'vue/server-renderer'
 
 const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
@@ -11,6 +11,27 @@ const {default: Schema} = await server.ssrLoadModule('/src/components/OpenApi/Sc
 const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {getSchemaTypeParts} = await server.ssrLoadModule('/src/components/OpenApi/schemaTypePreview.ts')
+const {useMediaType, provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
+const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
+const {default: ResponseContent} = await server.ssrLoadModule('/src/components/OpenApi/Partials/ResponseContent.vue')
+const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
+const {default: Select} = await server.ssrLoadModule('/src/components/UI/Select.vue')
+
+test('request curl sends URL-encoded fields for form content', async () => {
+  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+    base: '', components: {}, path: '/pet', method: 'post', operation: {
+      requestBody: {content: {'application/x-www-form-urlencoded': {example: {
+        name: "dog's & cat", category: {id: 1}, photoUrls: ['one', 'two'],
+      }}}}, responses: {},
+    },
+  })}))
+  assert.match(html, /Content-Type: application\/x-www-form-urlencoded/)
+  assert.match(html, /--data-urlencode &#39;name=dog&#39;\\&#39;&#39;s &amp; cat&#39;/)
+  assert.match(html, /--data-urlencode &#39;category=\{&quot;id&quot;:1\}&#39;/)
+  assert.match(html, /--data-urlencode &#39;photoUrls=one&#39;/)
+  assert.match(html, /--data-urlencode &#39;photoUrls=two&#39;/)
+  assert.doesNotMatch(html, / -d /)
+})
 
 async function renderReference(target) {
   return renderToString(createSSRApp({render: () => h(Schema, {
@@ -121,4 +142,187 @@ test('shows array union types and renders each included resource variant', async
   assert.match(text, /\(ComponentGroup \| Incident\)\[\]/)
   assert.ok((text.match(/ComponentGroup/g) ?? []).length >= 2)
   assert.ok((text.match(/Incident/g) ?? []).length >= 2)
+})
+
+test('content type selection changes media and handles changing or empty content', () => {
+  const json = {schema: {type: 'object'}, example: {message: 'JSON'}}
+  const xml = {schema: {type: 'string'}, example: '<message>XML</message>'}
+  const content = ref({'application/json': json, 'application/xml': xml})
+  const selection = useMediaType(() => content.value)
+  assert.equal(selection.type.value, 'application/json')
+  assert.deepEqual(selection.media.value, json)
+  selection.type.value = 'application/xml'
+  assert.deepEqual(selection.media.value, xml)
+  content.value = {'text/plain': {example: 'text'}}
+  assert.equal(selection.type.value, 'text/plain')
+  assert.equal(selection.media.value.example, 'text')
+  content.value = {}
+  assert.equal(selection.type.value, '')
+  assert.equal(selection.media.value, undefined)
+})
+
+test('body views render one schema with a borderless content type picker', async () => {
+  const content = {
+    'application/json': {schema: {type: 'object', properties: {jsonProperty: {type: 'string'}}}},
+    'application/xml': {schema: {type: 'object', properties: {xmlProperty: {type: 'string'}}}},
+  }
+  for (const [component, props, label] of [
+    [RequestBody, {requestBody: {content}}, 'Request body content type'],
+    [ResponseContent, {unreferencedResponse: {description: 'Success', content}}, 'Response body content type'],
+  ]) {
+    const html = await renderToString(createSSRApp({render: () => h(component, {components: {}, ...props})}))
+    assert.match(html, new RegExp(`aria-label="${label}"`))
+    assert.match(html, /border-0 bg-transparent/)
+    assert.match(html, /title="application\/json"/)
+    assert.match(html, /<option value="application\/json"/)
+    assert.match(html, /<option value="application\/xml"/)
+    assert.match(html, /jsonProperty/)
+    assert.doesNotMatch(html, /xmlProperty/)
+  }
+})
+
+test('example panels use the selected media without content type pickers', async () => {
+  const content = {
+    'application/json': {example: {message: 'JSON example'}},
+    'application/xml': {example: '<message>XML example</message>'},
+  }
+  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+    components: {}, base: 'https://example.com', path: '/messages', method: 'post',
+    operation: {requestBody: {content}, responses: {200: {description: 'Success', content}}},
+  })}))
+  assert.doesNotMatch(html, /aria-label="(?:Request|Response) example content type"/)
+  assert.match(html, /Content-Type: application\/json/)
+  assert.match(html, /JSON example/)
+  assert.doesNotMatch(html, /XML example/)
+})
+
+test('response payload format follows its documentation selection independently of the request', async () => {
+  const content = {
+    'application/json': {example: {message: 'JSON response'}},
+    'application/xml': {example: '<message>XML response</message>'},
+  }
+  for (const selected of Object.keys(content)) {
+    const Consumer = {setup() {
+      useMediaType(() => content, () => 'response:200').type.value = selected
+      return () => h(Examples, {
+        components: {}, base: 'https://example.com', path: '/messages', method: 'post',
+        operation: {requestBody: {content}, responses: {200: {description: 'Success', content}}},
+      })
+    }}
+    const html = await renderToString(createSSRApp({setup() {
+      provideMediaTypeSelections()
+      return () => h(Consumer)
+    }}))
+    const request = html.split('aria-label="Request example"')[1].split('</section>')[0]
+    const response = html.split('aria-label="Response example"')[1].split('</section>')[0]
+    assert.match(request, /Content-Type: application\/json/)
+    assert.doesNotMatch(request, /XML response/)
+    if (selected === 'application/xml') {
+      assert.match(response, /&lt;message&gt;XML response&lt;\/message&gt;/)
+      assert.doesNotMatch(response, /JSON response/)
+    } else {
+      assert.match(response, /&quot;message&quot;: &quot;JSON response&quot;/)
+      assert.doesNotMatch(response, /XML response/)
+    }
+  }
+})
+
+test('documentation and examples share selections separately for requests and each response status', async () => {
+  const content = {'application/json': {example: 'JSON'}, 'application/xml': {example: 'XML'}}
+  const status = ref('200')
+  let selections
+  const Consumer = {setup() {
+    selections = {
+      requestDocs: useMediaType(() => content, () => 'request'),
+      requestExample: useMediaType(() => content, () => 'request'),
+      successDocs: useMediaType(() => content, () => 'response:200'),
+      errorDocs: useMediaType(() => content, () => 'response:400'),
+      responseExample: useMediaType(() => content, () => `response:${status.value}`),
+    }
+    return () => h('div')
+  }}
+  const renderer = createRenderer({
+    createElement: () => ({}), createText: () => ({}), createComment: () => ({}),
+    insert() {}, remove() {}, setText() {}, setElementText() {}, patchProp() {},
+    parentNode: () => null, nextSibling: () => null,
+  })
+  const app = renderer.createApp({setup() {
+    provideMediaTypeSelections()
+    return () => h(Consumer)
+  }})
+  app.mount({})
+  selections.requestDocs.type.value = 'application/xml'
+  assert.equal(selections.requestExample.media.value.example, 'XML')
+  assert.equal(selections.responseExample.media.value.example, 'JSON')
+  selections.successDocs.type.value = 'application/xml'
+  assert.equal(selections.responseExample.media.value.example, 'XML')
+  status.value = '400'
+  assert.equal(selections.responseExample.media.value.example, 'JSON')
+  status.value = '200'
+  assert.equal(selections.responseExample.media.value.example, 'XML')
+  app.unmount()
+})
+
+test('a single select option renders plain text without a dropdown or chevron', async () => {
+  const html = await renderToString(createSSRApp({render: () => h(Select, {
+    modelValue: 'application/json', options: [{value: 'application/json', label: 'application/json'}],
+    class: 'text-gray-500', 'aria-label': 'Content type',
+  })}))
+  assert.match(html, /application\/json/)
+  assert.match(html, /text-gray-500/)
+  assert.doesNotMatch(html, /<select|<svg/)
+})
+
+test('request curl and response examples serialize selected XML schemas', async () => {
+  const components = {schemas: {Pet: {type: 'object', xml: {name: 'pet'}, properties: {
+    id: {type: 'integer', example: 7, xml: {attribute: true}},
+    name: {type: 'string', example: 'doggie'},
+  }}}}
+  const content = {'application/xml': {schema: {$ref: '#/components/schemas/Pet'}}}
+  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+    components, base: 'https://example.com', path: '/pets', method: 'post',
+    operation: {requestBody: {content}, responses: {200: {description: 'Success', content}}},
+  })}))
+  assert.match(html, /Content-Type: application\/xml/)
+  assert.match(html, /Bash/)
+  assert.match(html, /aria-label="Request example sender"/)
+  assert.match(html, /<option value="laravel">Laravel<\/option>/)
+  assert.match(html, /<option value="payload">XML<\/option>/)
+  assert.doesNotMatch(html, /<option value="payload">JSON<\/option>/)
+  assert.equal((html.match(/&lt;pet id=&quot;7&quot;&gt;/g) ?? []).length, 2)
+  assert.equal((html.match(/&lt;name&gt;doggie&lt;\/name&gt;/g) ?? []).length, 2)
+})
+
+test('request curl includes a generated JSON payload when no explicit example exists', async () => {
+  const content = {'application/json': {schema: {type: 'object', properties: {
+    name: {type: 'string', default: 'doggie'}, enabled: {type: 'boolean'},
+  }}}}
+  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+    components: {}, base: 'https://example.com', path: '/pets', method: 'post',
+    operation: {requestBody: {content}},
+  })}))
+  assert.match(html, /Content-Type: application\/json/)
+  assert.match(html, /-d &#39;\{/)
+  assert.match(html, /&quot;name&quot;: &quot;doggie&quot;/)
+  assert.match(html, /&quot;enabled&quot;: true/)
+})
+
+test('request picker offers only the payload format matching the selected content type', async () => {
+  for (const [type, label] of [
+    ['application/json', 'JSON'], ['Application/Problem+JSON; charset=utf-8', 'JSON'],
+    ['text/json', 'JSON'], ['application/xml', 'XML'], ['application/problem+xml', 'XML'],
+    ['text/xml; charset=utf-8', 'XML'], ['application/x-www-form-urlencoded', null],
+    ['multipart/form-data', null], ['', null],
+  ]) {
+    const html = await renderToString(createSSRApp({render: () => h(Examples, {
+      components: {}, base: 'https://example.com', path: '/pets', method: 'post',
+      operation: {requestBody: type ? {content: {[type]: {example: {name: 'doggie'}}}} : undefined},
+    })}))
+    assert.match(html, /<option value="bash"[^>]*>Bash<\/option>/)
+    assert.match(html, /<option value="laravel">Laravel<\/option>/)
+    if (label) {
+      assert.ok(html.includes(`<option value="payload">${label}</option>`))
+      assert.ok(!html.includes(`<option value="payload">${label === 'JSON' ? 'XML' : 'JSON'}</option>`))
+    } else assert.doesNotMatch(html, /<option value="payload">/)
+  }
 })

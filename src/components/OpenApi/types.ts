@@ -19,6 +19,13 @@ export type Schema = {
     examples?: (string|Example)[],
     required?: string[],
     format?: string,
+    xml?: {
+        name?: string,
+        namespace?: string,
+        prefix?: string,
+        attribute?: boolean,
+        wrapped?: boolean,
+    },
     // string specific attributes
     minLength?: number,
     maxLength?: number,
@@ -39,6 +46,9 @@ export type Example = {
 export type Encoding = {
     contentType?: string,
     headers?: { [name: string]: Header|Reference },
+    style?: 'form'|'spaceDelimited'|'pipeDelimited'|'deepObject',
+    explode?: boolean,
+    allowReserved?: boolean,
 }
 
 export type MediaType = {

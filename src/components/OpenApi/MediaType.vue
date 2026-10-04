@@ -4,40 +4,38 @@ import {computed} from "vue";
 import Schema from "./Schema.vue";
 import SchemaTypePreview from "./SchemaTypePreview.vue";
 import {getSchemaTypePreview} from "./utils.ts";
+import Select from "../UI/Select.vue";
+import {useMediaType} from "./useMediaType";
 
 const props = defineProps<{
   components: Components,
-  mediaType: MediaType,
-  type: string,
+  content?: Record<string, MediaType>,
+  label?: string,
+  selectionKey?: string,
 }>()
 
-const schemaNamePreview = computed(() => getSchemaTypePreview(props.mediaType.schema))
+const {types, type, media} = useMediaType(() => props.content, () => props.selectionKey ?? '')
+const schemaNamePreview = computed(() => getSchemaTypePreview(media.value?.schema))
 </script>
 
 <template>
-  <div>
-    <slot name="header" :type="type" :schemaNamePreview="schemaNamePreview">
-      <div class="flex justify-between">
-        <div class="flex gap-2 items-baseline">
+  <div v-if="media">
+    <div class="flex min-w-0 items-baseline justify-between gap-2">
+      <div class="flex min-w-0 gap-2 items-baseline">
+        <slot name="title">
           <div class="font-medium text-gray-900 text-base">Body</div>
-          <div v-if="schemaNamePreview" class="text-[#8A8A8A] text-sm"><SchemaTypePreview :schema="mediaType.schema" :components="components" /></div>
-        </div>
-        <div class="text-[#8A8A8A] text-sm">
-          {{ type }}
-        </div>
+        </slot>
+        <div v-if="schemaNamePreview" class="text-[#8A8A8A] text-sm font-normal"><SchemaTypePreview :schema="media.schema" :components="components" /></div>
       </div>
-    </slot>
-    <div v-if="mediaType.schema" class="mt-4">
+      <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="max-w-[50%] shrink-0 text-gray-500 text-sm font-normal" :aria-label="label ?? 'Body content type'" :title="type" />
+    </div>
+    <div v-if="media.schema" :key="type" class="mt-4">
       <Schema
           :components="components"
-          :schema="mediaType.schema"
+          :schema="media.schema"
           :shouldHideMainType="true"
           :shouldDisablePropertiesPadding="true"
       />
     </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>

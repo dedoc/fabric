@@ -7,6 +7,7 @@ import Schema from "../Schema.vue";
 const props = defineProps<{
   unreferencedResponse: Response,
   components: Components,
+  statusCode?: string,
 }>()
 
 const transformHeadersToSchema = (headers: Record<string, Header>): SchemaType => {
@@ -41,15 +42,6 @@ const transformHeadersToSchema = (headers: Record<string, Header>): SchemaType =
       />
     </div>
   </div>
-  <div
-      v-for="(mediaType, type) of unreferencedResponse.content"
-      class="mt-6"
-  >
-    <MediaType
-        :components="components"
-        :mediaType="mediaType"
-        :type="type"
-    />
-  </div>
+  <MediaType class="mt-6" :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
 </div>
 </template>

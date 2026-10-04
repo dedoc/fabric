@@ -1,5 +1,6 @@
 import type {Components, Schema} from './types'
 import {unreference} from './utils'
+import {createStringExample} from './stringExamples'
 
 /** Resolve local references without changing the document. Recursive branches end in null. */
 export function resolveExampleSchema(schema: Schema | undefined, components: Components): Schema | undefined {
@@ -59,7 +60,7 @@ export function createSchemaExample(schema: Schema | undefined): unknown {
         return Object.fromEntries(Object.entries(current.properties ?? {}).map(([name, property]) => [name, generate(property, next) ?? null]))
       case 'array':
         return current.prefixItems ? current.prefixItems.map(item => generate(item, next) ?? null) : current.items ? [generate(current.items, next) ?? null] : []
-      case 'string': return 'string'
+      case 'string': return createStringExample(current.format)
       case 'number':
       case 'integer': return 0
       case 'boolean': return true

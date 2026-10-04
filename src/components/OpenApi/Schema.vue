@@ -144,7 +144,11 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
     </div>
     <template v-if="arePropertiesVisible">
-      <div v-if="resolvedSchema.properties" :class="[shouldDisablePropertiesPadding ? '' : 'border-l pl-4','border-gray-100 -mt-8 pt-8']">
+      <div v-if="resolvedSchema.properties" :class="[
+        shouldDisablePropertiesPadding ? '' : 'relative border-l pl-4',
+        'border-gray-100',
+        !shouldDisablePropertiesPadding && canHideNestedProperties ? 'before:pointer-events-none before:absolute before:-left-px before:-top-8 before:h-8 before:border-l before:border-gray-100 before:content-[\'\']' : '',
+      ]">
         <template v-for="(propertySchema, name, i) of resolvedSchema.properties">
           <Schema
               :propertyTitle="name as string"

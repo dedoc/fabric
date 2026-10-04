@@ -26,15 +26,6 @@ const unreferencedResponse = computed(() => {
       <div><span class="text-gray-500">OK</span></div>
     </div>
     <Description v-if="unreferencedResponse.description" class="text-gray-900 mt-4 leading-5 text-sm" :content="unreferencedResponse.description"/>
-    <div
-        v-for="(mediaType, type) of unreferencedResponse.content"
-        class="mt-5"
-    >
-      <MediaType
-        :components="components"
-        :mediaType="mediaType"
-        :type="type"
-      />
-    </div>
+    <MediaType class="mt-5" :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode}`" label="Response body content type" />
   </div>
 </template>

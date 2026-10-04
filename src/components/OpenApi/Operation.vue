@@ -7,6 +7,7 @@ import Description from "./Description.vue";
 import Responses from "./Responses.vue";
 import MethodChip from "./Partials/MethodChip.vue";
 import OperationDatums from "./Partials/OperationDatums.vue";
+import {provideMediaTypeSelections} from "./useMediaType";
 
 const props = defineProps<{
   base: string, // todo: should not be here!
@@ -16,6 +17,8 @@ const props = defineProps<{
   operation: Operation,
 }>()
 
+
+provideMediaTypeSelections()
 
 const operationSummary = computed(() => {
   return props.operation.summary ?? props.operation.operationId
@@ -34,7 +37,7 @@ const operationSummary = computed(() => {
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <Description v-if="operation.description" class="mt-0 text-sm !text-neutral-500 leading-normal" :content="operation.description"/>
+      <Description v-if="operation.description" class="mt-0 text-sm !text-gray-500 leading-normal" :content="operation.description"/>
       <Request
           v-if="operation.parameters || operation.requestBody"
           :components="components"

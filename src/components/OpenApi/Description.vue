@@ -27,5 +27,5 @@ const renderedContent = computed(() => md.render(props.content))
 </script>
 
 <template>
-<div class="prose prose-neutral" v-html="renderedContent"></div>
+<div class="prose prose-gray" v-html="renderedContent"></div>
 </template>

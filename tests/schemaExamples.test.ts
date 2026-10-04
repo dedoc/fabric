@@ -60,3 +60,61 @@ test('terminates recursive schemas and handles missing schemas', () => {
   assert.deepEqual(createSchemaExample(cycle), {child: null})
   assert.equal(createSchemaExample(undefined), undefined)
 })
+
+test('generates valid temporal string samples', () => {
+  const sample = (format: string) => createSchemaExample({type: 'string', format}) as string
+  assert.equal(new Date(sample('date-time')).toISOString(), '2024-01-15T12:30:00.000Z')
+  assert.equal(new Date(sample('http-date')).toISOString(), '2024-01-15T12:30:00.000Z')
+  assert.equal(Number(sample('unixtime')), Date.parse(sample('date-time')) / 1000)
+  assert.match(sample('date'), /^\d{4}-\d{2}-\d{2}$/)
+  assert.match(sample('date-time-local'), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+  assert.match(sample('time'), /^\d{2}:\d{2}:\d{2}Z$/)
+  assert.match(sample('time-local'), /^\d{2}:\d{2}:\d{2}$/)
+  assert.match(sample('duration'), /^P\d+DT\d+H\d+M$/)
+})
+
+test('generates all registered string formats and common aliases', () => {
+  const formats = [
+    'base64url', 'binary', 'byte', 'char', 'commonmark', 'date-time-local', 'date-time', 'date',
+    'decimal', 'decimal128', 'duration', 'email', 'hostname', 'html', 'http-date', 'idn-email',
+    'idn-hostname', 'int64', 'ipv4-cidr', 'ipv4', 'ipv6-cidr', 'ipv6', 'iri-reference', 'iri',
+    'json-pointer', 'language', 'media-range', 'password', 'regex', 'relative-json-pointer',
+    'sf-binary', 'sf-boolean', 'sf-string', 'sf-token', 'time-local', 'time', 'uint64', 'unixtime',
+    'uri-reference', 'uri-template', 'uri', 'uuid', 'url', 'base64', 'markdown', 'json',
+  ]
+  for (const format of formats) {
+    const value = createSchemaExample({type: 'string', format})
+    assert.equal(typeof value, 'string', format)
+    assert.notEqual(value, 'string', format)
+    assert.equal(createSchemaExample({type: ['null', 'string'], format}), value, format)
+  }
+})
+
+test('generates usable encoded, identifier, network, and structured string samples', () => {
+  const sample = (format: string) => createSchemaExample({type: 'string', format}) as string
+  for (const format of ['byte', 'base64', 'base64url']) {
+    assert.equal(Buffer.from(sample(format), format === 'base64url' ? 'base64url' : 'base64').toString(), 'Hello, world!')
+  }
+  assert.equal(Buffer.from(sample('sf-binary').slice(1, -1), 'base64').toString(), 'Hello, world!')
+  assert.match(sample('uuid'), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+  assert.equal(new URL(sample('uri')).protocol, 'https:')
+  assert.equal(new URL(sample('uri-reference'), 'https://example.com').pathname, '/resources/123')
+  assert.equal(new URL(sample('iri')).hostname, 'xn--r8jz45g.xn--zckzah')
+  assert.ok(new RegExp(sample('regex')).test('Example123'))
+  assert.deepEqual(JSON.parse(sample('json')), {message: 'Hello, world!'})
+  assert.equal(JSON.parse(sample('sf-string')), 'Hello, world!')
+})
+
+test('preserves explicit values before generating formats and falls back for custom formats', () => {
+  for (const field of ['example', 'const', 'default'] as const) {
+    assert.equal(createSchemaExample({type: 'string', format: 'uuid', [field]: 'provided'}), 'provided')
+  }
+  assert.equal(createSchemaExample({type: 'string', format: 'uuid', examples: ['provided']}), 'provided')
+  assert.equal(createSchemaExample({type: 'string', format: 'uuid', enum: ['provided']}), 'provided')
+  for (const format of [undefined, '', 'custom-format', 'constructor', '__proto__']) {
+    assert.equal(createSchemaExample({type: 'string', format}), 'string')
+  }
+  assert.deepEqual(createSchemaExample({type: 'object', properties: {
+    email: {type: 'string', format: 'email'}, ids: {type: 'array', items: {type: 'string', format: 'uuid'}},
+  }}), {email: 'user@example.com', ids: ['123e4567-e89b-42d3-a456-426614174000']})
+})
