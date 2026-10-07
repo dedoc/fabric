@@ -92,25 +92,25 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
   <div v-if="resolvedSchema" class="flex flex-col gap-1.5">
 <!--    <pre class="text-xs">{{resolvedSchema}}</pre>-->
 <!--    <pre class="text-xs">{{schema}}</pre>-->
-    <div v-if="!shouldHideMainType" class="flex items-baseline gap-2">
-      <div class="flex items-baseline gap-2">
-        <div v-if="propertyTitle" class="text-sm font-medium text-gray-900">{{ propertyTitle }}</div>
+    <div v-if="!shouldHideMainType" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
+      <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <div v-if="propertyTitle" class="font-medium text-gray-900">{{ propertyTitle }}</div>
 
-        <div class="text-[#8A8A8A] text-sm">
+        <div class="min-w-0 text-gray-500">
           <SchemaTypePreview :schema="resolvedSchema" :original="schema" :components="components" />
           <template v-if="schema.$ref && alternatives.length">{{ ' ' }}<template v-for="(alternative, index) of alternatives" :key="index"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template></template>
         </div>
       </div>
-      <div v-if="propertyRequired" class="text-sm text-orange-400">required</div>
+      <div v-if="propertyRequired" class="text-amber-700">required</div>
     </div>
-    <Description v-if="resolvedSchema.description && !shouldHideDescription" class="text-gray-700 leading-5 prose-sm" :content="resolvedSchema.description"/>
+    <Description v-if="resolvedSchema.description && !shouldHideDescription" :content="resolvedSchema.description"/>
 
     <div v-if="
       resolvedSchema.minLength !== undefined
       || resolvedSchema.maxLength !== undefined
       || resolvedSchema.minimum !== undefined
       || resolvedSchema.maximum !== undefined
-    " class="flex gap-1">
+    " class="flex flex-wrap gap-1">
       <div v-if="resolvedSchema.minLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minLength }} characters</div>
       <div v-if="resolvedSchema.maxLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maxLength }} characters</div>
       <div v-if="resolvedSchema.minimum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minimum }}</div>

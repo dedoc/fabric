@@ -13,7 +13,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="space-y-10">
+  <div class="space-y-[--sections-gap]">
     <Parameters v-if="parameters?.length" :components="components" :parameters="parameters"/>
     <RequestBody v-if="requestBody" :components="components" :request-body="requestBody"/>
   </div>

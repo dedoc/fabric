@@ -26,18 +26,18 @@ const operationSummary = computed(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-x-6 max-md:pt-7 min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] min-[1200px]:gap-x-8" :class="operation.description ? 'gap-y-6 max-md:gap-y-8 min-[1200px]:gap-y-8' : 'gap-y-[--sections-gap]'">
+  <div class="grid grid-cols-1 gap-8 min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
     <div class="col-start-1 min-w-0 space-y-3">
-      <div v-if="operationSummary" class="text-[26px] font-medium leading-[1.3] md:text-[30px]">{{ operationSummary }}</div>
-      <div class="flex items-baseline gap-2.5 text-lg">
+      <h1 v-if="operationSummary" class="text-balance text-2xl font-medium tracking-tight md:text-3xl">{{ operationSummary }}</h1>
+      <div class="flex items-baseline gap-2.5 text-base">
         <MethodChip :method="method" class="shrink-0"/>
-        <div class="text-gray-500"><span class="text-gray-400">{{ base.replace(/\/$/, '') }}</span>/{{ path.replace(/^\//, '') }}</div>
+        <div class="min-w-0 text-gray-900"><span class="text-gray-500">{{ base.replace(/\/$/, '') }}</span>/{{ path.replace(/^\//, '') }}</div>
       </div>
       <OperationDatums :operation="operation"/>
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <Description v-if="operation.description" class="mt-0 text-sm !text-gray-500 leading-normal" :content="operation.description"/>
+      <Description v-if="operation.description" :content="operation.description"/>
       <Request
           v-if="operation.parameters || operation.requestBody"
           :components="components"

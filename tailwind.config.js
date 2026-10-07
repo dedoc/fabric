@@ -1,5 +1,4 @@
 import colors from 'tailwindcss/colors.js'
-import typography from '@tailwindcss/typography'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -12,16 +11,11 @@ export default {
       colors: {
         gray: colors.neutral,
       },
-      typography: {
-        // Typography palettes are defined independently of theme.colors.
-        gray: typography().config.theme.typography.neutral,
-      },
       fontFamily: {
+        sans: ['InterVariable', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         'jetbrains-mono': '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       },
     },
   },
-  plugins: [
-    typography,
-  ],
+  plugins: [],
 }

@@ -60,33 +60,33 @@ async function copy(code: string, panel: string) {
 
 <template>
   <aside class="col-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2" aria-label="Examples">
-    <div class="flex flex-col gap-4 min-[1200px]:sticky min-[1200px]:top-6 min-[1200px]:max-h-[calc(100dvh-48px)]">
-      <section class="flex max-h-[40dvh] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-[#eeeeef] text-xs" aria-label="Request example">
-        <div class="flex min-h-11 shrink-0 items-center gap-2 border-b border-[#eeeeef] px-3 py-2 md:px-4">
+    <div class="flex flex-col gap-5 min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[calc(100dvh-64px)]">
+      <section class="flex max-h-[28rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-[40dvh]" aria-label="Request example">
+        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-gray-950/10 px-4 py-2">
           <div class="flex min-w-0 flex-1 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-gray-500" :title="path">{{ path }}</span></div>
           <span v-if="requestView === 'schema'" class="shrink-0 text-gray-600">JSON</span>
-          <Select v-else v-model="requestExample" :options="requestExampleOptions" class="shrink-0 whitespace-nowrap text-xs" aria-label="Request example sender" />
-          <Select class="ml-auto shrink-0 whitespace-nowrap text-xs" v-model="requestView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Request example or schema" />
-          <button class="grid size-6 shrink-0 place-items-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-default disabled:opacity-[.35] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500" :disabled="!requestCode" :aria-label="copied === 'request' ? 'Copied request' : 'Copy request example'" @click="copy(requestCode, 'request')">
+          <Select v-else v-model="requestExample" :options="requestExampleOptions" class="shrink-0 whitespace-nowrap" aria-label="Request example sender" />
+          <Select class="shrink-0 whitespace-nowrap" v-model="requestView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Request example or schema" />
+          <button type="button" class="copy-button disabled:cursor-default disabled:opacity-40" :disabled="!requestCode" :aria-label="copied === 'request' ? 'Copied request' : 'Copy request example'" @click="copy(requestCode, 'request')">
             <span v-if="copied === 'request'">✓</span>
             <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
           </button>
         </div>
-        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 px-5 py-3.5 text-xs leading-[1.7] text-[#435a78] [tab-size:2]" v-if="requestCode"><code>{{ requestCode }}</code></pre>
+        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="requestCode"><code>{{ requestCode }}</code></pre>
         <p v-else class="p-4 text-[13px] text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
       </section>
-      <section class="flex max-h-[60dvh] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-[#eeeeef] text-xs min-[1200px]:max-h-none" aria-label="Response example">
-        <div class="flex min-h-11 shrink-0 items-center gap-2 border-b border-[#eeeeef] px-3 py-2 md:px-4">
+      <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">
+        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-gray-950/10 px-4 py-2">
           <span>Output</span>
-          <span v-if="responseType" class="min-w-0 truncate text-gray-500" :title="responseType">{{ responseType }}</span>
-          <Select class="ml-auto shrink-0 whitespace-nowrap text-xs" v-if="responseStatus" v-model="responseStatus" :options="Object.keys(operation.responses ?? {}).map(value => ({value, label: value}))" aria-label="Response status" />
-          <Select :class="{'ml-auto': !responseStatus}" class="shrink-0 whitespace-nowrap text-xs" v-model="responseView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Response example or schema" />
-          <button class="grid size-6 shrink-0 place-items-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-default disabled:opacity-[.35] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500" :disabled="!responseCode" :aria-label="copied === 'response' ? 'Copied response' : 'Copy response example'" @click="copy(responseCode, 'response')">
+          <span v-if="responseType" class="min-w-0 flex-1 truncate text-gray-500" :title="responseType">{{ responseType }}</span>
+          <Select class="shrink-0 whitespace-nowrap" v-if="responseStatus" v-model="responseStatus" :options="Object.keys(operation.responses ?? {}).map(value => ({value, label: value}))" aria-label="Response status" />
+          <Select class="shrink-0 whitespace-nowrap" v-model="responseView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Response example or schema" />
+          <button type="button" class="copy-button disabled:cursor-default disabled:opacity-40" :disabled="!responseCode" :aria-label="copied === 'response' ? 'Copied response' : 'Copy response example'" @click="copy(responseCode, 'response')">
             <span v-if="copied === 'response'">✓</span>
             <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
           </button>
         </div>
-        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 px-5 py-3.5 text-xs leading-[1.7] text-[#435a78] [tab-size:2]" v-if="responseCode"><code>{{ responseCode }}</code></pre>
+        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><code>{{ responseCode }}</code></pre>
         <p v-else class="p-4 text-[13px] text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
       </section>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>

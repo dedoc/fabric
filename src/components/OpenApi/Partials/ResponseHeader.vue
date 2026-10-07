@@ -51,13 +51,13 @@ const responseDescription = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-baseline gap-1.5 text-sm">
+  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-2 text-base sm:text-sm">
     <div class="font-jetbrains-mono rounded-lg leading-[18px] font-medium uppercase shrink-0" :class="statusCodeClasses">
       {{ statusCode }}
     </div>
     <template v-if="responseDescription">
       <div class="text-gray-300 shrink-0">·</div>
-      <div class="text-gray-500 shrink-0">{{ responseDescription }}</div>
+      <div class="min-w-0 text-gray-500">{{ responseDescription }}</div>
     </template>
     <slot/>
   </div>

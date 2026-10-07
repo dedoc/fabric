@@ -23,7 +23,7 @@ const [primaryResponses, secondaryResponses] = Object.entries(props.responses ||
     <div class="flex gap-2 items-baseline">
       <SectionTitle>Response</SectionTitle>
     </div>
-    <div class="mt-6">
+    <div class="mt-4">
       <Response
           v-for="(response, statusCode) of primaryResponses"
           :components="components"

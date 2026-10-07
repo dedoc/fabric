@@ -20,15 +20,15 @@ const schemaNamePreview = computed(() => getSchemaTypePreview(media.value?.schem
 
 <template>
   <div v-if="media">
-    <div class="flex min-w-0 items-baseline justify-between gap-2">
-      <div class="flex min-w-0 gap-2 items-baseline">
+    <div class="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div class="flex min-w-fit flex-1 flex-col items-start gap-1">
         <slot name="title">
           <div class="font-medium text-gray-900 text-base">Body</div>
         </slot>
-        <div v-if="schemaNamePreview" class="text-[#8A8A8A] text-sm font-normal"><SchemaTypePreview :schema="media.schema" :components="components" /></div>
       </div>
-      <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="max-w-[50%] shrink-0 text-gray-500 text-sm font-normal" :aria-label="label ?? 'Body content type'" :title="type" />
+      <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="max-w-full shrink-0 text-base font-normal text-gray-500 sm:max-w-[50%] sm:text-sm" :aria-label="label ?? 'Body content type'" :title="type" />
     </div>
+    <div v-if="schemaNamePreview" class="mt-1 break-words text-base font-normal text-gray-500 sm:text-sm"><SchemaTypePreview :schema="media.schema" :components="components" /></div>
     <div v-if="media.schema" :key="type" class="mt-4">
       <Schema
           :components="components"

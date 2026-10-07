@@ -25,9 +25,9 @@ const transformHeadersToSchema = (headers: Record<string, Header>): SchemaType =
 </script>
 
 <template>
-<div>
-  <Description v-if="unreferencedResponse.description" class="text-gray-900 leading-5 text-sm" :content="unreferencedResponse.description"/>
-  <div v-if="unreferencedResponse.headers" class="mt-6">
+<div class="space-y-5">
+  <Description v-if="unreferencedResponse.description" :content="unreferencedResponse.description"/>
+  <div v-if="unreferencedResponse.headers">
     <div class="flex">
       <div class="flex gap-2 items-baseline">
         <div class="font-medium text-gray-900 text-base">Headers</div>
@@ -42,6 +42,6 @@ const transformHeadersToSchema = (headers: Record<string, Header>): SchemaType =
       />
     </div>
   </div>
-  <MediaType class="mt-6" :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
+  <MediaType :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
 </div>
 </template>

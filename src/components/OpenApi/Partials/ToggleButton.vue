@@ -10,11 +10,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-      class="text-xs text-gray-500 hover:text-gray-900 inline-block rounded-full p-1 px-3 border cursor-pointer"
-      :class="{'border-transparent mb-1 text-gray-400': expanded}"
+  <button
+      type="button"
+      class="min-h-8 self-start rounded-full border border-gray-950/10 px-2.5 py-1 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      :aria-expanded="expanded"
       @click="emit('update:expanded', !expanded)"
   >
     {{ expanded ? '- Hide' : '+ Show' }} {{ label }}
-  </div>
+  </button>
 </template>

@@ -47,7 +47,7 @@ const transformParamsToSchema = (params: Parameter[]): SchemaType => {
           {{ group }} Parameters
         </SectionTitle>
       </div>
-      <div class="mt-5">
+      <div class="mt-4">
         <Schema
             :components="components"
             :schema="transformParamsToSchema(params!)"

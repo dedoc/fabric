@@ -5,9 +5,56 @@
 :root {
     --primary-color: theme('colors.gray.800');
 
-    --sections-gap: theme('spacing.12');
+    --sections-gap: theme('spacing.8');
 
     --navigation-item-padding-y: theme('spacing[1.5]');
     --navigation-item-highlight: theme('colors.gray.100 / 75%');
     --navigation-item-radius: theme('borderRadius.lg');
+}
+
+@media (min-width: 640px) {
+    :root { --sections-gap: theme('spacing.10'); }
+}
+
+@layer components {
+    .copy-button {
+        @apply relative grid size-8 shrink-0 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900;
+    }
+    .prose {
+        @apply text-pretty text-base text-gray-600 sm:text-sm;
+        line-height: 1.75;
+        overflow-wrap: anywhere;
+    }
+    .prose > * + * { margin-top: 0.75em; }
+    .prose :is(h1, h2, h3, h4, h5, h6) { @apply font-semibold text-gray-900; }
+    .prose :is(h1, h2) { @apply text-xl; }
+    .prose :is(h3, h4, h5, h6) { @apply text-lg; }
+    .prose a { @apply text-gray-900 underline underline-offset-2 hover:text-gray-600; }
+    .prose :is(ul, ol) { padding-left: 1.5em; }
+    .prose ul { list-style: disc; }
+    .prose ol { list-style: decimal; }
+    .prose li + li { margin-top: 0.25em; }
+    .prose li > * + * { margin-top: 0.5em; }
+    .prose code { @apply rounded bg-gray-100 px-1 py-0.5; font-size: 0.9em; }
+    .prose pre { @apply overflow-auto rounded-lg bg-gray-50 p-4; }
+    .prose pre code { @apply bg-transparent p-0; }
+    .prose img { @apply h-auto max-w-full rounded-lg; }
+    .prose strong { @apply font-semibold text-gray-900; }
+    .prose blockquote { @apply border-l-2 border-gray-950/10 pl-4; }
+    .prose hr { @apply border-gray-950/10; }
+    .prose table { @apply block max-w-full overflow-auto text-left; }
+    .prose :is(th, td) { @apply border-b border-gray-950/10 px-3 py-2; }
+    .prose th { @apply font-medium text-gray-900; }
+}
+
+@media (pointer: coarse) {
+    .copy-button::after {
+        content: '';
+        position: absolute;
+        width: 3rem;
+        height: 3rem;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
 }

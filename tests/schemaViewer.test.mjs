@@ -141,6 +141,18 @@ test('only shows schema navigation when component schemas exist', async () => {
   assert.match(await renderPages({schemas: {Person: {type: 'object'}}}), /aria-label="Schemas"/)
 })
 
+test('initial reference view opens the first endpoint with accessible property disclosures', async () => {
+  const html = await renderPages({}, '', {paths: {'/files': {get: {
+    operationId: 'list-files', summary: 'List files',
+    requestBody: {content: {'application/json': {schema: {type: 'object', properties: {
+      options: {type: 'object', properties: {name: {type: 'string'}}},
+    }}}}},
+  }}}})
+  assert.match(html, /<h1[^>]*>List files<\/h1>/)
+  assert.match(html, /aria-current="page"/)
+  assert.match(html, /<button[^>]*type="button"[^>]*aria-expanded="false"[^>]*>\+ Show properties<\/button>/)
+})
+
 test('opens schema hashes and renders the title, description and tabbed example', async () => {
   const html = await renderPages({schemas: {'Person/Details': {
     title: 'Person details', description: 'A person in the workspace.', type: 'object', properties: {id: {type: 'integer', example: 42}},

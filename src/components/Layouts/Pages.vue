@@ -28,7 +28,7 @@ function getPageIdFromUrl (): string|undefined {
   return url.hash.replace(/^#/, '')
 }
 
-const selectedPageId = ref<string|undefined>(getPageIdFromUrl())
+const selectedPageId = ref<string|undefined>(getPageIdFromUrl() || operations.value[0]?.id)
 
 const schemas = computed(() => Object.entries(props.components.schemas ?? {}).map(([name, schema]) => ({
   id: `schemas/${encodeURIComponent(name)}`,
@@ -115,33 +115,40 @@ const filteredNavigation = computed(() => buildNavigationTree(operations.value.f
     .toLowerCase().includes(search.value.toLowerCase())
 )))
 function syncLocation() {
-  selectedPageId.value = getPageIdFromUrl()
+  selectedPageId.value = getPageIdFromUrl() || operations.value[0]?.id
   window.scrollTo(0, 0)
   mobileNavigationOpen.value = false
 }
+let desktopQuery: MediaQueryList | undefined
+function closeMobileNavigation() {
+  mobileNavigationOpen.value = false
+}
 onMounted(() => {
+  desktopQuery = window.matchMedia('(min-width: 768px)')
+  desktopQuery.addEventListener('change', closeMobileNavigation)
   window.addEventListener('popstate', syncLocation)
   window.addEventListener('hashchange', syncLocation)
 })
 onUnmounted(() => {
+  desktopQuery?.removeEventListener('change', closeMobileNavigation)
   window.removeEventListener('popstate', syncLocation)
   window.removeEventListener('hashchange', syncLocation)
 })
 </script>
 
 <template>
-  <div class="bg-white text-gray-900 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
+  <div class="isolate bg-white text-gray-900 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
     <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] bg-white px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
       <div class="min-w-0 flex-1 truncate text-base font-semibold md:w-full md:flex-none md:text-lg">{{ document.info.title ?? '' }}</div>
-      <button class="rounded-md border border-[#eeeeef] p-2 text-[13px] md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
+      <button type="button" class="min-h-9 rounded-md border border-gray-950/10 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
       </button>
     </header>
     <div class="flex items-start md:min-h-dvh">
-      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto px-6 pb-5 pt-2 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'">
+      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] md:px-6 md:pt-2 min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
         <label class="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-2 text-gray-500 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
-          <input class="min-w-0 w-full bg-transparent text-[13px] outline-none" v-model="search" type="search" placeholder="Search reference…" aria-label="Search reference">
+          <input class="min-w-0 w-full bg-transparent text-base outline-none sm:text-sm" v-model="search" name="reference-search" type="search" placeholder="Search reference…" aria-label="Search reference">
         </label>
         <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">
@@ -156,7 +163,7 @@ onUnmounted(() => {
           </nav>
         </template>
       </aside>
-      <main class="min-w-0 flex-1 px-5 pb-12 md:px-6 md:pb-20 md:pt-6 min-[1200px]:pl-8 min-[1200px]:pr-10 min-[1600px]:mx-auto min-[1600px]:max-w-[1400px]">
+      <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <div v-if="selectedOperation" :key="selectedOperation.id">
           <article class="min-w-0 [overflow-wrap:anywhere]">
