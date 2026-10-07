@@ -8,9 +8,11 @@ import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
 import NavigationItem from "./Partials/NavigationItem.vue";
 import {getInlineOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
+import {resolveOperationBase} from "../OpenApi/servers.ts";
 
 const props = withDefaults(defineProps<{
-  base: string, // todo: should not be here!
+  base?: string,
+  documentUrl?: string,
   document: any, // todo: should not be here!
   components: Components, // todo: should not be here!
   paths: PathsType,
@@ -44,6 +46,15 @@ const selectedOperation = computed<InlineOperation|undefined>(() => {
     return undefined
   }
   return operations.value.find(op => op.id === operationId)
+})
+
+const operationBase = computed(() => {
+  const selected = selectedOperation.value
+  if (!selected) return ''
+  return resolveOperationBase(
+    props.document.servers ?? (props.base === undefined ? undefined : [{url: props.base}]),
+    props.paths[selected.path], selected.operation, props.documentUrl,
+  )
 })
 
 function handlePageSelect (pageId: string) {
@@ -149,7 +160,7 @@ onUnmounted(() => {
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <div v-if="selectedOperation" :key="selectedOperation.id">
           <article class="min-w-0 [overflow-wrap:anywhere]">
-            <Paths :base="base" :components="components" :paths="{[selectedOperation.path]: {[selectedOperation.method]: selectedOperation.operation}}" />
+            <Paths :base="operationBase" :components="components" :paths="{[selectedOperation.path]: {[selectedOperation.method]: selectedOperation.operation}}" />
           </article>
         </div>
       </main>

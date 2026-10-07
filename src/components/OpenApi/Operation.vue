@@ -31,7 +31,7 @@ const operationSummary = computed(() => {
       <div v-if="operationSummary" class="text-[26px] font-medium leading-[1.3] md:text-[30px]">{{ operationSummary }}</div>
       <div class="flex items-baseline gap-2.5 text-lg">
         <MethodChip :method="method" class="shrink-0"/>
-        <div class="text-gray-500"><span class="text-gray-400">{{ base }}</span>{{ path }}</div>
+        <div class="text-gray-500"><span class="text-gray-400">{{ base.replace(/\/$/, '') }}</span>/{{ path.replace(/^\//, '') }}</div>
       </div>
       <OperationDatums :operation="operation"/>
     </div>

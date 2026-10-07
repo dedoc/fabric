@@ -1,4 +1,6 @@
-import type {Components, Operation, Paths, Schema as SchemaType} from "./types.ts";
+import type {Components, HttpMethod, Operation, Paths, Schema as SchemaType} from "./types.ts";
+
+export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 
 export type InlineOperation = {
     id: string,
@@ -106,7 +108,8 @@ export function getOperationTitle (path: string, operation: Operation) {
 
 export function getInlineOperations (paths: Paths): InlineOperation[] {
     return Object.entries(paths).reduce<InlineOperation[]>((acc, [path, pathItem]) => {
-        return acc.concat(Object.entries(pathItem).map(([method, operation]) => {
+        return acc.concat(httpMethods.filter(method => pathItem[method]).map(method => {
+            const operation = pathItem[method]!
             return {
                 id: getOperationId(method, path, operation),
                 method,

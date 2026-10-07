@@ -16,6 +16,56 @@ const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenA
 const {default: ResponseContent} = await server.ssrLoadModule('/src/components/OpenApi/Partials/ResponseContent.vue')
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
 const {default: Select} = await server.ssrLoadModule('/src/components/UI/Select.vue')
+const {resolveOperationBase} = await server.ssrLoadModule('/src/components/OpenApi/servers.ts')
+const {getInlineOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
+
+test('server resolution respects overrides, defaults, variables and document-relative URLs', () => {
+  const root = [{url: 'https://api.converterer.com'}]
+  const pathItem = {servers: [{url: 'https://download.converterer.com'}]}
+  assert.equal(resolveOperationBase(root, {}, {}), root[0].url)
+  assert.equal(resolveOperationBase(root, pathItem, {}), pathItem.servers[0].url)
+  assert.equal(resolveOperationBase(root, pathItem, {servers: [{url: 'https://other.example.com'}]}), 'https://other.example.com')
+  assert.equal(resolveOperationBase(root, pathItem, {servers: []}), '/')
+  assert.equal(resolveOperationBase(undefined, {}, {}), '/')
+  assert.equal(resolveOperationBase([], {}, {}, 'https://example.com/docs/openapi.json'), 'https://example.com/')
+  assert.equal(resolveOperationBase([{url: 'https://{region}.example.com/{version}', variables: {
+    region: {default: 'eu'}, version: {default: 'v2'},
+  }}], {}, {}), 'https://eu.example.com/v2')
+  assert.equal(resolveOperationBase([{url: '../api'}], {}, {}, 'https://example.com/docs/openapi.json'), 'https://example.com/api')
+  assert.equal(resolveOperationBase([{url: '/v1'}], {}, {}, 'https://example.com/docs/openapi.json'), 'https://example.com/v1')
+})
+
+test('path metadata never becomes an operation', () => {
+  const paths = {'/': {servers: [{url: 'https://download.converterer.com'}], summary: 'Downloads',
+    description: 'Download files', parameters: [], post: {operationId: 'download'},
+  }}
+  assert.deepEqual(getInlineOperations(paths).map(({id, method}) => [id, method]), [['operations/download', 'post']])
+})
+
+test('download path server appears in the endpoint and request example', async () => {
+  const html = await renderPages({}, '#operations/download', {
+    document: {info: {title: 'Converterer'}, servers: [{url: 'https://api.converterer.com'}]},
+    paths: {'/': {servers: [{url: 'https://download.converterer.com'}], post: {operationId: 'download'}}},
+  })
+  assert.match(html, /https:\/\/download.converterer\.com<\/span>\//)
+  assert.match(html, /curl -X POST &#39;https:\/\/download.converterer\.com\/&#39;/)
+  assert.doesNotMatch(html, /api\.converterer\.com|operations\/get--|operations\/servers/)
+})
+
+test('operation server overrides reach request examples after page selection', async () => {
+  const html = await renderPages({}, '#operations/selected', {
+    document: {info: {title: 'API'}, servers: [{url: 'https://root.example.com'}]},
+    documentUrl: 'https://spec.example.com/docs/openapi.json',
+    paths: {'/files': {
+      servers: [{url: 'https://path.example.com'}],
+      get: {operationId: 'selected', servers: [{url: '../{version}/', variables: {version: {default: 'v2'}}}]},
+      post: {operationId: 'other'},
+    }},
+  })
+  assert.match(html, /https:\/\/spec.example.com\/v2<\/span>\/files/)
+  assert.match(html, /curl -X GET &#39;https:\/\/spec.example.com\/v2\/files&#39;/)
+  assert.doesNotMatch(html, /root\.example\.com|path\.example\.com|curl -X POST/)
+})
 
 test('request curl sends URL-encoded fields for form content', async () => {
   const html = await renderToString(createSSRApp({render: () => h(Examples, {

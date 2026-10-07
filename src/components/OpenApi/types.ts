@@ -79,6 +79,7 @@ export type Reference = {
 }
 
 export type Operation = {
+    servers?: Server[],
     summary?: string,
     description?: string,
     operationId?: string,
@@ -115,8 +116,20 @@ export type Header = {
     content?: { [name: string]: MediaType },
 })
 
-export type PathItem = {
-    post?: Operation,
+export type HttpMethod = 'get'|'post'|'put'|'delete'|'options'|'head'|'patch'|'trace'
+
+export type Server = {
+    url: string,
+    description?: string,
+    variables?: Record<string, {default: string, enum?: string[], description?: string}>,
+}
+
+export type PathItem = Partial<Record<HttpMethod, Operation>> & {
+    servers?: Server[],
+    parameters?: (Reference|Parameter)[],
+    summary?: string,
+    description?: string,
+    $ref?: string,
 }
 
 export type Paths = {
@@ -169,6 +182,7 @@ export type Components = {
 }
 
 export type Document = {
+    servers?: Server[],
     security?: SecurityRequirement[],
     components?: Components,
 }

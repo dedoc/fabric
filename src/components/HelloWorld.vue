@@ -6,6 +6,7 @@ import {documentKey} from "../utils/symbols.ts";
 withDefaults(defineProps<{ msg: string, showSchemas?: boolean }>(), {showSchemas: true})
 
 const document = ref(null)
+const documentUrl = ref('')
 
 onMounted(async () => {
   async function getDocument () {
@@ -23,6 +24,8 @@ onMounted(async () => {
     // const f = await fetch('http://l12app.test/docs/api.json')
     // const f = await fetch('http://reproduction.test/docs/api.json')
     // const f = await fetch('http://l12.test/docs/api.json')
+    documentUrl.value = f.url === new URL('/converterer/openapi.json', window.location.href).href
+      ? 'https://api.converterer.com/openapi.json' : f.url
     return await f.json()
   }
 
@@ -39,7 +42,7 @@ provide(documentKey, document)
   <Pages
       v-if="document"
       :document="document"
-      :base="document.servers[0].url"
+      :document-url="documentUrl"
       :components="document.components"
       :paths="document.paths"
       :showSchemas="showSchemas"

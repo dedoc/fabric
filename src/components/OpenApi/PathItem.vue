@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {Paths, Components, PathItem} from "./types";
 import Operation from "./Operation.vue";
+import {getInlineOperations} from "./utils";
 
 defineProps<{
   base: string, // todo: should not be here!
@@ -9,17 +10,15 @@ defineProps<{
   pathItem: PathItem,
 }>()
 
-const operationsFields = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 </script>
 
 <template>
   <div class="space-y-40">
-    <div v-for="(operation, field) of pathItem">
+    <div v-for="{operation, method} of getInlineOperations({[path]: pathItem})" :key="method">
       <Operation
-          v-if="operationsFields.includes(field)"
           :base="base"
           :components="components"
-          :method="field"
+          :method="method"
           :path="path"
           :operation="operation"
       />
