@@ -78,6 +78,8 @@ const normalizedExamples = computed(() => {
   return res
 })
 
+const canGroupExamples = computed(() => normalizedExamples.value.length > 1 && normalizedExamples.value.every(example => !example.description))
+
 const arePropertiesVisible = ref(props.arePropertiesInitiallyVisible)
 const alternatives = computed(() => resolvedSchema.value.anyOf ?? resolvedSchema.value.oneOf ?? [])
 
@@ -124,11 +126,19 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
           :value="resolvedSchema.default === '' ? '\'\'' : resolvedSchema.default"
       />
       <SchemaAttribute
-          v-for="example of normalizedExamples"
-          title="Example"
-          :value="example.value"
-          :description="example.description"
+          v-if="canGroupExamples"
+          title="Examples"
+          :value="normalizedExamples.map(example => example.value)"
       />
+      <template v-else>
+        <SchemaAttribute
+            v-for="(example, index) of normalizedExamples"
+            :key="index"
+            title="Example"
+            :value="example.value"
+            :description="example.description"
+        />
+      </template>
     </div>
 
     <SchemaAttribute v-if="resolvedSchema.const !== undefined" title="Const" :value="resolvedSchema.const" />
@@ -141,7 +151,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     </div>
 
     <div v-if="canHideNestedProperties" class="relative z-10">
-      <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
+      <ToggleButton v-model:expanded="arePropertiesVisible" :label="alternatives.length ? 'options' : 'properties'"/>
     </div>
     <template v-if="arePropertiesVisible">
       <div v-if="resolvedSchema.properties" :class="[
@@ -161,8 +171,19 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
         </template>
       </div>
     </template>
-    <div v-if="arePropertiesVisible && alternatives.length" class="space-y-4">
-      <Schema v-for="(alternative, index) of alternatives" :key="index" :components="components" :schema="alternative" :level="level + 1" :arePropertiesInitiallyVisible="false" />
+    <div v-if="arePropertiesVisible && alternatives.length" class="space-y-3" role="group" :aria-label="`${propertyTitle ?? 'Value'} options`">
+      <p class="text-base text-gray-500 sm:text-sm">{{ resolvedSchema.anyOf ? 'Must match at least one option.' : 'Must match exactly one option.' }}</p>
+      <div class="divide-y divide-gray-950/5 border-l border-gray-950/10 pl-4">
+        <div v-for="(alternative, index) of alternatives" :key="index" class="py-3 first:pt-0 last:pb-0">
+          <Schema
+              :propertyTitle="`Option ${index + 1}`"
+              :components="components"
+              :schema="alternative"
+              :level="level + 1"
+              :arePropertiesInitiallyVisible="!alternative.$ref"
+          />
+        </div>
+      </div>
     </div>
     <div v-if="(arePropertiesVisible || !canHideNestedProperties) && resolvedSchema.type === 'array' && resolvedSchema.items">
       <Schema

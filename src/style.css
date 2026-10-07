@@ -35,8 +35,8 @@
     .prose ol { list-style: decimal; }
     .prose li + li { margin-top: 0.25em; }
     .prose li > * + * { margin-top: 0.5em; }
-    .prose code { @apply rounded bg-gray-100 px-1 py-0.5; font-size: 0.9em; }
-    .prose pre { @apply overflow-auto rounded-lg bg-gray-50 p-4; }
+    .prose code { @apply rounded px-1 py-0.5; font-size: 0.9em; }
+    .prose pre { @apply overflow-auto rounded-lg p-4; }
     .prose pre code { @apply bg-transparent p-0; }
     .prose img { @apply h-auto max-w-full rounded-lg; }
     .prose strong { @apply font-semibold text-gray-900; }

@@ -103,6 +103,26 @@ test('renders a referenced oneOf schema without a top-level type', async () => {
   assert.match(html.replace(/<[^>]*>/g, ''), /string \| integer \| number \| string\[\]/)
 })
 
+test('union details distinguish matching rules and expose inline object requirements', async () => {
+  const options = [
+    {type: 'string', enum: ['a4', 'letter']},
+    {type: 'object', required: ['width', 'height'], properties: {
+      width: {type: ['string', 'number']}, height: {type: ['string', 'number']},
+    }},
+  ]
+  for (const [keyword, rule] of [['anyOf', 'at least one'], ['oneOf', 'exactly one']]) {
+    const html = await renderReference({[keyword]: options, default: 'a4'})
+    assert.ok(html.includes(`Must match ${rule} option.`))
+    assert.match(html, /role="group" aria-label="value options"/)
+    assert.match(html, /Option 1/)
+    assert.match(html, /Option 2/)
+    const text = html.replace(/<[^>]*>/g, '')
+    assert.match(text, /width\s*string\s*\|\s*number\s*required/)
+    assert.match(text, /height\s*string\s*\|\s*number\s*required/)
+    assert.match(html, /Hide options/)
+  }
+})
+
 test('renders const constraints, including falsy and structured values', async () => {
   for (const value of ['Pong!', null, false, 0, '', {message: 'Pong!'}]) {
     const html = await renderReference({const: value})

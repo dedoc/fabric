@@ -46,7 +46,7 @@ async function copy() {
           <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
         </button>
       </div>
-      <pre :id="`${panelId}-panel`" role="tabpanel" :aria-labelledby="`${panelId}-${selectedTab}`" tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain p-4 text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [scrollbar-width:thin] [tab-size:2] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500"><code>{{ code }}</code></pre>
+      <pre :id="`${panelId}-panel`" role="tabpanel" :aria-labelledby="`${panelId}-${selectedTab}`" tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [scrollbar-width:thin] [tab-size:2] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500"><code class="font-jetbrains-mono">{{ code }}</code></pre>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>
     </section>
   </aside>
