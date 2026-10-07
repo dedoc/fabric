@@ -105,7 +105,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       </div>
       <div v-if="propertyRequired" class="text-amber-700">required</div>
     </div>
-    <Description v-if="resolvedSchema.description && !shouldHideDescription" :content="resolvedSchema.description"/>
+    <Description v-if="resolvedSchema.description && !shouldHideDescription" class="leading-normal" :content="resolvedSchema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
 
     <div v-if="
       resolvedSchema.minLength !== undefined
@@ -156,6 +156,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     <template v-if="arePropertiesVisible">
       <div v-if="resolvedSchema.properties" :class="[
         shouldDisablePropertiesPadding ? '' : 'relative border-l pl-4',
+        shouldHideMainType && resolvedSchema.description && !shouldHideDescription ? 'mt-4' : '',
         'border-gray-100',
       ]">
         <template v-for="(propertySchema, name, i) of resolvedSchema.properties">

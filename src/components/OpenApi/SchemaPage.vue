@@ -14,7 +14,7 @@ const resolvedSchema = computed(() => resolveExampleSchema(props.schema, props.c
   <article class="grid grid-cols-1 gap-8 [overflow-wrap:anywhere] min-[1200px]:min-h-[calc(100dvh-112px)] min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] min-[1200px]:grid-rows-[auto_1fr]">
     <h1 class="col-start-1 min-w-0 text-balance text-2xl font-medium tracking-tight md:text-3xl">{{ resolvedSchema?.title ?? name }}</h1>
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <Description v-if="resolvedSchema?.description" :content="resolvedSchema.description" />
+      <Description v-if="resolvedSchema?.description" class="text-gray-700" :content="resolvedSchema.description" />
       <Schema :schema="schema" :components="components" :level="1" :shouldHideDescription="true" :shouldHideMainType="true" :shouldDisablePropertiesPadding="true" />
     </div>
     <SchemaExamples :schema="schema" :components="components" />

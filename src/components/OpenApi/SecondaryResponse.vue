@@ -25,7 +25,7 @@ const unreferencedResponse = computed(() => {
       <div class="text-gray-300 shrink-0">·</div>
       <div><span class="text-gray-500">OK</span></div>
     </div>
-    <Description v-if="unreferencedResponse.description" class="text-gray-900 mt-4 leading-5 text-sm" :content="unreferencedResponse.description"/>
+    <Description v-if="unreferencedResponse.description" class="text-gray-700 mt-4 leading-normal text-sm" :content="unreferencedResponse.description"/>
     <MediaType class="mt-5" :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode}`" label="Response body content type" />
   </div>
 </template>

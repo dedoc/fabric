@@ -37,7 +37,7 @@ const operationSummary = computed(() => {
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <Description v-if="operation.description" :content="operation.description"/>
+      <Description v-if="operation.description" class="leading-normal text-gray-700" :content="operation.description"/>
       <Request
           v-if="operation.parameters || operation.requestBody"
           :components="components"

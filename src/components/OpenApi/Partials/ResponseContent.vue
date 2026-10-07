@@ -26,7 +26,7 @@ const transformHeadersToSchema = (headers: Record<string, Header>): SchemaType =
 
 <template>
 <div class="space-y-5">
-  <Description v-if="unreferencedResponse.description" :content="unreferencedResponse.description"/>
+  <Description v-if="unreferencedResponse.description" class="leading-normal text-gray-700" :content="unreferencedResponse.description"/>
   <div v-if="unreferencedResponse.headers">
     <div class="flex">
       <div class="flex gap-2 items-baseline">

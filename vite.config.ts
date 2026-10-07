@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     proxy: {
+      '/spotify/open-api-schema.yaml': {
+        target: 'https://developer.spotify.com',
+        changeOrigin: true,
+        rewrite: () => '/reference/web-api/open-api-schema.yaml',
+      },
       '/converterer/openapi.json': {
         target: 'https://api.converterer.com',
         changeOrigin: true,

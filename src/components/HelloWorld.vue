@@ -2,6 +2,7 @@
 import {InjectionKey, onMounted, provide, ref} from 'vue'
 import Pages from "./Layouts/Pages.vue";
 import {documentKey} from "../utils/symbols.ts";
+import {parse} from 'yaml'
 
 withDefaults(defineProps<{ msg: string, showSchemas?: boolean }>(), {showSchemas: true})
 
@@ -18,15 +19,20 @@ onMounted(async () => {
     // const f = await fetch('https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json')
     // Stripe: large fixture for nested schemas and rendering performance.
     // const f = await fetch('https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json')
-    const f = await fetch('https://raw.githubusercontent.com/box/box-openapi/main/openapi.json')
+    // const f = await fetch('https://raw.githubusercontent.com/box/box-openapi/main/openapi.json')
+    // Spotify: official YAML specification, proxied to avoid browser CORS restrictions.
+    const f = await fetch('/spotify/open-api-schema.yaml')
     // const f = await fetch('http://demo-scramble-pro.test/docs/api.json')
     // const f = await fetch('/docs/api.json')
     // const f = await fetch('http://l12app.test/docs/api.json')
     // const f = await fetch('http://reproduction.test/docs/api.json')
     // const f = await fetch('http://l12.test/docs/api.json')
-    documentUrl.value = f.url === new URL('/converterer/openapi.json', window.location.href).href
-      ? 'https://api.converterer.com/openapi.json' : f.url
-    return await f.json()
+    const sourceUrls: Record<string, string> = {
+      '/converterer/openapi.json': 'https://api.converterer.com/openapi.json',
+      '/spotify/open-api-schema.yaml': 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml',
+    }
+    documentUrl.value = sourceUrls[new URL(f.url).pathname] ?? f.url
+    return parse(await f.text())
   }
 
   document.value = await getDocument()

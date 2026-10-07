@@ -1118,6 +1118,7 @@ __metadata:
     vite: "npm:^5.4.1"
     vue: "npm:^3.4.37"
     vue-tsc: "npm:^2.0.29"
+    yaml: "npm:^2.3.4"
   languageName: unknown
   linkType: soft
 

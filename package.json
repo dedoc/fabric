@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "markdown-it": "^14.1.0",
-    "vue": "^3.4.37"
+    "vue": "^3.4.37",
+    "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.14",

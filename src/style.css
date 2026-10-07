@@ -26,20 +26,26 @@
         overflow-wrap: anywhere;
     }
     .prose > * + * { margin-top: 0.75em; }
+    .prose p { margin-bottom: 0.25em; }
+    .prose > p + p { margin-top: 0.5em; }
+    .prose > :first-child { margin-top: 0; }
+    .prose > :last-child { margin-bottom: 0; }
     .prose :is(h1, h2, h3, h4, h5, h6) { @apply font-semibold text-gray-900; }
     .prose :is(h1, h2) { @apply text-xl; }
     .prose :is(h3, h4, h5, h6) { @apply text-lg; }
-    .prose a { @apply text-gray-900 underline underline-offset-2 hover:text-gray-600; }
+    .prose a { @apply text-gray-600 underline underline-offset-2 hover:text-gray-700; }
     .prose :is(ul, ol) { padding-left: 1.5em; }
     .prose ul { list-style: disc; }
     .prose ol { list-style: decimal; }
     .prose li + li { margin-top: 0.25em; }
     .prose li > * + * { margin-top: 0.5em; }
     .prose code { @apply rounded px-1 py-0.5; font-size: 0.9em; }
+    .prose :is(pre, code) { @apply text-gray-600; }
     .prose pre { @apply overflow-auto rounded-lg p-4; }
     .prose pre code { @apply bg-transparent p-0; }
     .prose img { @apply h-auto max-w-full rounded-lg; }
-    .prose strong { @apply font-semibold text-gray-900; }
+    .prose strong { @apply font-semibold; }
+    .prose :is(strong, b, em, i) { color: inherit; }
     .prose blockquote { @apply border-l-2 border-gray-950/10 pl-4; }
     .prose hr { @apply border-gray-950/10; }
     .prose table { @apply block max-w-full overflow-auto text-left; }
