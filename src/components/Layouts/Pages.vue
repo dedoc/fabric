@@ -4,6 +4,7 @@ import {computed, onMounted, onUnmounted, provide, ref} from "vue";
 import {showSchemasKey} from "../../utils/symbols.ts";
 import Paths from "../OpenApi/Paths.vue";
 import SchemaPage from "../OpenApi/SchemaPage.vue";
+import Overview from "../OpenApi/Overview.vue";
 import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
 import NavigationItem from "./Partials/NavigationItem.vue";
@@ -25,10 +26,11 @@ const operations = computed(() => getInlineOperations(props.paths))
 
 function getPageIdFromUrl (): string|undefined {
   const url = new URL(window.location.href)
-  return url.hash.replace(/^#/, '')
+  const id = url.hash.replace(/^#/, '')
+  return id.startsWith('overview/') ? 'overview' : id
 }
 
-const selectedPageId = ref<string|undefined>(getPageIdFromUrl() || operations.value[0]?.id)
+const selectedPageId = ref<string|undefined>(getPageIdFromUrl() || 'overview')
 
 const schemas = computed(() => Object.entries(props.components.schemas ?? {}).map(([name, schema]) => ({
   id: `schemas/${encodeURIComponent(name)}`,
@@ -115,7 +117,7 @@ const filteredNavigation = computed(() => buildNavigationTree(operations.value.f
     .toLowerCase().includes(search.value.toLowerCase())
 )))
 function syncLocation() {
-  selectedPageId.value = getPageIdFromUrl() || operations.value[0]?.id
+  selectedPageId.value = getPageIdFromUrl() || 'overview'
   window.scrollTo(0, 0)
   mobileNavigationOpen.value = false
 }
@@ -139,7 +141,7 @@ onUnmounted(() => {
 <template>
   <div class="isolate bg-white text-gray-900 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
     <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] bg-white px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
-      <div class="min-w-0 flex-1 truncate text-base font-semibold md:w-full md:flex-none md:text-lg">{{ document.info.title ?? '' }}</div>
+      <div class="min-w-0 flex-1 truncate text-base font-semibold md:w-full md:flex-none md:text-lg">{{ document.info?.title ?? '' }}</div>
       <button type="button" class="min-h-9 rounded-md border border-gray-950/10 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
       </button>
@@ -150,6 +152,9 @@ onUnmounted(() => {
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
           <input class="min-w-0 w-full bg-transparent text-base outline-none sm:text-sm" v-model="search" name="reference-search" type="search" placeholder="Search reference…" aria-label="Search reference">
         </label>
+        <nav aria-label="Introduction" class="-mx-2 mb-6">
+          <NavigationItem label="Overview" href="#overview" :active="selectedPageId === 'overview'" :aria-current="selectedPageId === 'overview' ? 'page' : undefined" @click.prevent="handlePageSelect('overview')" />
+        </nav>
         <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">
           <Navigation v-for="item of filteredNavigation" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
@@ -164,6 +169,7 @@ onUnmounted(() => {
         </template>
       </aside>
       <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
+        <Overview v-if="selectedPageId === 'overview'" :document="document" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <div v-if="selectedOperation" :key="selectedOperation.id">
           <article class="min-w-0 [overflow-wrap:anywhere]">

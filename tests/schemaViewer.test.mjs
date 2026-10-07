@@ -161,8 +161,8 @@ test('only shows schema navigation when component schemas exist', async () => {
   assert.match(await renderPages({schemas: {Person: {type: 'object'}}}), /aria-label="Schemas"/)
 })
 
-test('initial reference view opens the first endpoint with accessible property disclosures', async () => {
-  const html = await renderPages({}, '', {paths: {'/files': {get: {
+test('direct endpoint view retains accessible property disclosures', async () => {
+  const html = await renderPages({}, '#operations/list-files', {paths: {'/files': {get: {
     operationId: 'list-files', summary: 'List files',
     requestBody: {content: {'application/json': {schema: {type: 'object', properties: {
       options: {type: 'object', properties: {name: {type: 'string'}}},
@@ -171,6 +171,67 @@ test('initial reference view opens the first endpoint with accessible property d
   assert.match(html, /<h1[^>]*>List files<\/h1>/)
   assert.match(html, /aria-current="page"/)
   assert.match(html, /<button[^>]*type="button"[^>]*aria-expanded="false"[^>]*>\+ Show properties<\/button>/)
+})
+
+test('overview is the landing page and renders spec descriptions, metadata and reference links', async () => {
+  const html = await renderPages({}, '', {
+    document: {openapi: '3.1.0', info: {
+      title: 'Files API', version: '2.0', summary: 'Manage your files.',
+      description: 'Upload **documents** and organize your workspace.\n\n## Getting started\n\nUse your API key.',
+      license: {name: 'MIT', url: 'https://example.com/license'},
+      contact: {name: 'Developer support', email: 'api@example.com', url: 'https://example.com/support'},
+      termsOfService: 'https://example.com/terms',
+    }, externalDocs: {url: 'https://example.com/guides', description: 'Guides'}},
+    paths: {'/files': {get: {operationId: 'list-files', tags: ['Files']}, post: {operationId: 'create-file', tags: ['Files']}}},
+  })
+  assert.match(html, /<h1[^>]*>Overview<\/h1>/)
+  assert.match(html, /Upload <strong>documents<\/strong>/)
+  assert.match(html, /<h2>Getting started<\/h2>/)
+  assert.match(html, /Manage your files\./)
+  assert.match(html, /href="#operations\/list-files"/)
+  assert.match(html, /2 endpoints/)
+  assert.match(html, /OpenAPI 3\.1\.0/)
+  assert.match(html, /https:\/\/example.com\/license/)
+  assert.match(html, /Developer support/)
+  assert.match(html, /mailto:api%40example.com/)
+  assert.match(html, /aria-current="page"/)
+  const direct = await renderPages({}, '#overview')
+  assert.match(direct, /<h1[^>]*>Overview<\/h1>/)
+  assert.doesNotMatch(direct, /aria-label="API details"|id="overview-auth"|id="overview-reference"/)
+})
+
+test('editorial is the only overview and old variant links still open it', async () => {
+  for (const hash of ['#overview', '#overview/editorial', '#overview/xai']) {
+    const html = await renderPages({}, hash, {
+      document: {info: {title: 'Files', description: 'Manage **files**.', version: '1.0'}},
+      paths: {'/files': {get: {operationId: 'list', tags: ['Files']}}},
+    })
+    assert.match(html, /max-w-\[72ch\]/)
+    assert.match(html, /Manage <strong>files<\/strong>/)
+    assert.match(html, /href="#operations\/list"/)
+    assert.equal((html.match(/href="#overview"/g) ?? []).length, 1)
+    assert.match(html, /href="#overview"[^>]*aria-current="page"/)
+    assert.doesNotMatch(html, /Overview ·|overview--|Authenticate with/)
+    assert.equal((html.match(/<h1[ >]/g) ?? []).length, 1)
+  }
+})
+
+test('overview includes server overrides, resolves templates and renders declared authentication', async () => {
+  const html = await renderPages({securitySchemes: {
+    ApiKey: {type: 'http', scheme: 'basic', description: 'Use your API key as the username.'},
+  }}, '#overview', {
+    document: {info: {title: 'API'}, servers: [{url: '/{version}', variables: {version: {default: 'v2'}}}]},
+    documentUrl: 'https://api.example.com/docs/openapi.json',
+    paths: {
+      '/files': {servers: [{url: 'https://download.example.com'}], post: {operationId: 'download'}},
+      '/status': {get: {operationId: 'status', servers: [{url: 'https://download.example.com'}]}},
+    },
+  })
+  assert.match(html, /https:\/\/api.example.com\/v2/)
+  assert.equal((html.match(/https:\/\/download.example.com/g) ?? []).length, 1)
+  assert.match(html, /HTTP Basic/)
+  assert.match(html, /Use your API key as the username\./)
+  assert.doesNotMatch(html, /Bearer token/)
 })
 
 test('opens schema hashes and renders the title, description and tabbed example', async () => {

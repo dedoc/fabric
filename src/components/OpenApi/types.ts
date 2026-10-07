@@ -182,6 +182,17 @@ export type Components = {
 }
 
 export type Document = {
+    openapi?: string,
+    info?: {
+        title?: string,
+        summary?: string,
+        description?: string,
+        version?: string,
+        termsOfService?: string,
+        contact?: {name?: string, url?: string, email?: string},
+        license?: {name: string, url?: string, identifier?: string},
+    },
+    externalDocs?: {description?: string, url: string},
     servers?: Server[],
     security?: SecurityRequirement[],
     components?: Components,
