@@ -146,7 +146,7 @@ onUnmounted(() => {
     </header>
     <div class="flex items-start md:min-h-dvh">
       <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] md:px-6 md:pt-2 min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
-        <label class="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-2 text-gray-500 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
+        <label class="mb-6 flex items-center gap-2 rounded-xl border border-gray-200 px-2.5 py-2 text-gray-500 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
           <input class="min-w-0 w-full bg-transparent text-base outline-none sm:text-sm" v-model="search" name="reference-search" type="search" placeholder="Search reference…" aria-label="Search reference">
         </label>
