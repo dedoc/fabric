@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
+import {readFile} from 'node:fs/promises'
 import {createServer as createHttpServer} from 'node:http'
 import {createServer} from 'vite'
 import {createRenderer, createSSRApp, h, provide, ref} from 'vue'
@@ -9,6 +10,8 @@ const server = await createServer({server: {middlewareMode: true, hmr: {server: 
 after(() => server.close())
 const {default: Schema} = await server.ssrLoadModule('/src/components/OpenApi/Schema.vue')
 const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
+const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
+const {parseSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {getSchemaTypeParts} = await server.ssrLoadModule('/src/components/OpenApi/schemaTypePreview.ts')
 const {useMediaType, provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
@@ -23,6 +26,43 @@ const {operationSecurity, resolveSecurityScheme} = await server.ssrLoadModule('/
 const {provideAuthCredentials, httpAuthForOperation, authorizationForOption} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
 const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
 const {basicAuthorization} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/auth.ts')
+
+test('the selected Petstore fixture loads with its upstream logo', async () => {
+  const document = parseSpecification(await readFile(new URL('../public/specs/redocly-petstore.yaml', import.meta.url), 'utf8'))
+  assert.equal(document.info.title, 'Swagger Petstore')
+  assert.equal(document.info['x-logo'].url, 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/petstore-logo.png')
+  assert.ok(Object.keys(document.paths).length)
+})
+
+test('API branding resolves spec-relative logos and contact links with accessible text', async () => {
+  const html = await renderToString(createSSRApp(ApiBrand, {
+    documentUrl: 'https://example.com/spec/openapi.yaml',
+    info: {title: 'Example API', contact: {url: '../support'}, 'x-logo': {
+      url: './logo.svg', altText: 'Example logo', backgroundColor: '#FFFFFF',
+    }},
+  }))
+  assert.match(html, /src="https:\/\/example.com\/spec\/logo.svg"/)
+  assert.match(html, /href="https:\/\/example.com\/support"/)
+  assert.match(html, /alt="Example logo"/)
+  assert.match(html, /background-color:#FFFFFF/)
+})
+
+test('API branding honors explicit links and rejects unsafe URLs and invalid colors', async () => {
+  const render = info => renderToString(createSSRApp(ApiBrand, {info}))
+  const html = await render({contact: {url: 'https://example.com/support'}, 'x-logo': {
+    url: 'https://example.com/logo.png', href: 'https://example.com/home', backgroundColor: 'url(https://example.com)',
+  }})
+  assert.match(html, /href="https:\/\/example.com\/home"/)
+  assert.match(html, /alt="logo"/)
+  assert.doesNotMatch(html, /background-color/)
+  const unsafeLink = await render({'x-logo': {url: 'https://example.com/logo.png', href: 'javascript:alert(1)'}})
+  assert.doesNotMatch(unsafeLink, /<a\b|javascript:/)
+  for (const logo of [undefined, {url: 'javascript:alert(1)'}, {url: 'data:image/svg+xml,unsafe'}, {url: ''}]) {
+    const fallback = await render({title: 'Example API', 'x-logo': logo})
+    assert.match(fallback, /Example API/)
+    assert.doesNotMatch(fallback, /<img/)
+  }
+})
 
 test('saved Basic credentials respect endpoint overrides and complete authentication alternatives', () => {
   const document = {security: [{Basic: []}], components: {securitySchemes: {

@@ -9,15 +9,17 @@ yarn install
 yarn dev
 ```
 
-Scalar Galaxy is the active test specification, with HTTP Bearer authentication among its supported methods. Specifications are fetched at runtime; none are bundled.
+Redocly's Petstore demo is the active test specification, loaded from `public/specs/redocly-petstore.yaml`. This copy uses the compatible `v2.0.0-rc.1` demo with its retired logo URL replaced by the working upstream repository asset. The main-branch demo has a malformed array schema. Both upstream URLs remain commented alternatives; other remote specifications are fetched at runtime.
 
 ## Use another specification
 
-In `src/components/HelloWorld.vue`, comment out the active `specUrl` and uncomment another. Choices include Scalar Galaxy, SpaceTraders, Spotify, Converterer, Petstore, GitHub, Stripe, Box, and local test APIs. SpaceTraders uses external schema references, which the renderer does not yet resolve.
+In `src/components/HelloWorld.vue`, comment out the active `specUrl` and uncomment another. Keep added specifications as commented alternatives when switching. Choices include Redocly Petstore, SavvyCal, Scalar Galaxy, SpaceTraders, Spotify, Converterer, Petstore, GitHub, Stripe, Box, and local test APIs. SpaceTraders uses external schema references, which the renderer does not yet resolve.
 
 The URL can serve JSON or YAML. Spotify and Converterer use development proxies configured in `vite.config.ts`. Other cross-origin sources must allow browser requests through CORS. These proxies are for local testing; production source hosting remains a separate deployment concern.
 
 When embedding the viewer, pass `specUrl` and optionally `showSchemas` to `src/components/HelloWorld.vue`. Omitting `specUrl` uses the selected test URL. Changing the prop cancels the previous load.
+
+`info.x-logo` displays a logo above navigation, with support for `url`, `altText`, hexadecimal `backgroundColor`, and `href` (defaulting to `info.contact.url`). Relative URLs resolve against the specification URL. Images and links accept HTTP(S) URLs; missing, invalid, or failed images fall back to the API title.
 
 ## Errors and description safety
 

@@ -12,7 +12,11 @@ const props = withDefaults(defineProps<{showSchemas?: boolean, specUrl?: string}
 // Uncomment one URL at a time to switch the test specification.
 // const specUrl = '/spotify/open-api-schema.yaml'
 // const specUrl = '/converterer/openapi.json'
-const specUrl = 'https://galaxy.scalar.com/openapi.json'
+const specUrl = '/specs/redocly-petstore.yaml'
+// const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml'
+// const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/openapi.yaml'
+// const specUrl = 'https://api.savvycal.com/v1/spec'
+// const specUrl = 'https://galaxy.scalar.com/openapi.json'
 // const specUrl = 'https://raw.githubusercontent.com/SpaceTradersAPI/api-docs/main/reference/SpaceTraders.json'
 // const specUrl = 'https://petstore3.swagger.io/api/v3/openapi.json'
 // const specUrl = 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json'
@@ -24,8 +28,9 @@ const specUrl = 'https://galaxy.scalar.com/openapi.json'
 // const specUrl = 'http://reproduction.test/docs/api.json'
 // const specUrl = 'http://l12.test/docs/api.json'
 
-// Preserve the upstream base URL when loading through a development proxy.
+// Preserve the upstream base URL for mirrored specs and development proxies.
 const proxySources: Record<string, string> = {
+  '/specs/redocly-petstore.yaml': 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml',
   '/spotify/open-api-schema.yaml': 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml',
   '/converterer/openapi.json': 'https://api.converterer.com/openapi.json',
 }

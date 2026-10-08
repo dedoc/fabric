@@ -190,6 +190,7 @@ export type Document = {
         description?: string,
         version?: string,
         termsOfService?: string,
+        'x-logo'?: {url: string, backgroundColor?: string, altText?: string, href?: string},
         contact?: {name?: string, url?: string, email?: string},
         license?: {name: string, url?: string, identifier?: string},
     },

@@ -5,6 +5,7 @@ import {showSchemasKey} from "../../utils/symbols.ts";
 import Paths from "../OpenApi/Paths.vue";
 import SchemaPage from "../OpenApi/SchemaPage.vue";
 import Overview from "../OpenApi/Overview.vue";
+import ApiBrand from '../OpenApi/ApiBrand.vue'
 import Operation from "../OpenApi/Operation.vue";
 import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
@@ -150,7 +151,7 @@ onUnmounted(() => {
 <template>
   <div class="isolate bg-white text-gray-900 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
     <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] bg-white px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
-      <div class="min-w-0 flex-1 truncate text-base font-semibold md:w-full md:flex-none md:text-lg">{{ document.info?.title ?? '' }}</div>
+      <ApiBrand :info="document.info" :document-url="documentUrl" />
       <button type="button" class="min-h-9 rounded-md border border-gray-950/10 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
       </button>
