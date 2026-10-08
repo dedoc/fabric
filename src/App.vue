@@ -5,5 +5,5 @@ const viewerOptions = {showSchemas: true}
 </script>
 
 <template>
-  <HelloWorld msg="Vite + Vue" :showSchemas="viewerOptions.showSchemas" />
+  <HelloWorld :showSchemas="viewerOptions.showSchemas" />
 </template>

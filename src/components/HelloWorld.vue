@@ -1,56 +1,79 @@
 <script setup lang="ts">
-import {InjectionKey, onMounted, provide, ref} from 'vue'
-import Pages from "./Layouts/Pages.vue";
-import {documentKey} from "../utils/symbols.ts";
-import {parse} from 'yaml'
+import {onErrorCaptured, onMounted, onUnmounted, provide, ref, watch} from 'vue'
+import Pages from './Layouts/Pages.vue'
+import SpecError from './SpecError.vue'
+import {documentKey} from '../utils/symbols'
+import type {Document} from './OpenApi/types'
+import {fetchSpecification, SpecificationError} from './OpenApi/specification'
+import type {Specification} from './OpenApi/specification'
 
-withDefaults(defineProps<{ msg: string, showSchemas?: boolean }>(), {showSchemas: true})
+const props = withDefaults(defineProps<{showSchemas?: boolean, specUrl?: string}>(), {showSchemas: true})
 
-const document = ref(null)
+// Uncomment one URL at a time to switch the test specification.
+const specUrl = '/spotify/open-api-schema.yaml'
+// const specUrl = '/converterer/openapi.json'
+// const specUrl = 'https://petstore3.swagger.io/api/v3/openapi.json'
+// const specUrl = 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json'
+// const specUrl = 'https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json'
+// const specUrl = 'https://raw.githubusercontent.com/box/box-openapi/main/openapi.json'
+// const specUrl = 'http://demo-scramble-pro.test/docs/api.json'
+// const specUrl = '/docs/api.json'
+// const specUrl = 'http://l12app.test/docs/api.json'
+// const specUrl = 'http://reproduction.test/docs/api.json'
+// const specUrl = 'http://l12.test/docs/api.json'
+
+// Preserve the upstream base URL when loading through a development proxy.
+const proxySources: Record<string, string> = {
+  '/spotify/open-api-schema.yaml': 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml',
+  '/converterer/openapi.json': 'https://api.converterer.com/openapi.json',
+}
+const document = ref<Document>({})
+const specification = ref<Specification>()
 const documentUrl = ref('')
-
-onMounted(async () => {
-  async function getDocument () {
-    // Converterer: fetch through the Vite development proxy to avoid browser CORS restrictions.
-    // const f = await fetch('/converterer/openapi.json')
-    // Petstore: small baseline with multiple content types and response headers.
-    // const f = await fetch('https://petstore3.swagger.io/api/v3/openapi.json')
-    // GitHub: large fixture for navigation, search, and schema references.
-    // const f = await fetch('https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json')
-    // Stripe: large fixture for nested schemas and rendering performance.
-    // const f = await fetch('https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json')
-    // const f = await fetch('https://raw.githubusercontent.com/box/box-openapi/main/openapi.json')
-    // Spotify: official YAML specification, proxied to avoid browser CORS restrictions.
-    const f = await fetch('/spotify/open-api-schema.yaml')
-    // const f = await fetch('http://demo-scramble-pro.test/docs/api.json')
-    // const f = await fetch('/docs/api.json')
-    // const f = await fetch('http://l12app.test/docs/api.json')
-    // const f = await fetch('http://reproduction.test/docs/api.json')
-    // const f = await fetch('http://l12.test/docs/api.json')
-    const sourceUrls: Record<string, string> = {
-      '/converterer/openapi.json': 'https://api.converterer.com/openapi.json',
-      '/spotify/open-api-schema.yaml': 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml',
-    }
-    documentUrl.value = sourceUrls[new URL(f.url).pathname] ?? f.url
-    return parse(await f.text())
-  }
-
-  document.value = await getDocument()
-})
+const state = ref<'loading' | 'ready' | 'error'>('loading')
+const message = ref('')
+let controller: AbortController | undefined
+let revision = 0
 
 provide(documentKey, document)
 
-//https://github.com/xiaoluoboding/vue-command-palette
-// fuse for search
+async function load() {
+  const current = ++revision
+  controller?.abort()
+  controller = new AbortController()
+  state.value = 'loading'
+  specification.value = undefined
+  message.value = ''
+  try {
+    const url = props.specUrl ?? specUrl
+    const result = await fetchSpecification(url, controller.signal)
+    if (current !== revision) return
+    document.value = result.document
+    specification.value = result.document
+    documentUrl.value = proxySources[url] ?? result.documentUrl
+    state.value = 'ready'
+  } catch (error) {
+    if (current !== revision) return
+    message.value = error instanceof SpecificationError ? error.message : 'The specification could not be displayed. Check the document and try again.'
+    state.value = 'error'
+  }
+}
+
+onErrorCaptured((error) => {
+  console.error('API reference rendering failed', error)
+  message.value = 'Something in this specification could not be displayed. Check the document and try again.'
+  state.value = 'error'
+  return false
+})
+onMounted(load)
+watch(() => props.specUrl, load)
+onUnmounted(() => { revision++; controller?.abort() })
 </script>
 
 <template>
-  <Pages
-      v-if="document"
-      :document="document"
-      :document-url="documentUrl"
-      :components="document.components ?? {}"
-      :paths="document.paths ?? {}"
-      :showSchemas="showSchemas"
-  />
+  <SpecError v-if="state === 'error'" :message="message" @retry="load" />
+  <main v-else-if="state === 'loading'" class="grid min-h-dvh place-items-center px-6" role="status">
+    <p class="text-sm text-gray-500">Loading API reference…</p>
+  </main>
+  <Pages v-else-if="specification" :key="revision" :document="specification" :document-url="documentUrl" :components="specification.components ?? {}" :paths="specification.paths" :show-schemas="showSchemas" />
 </template>
