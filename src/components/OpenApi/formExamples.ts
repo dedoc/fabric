@@ -1,4 +1,4 @@
-import type {Components, MediaType} from './types'
+import type {Components, Document, MediaType} from './types'
 import {getMediaExample} from './mediaExamples'
 
 export function isFormContentType(contentType: string): boolean {
@@ -6,8 +6,8 @@ export function isFormContentType(contentType: string): boolean {
 }
 
 /** Form values are shared by request senders before transport-specific escaping. */
-export function createFormFields(media: MediaType | undefined, components: Components): [string, string][] {
-  const value = getMediaExample(media, components)
+export function createFormFields(media: MediaType | undefined, components: Components, document: Document = {components}): [string, string][] {
+  const value = getMediaExample(media, components, true, document)
   if (value === undefined) return []
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return []
 

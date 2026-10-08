@@ -1,0 +1,43 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Reference fixture", "version": "1"},
+  "paths": {
+    "/source": {
+      "post": {
+        "operationId": "source",
+        "summary": "Source endpoint",
+        "parameters": [{"name": "trace", "in": "header", "schema": {"type": "string"}, "description": "Trace identifier"}],
+        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Alias"}}}},
+        "responses": {"200": {"$ref": "#/components/responses/Alias", "description": "Local response description"}},
+        "security": [{"Alias": []}]
+      }
+    },
+    "/alias": {"$ref": "#/paths/~1source"},
+    "/broken": {"$ref": "#/paths/~1missing"},
+    "/external": {"$ref": "external.yaml#/paths/~1pets"}
+  },
+  "webhooks": {"created": {"$ref": "#/paths/~1source"}, "broken": {"$ref": "#/components/pathItems/Loop"}},
+  "components": {
+    "schemas": {
+      "A/B~C": {"type": "object", "properties": {"id": {"type": "integer", "example": 7}}},
+      "Alias": {"$ref": "#/components/schemas/A~1B~0C"},
+      "Extended": {"$ref": "#/components/schemas/Alias", "type": "object", "properties": {"name": {"type": "string", "example": "pet"}}},
+      "Node": {"type": "object", "properties": {"next": {"$ref": "#/components/schemas/Node"}}},
+      "LoopA": {"$ref": "#/components/schemas/LoopB"},
+      "LoopB": {"$ref": "#/components/schemas/LoopA"},
+      "Missing": {"$ref": "#/components/schemas/absent"},
+      "External": {"$ref": "models.yaml#/Pet"},
+      "FromPath": {"$ref": "#/paths/~1source/post/requestBody/content/application~1json/schema"}
+    },
+    "parameters": {"Trace": {"$ref": "#/paths/~1source/post/parameters/0"}},
+    "requestBodies": {"Alias": {"$ref": "#/paths/~1source/post/requestBody"}},
+    "headers": {"Count": {"schema": {"type": "integer"}, "description": "Remaining count"}, "Alias": {"$ref": "#/components/headers/Count"}, "Broken": {"$ref": "headers.yaml#/Count"}},
+    "responses": {
+      "Success": {"description": "Target response description", "headers": {"X-Count": {"$ref": "#/components/headers/Alias"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Alias"}, "examples": {"sample": {"$ref": "#/components/examples/Alias"}}}}},
+      "Alias": {"$ref": "#/components/responses/Success"}
+    },
+    "examples": {"Sample": {"value": {"id": 8}}, "Alias": {"$ref": "#/components/examples/Sample"}},
+    "securitySchemes": {"Basic": {"type": "http", "scheme": "basic"}, "Alias": {"$ref": "#/components/securitySchemes/Basic"}},
+    "pathItems": {"Loop": {"$ref": "#/components/pathItems/Loop"}}
+  }
+}

@@ -115,7 +115,7 @@ test('slow remote loads time out and abort the outstanding fetch', async t => {
 
 function mountViewer(url = '/spec.json', hash = '#overview', component) {
   const originalWindow = globalThis.window
-  globalThis.window = {location: {href: `https://example.com/${hash}`}, scrollTo() {}, addEventListener() {}, removeEventListener() {},
+  globalThis.window = {location: {href: `https://example.com/${hash}`}, history: {pushState() {}}, scrollTo() {}, addEventListener() {}, removeEventListener() {},
     matchMedia: () => ({addEventListener() {}, removeEventListener() {}})}
   const node = (type, text = '') => ({type, tagName: type.toUpperCase(), text, children: [], props: {}, parent: null,
     get options() { return this.children.filter(child => child.type === 'option') },
@@ -266,16 +266,21 @@ test('the small error page retries loading and recovers to the API reference', a
   } finally { viewer.close(); globalThis.fetch = original }
 })
 
-test('renderer errors such as unresolved schema references show the same small error page', async () => {
+test('unresolved schemas show local warnings while navigation remains usable', async () => {
   const original = globalThis.fetch
   globalThis.fetch = async () => new Response(JSON.stringify({...valid, components: {schemas: {Broken: {
     $ref: '#/components/schemas/Missing',
   }}}}))
   const viewer = mountViewer('/spec.json', '#schemas/Broken')
   try {
-    await until(() => viewer.text().includes('Something in this specification could not be displayed'))
-    assert.match(viewer.text(), /Unable to display this API/)
-    assert.equal(viewer.button().text, 'Try again')
+    await until(() => viewer.text().includes('Reference target was not found'))
+    assert.match(viewer.text(), /#\/components\/schemas\/Missing/)
+    assert.doesNotMatch(viewer.text(), /Unable to display this API/)
+    const overview = viewer.find(el => el.props.href === '#overview')
+    assert.ok(overview)
+    overview.props.onClick({preventDefault() {}})
+    await until(() => !viewer.text().includes('Reference target was not found'))
+    assert.match(viewer.text(), /Recovered API/)
   } finally { viewer.close(); globalThis.fetch = original }
 })
 

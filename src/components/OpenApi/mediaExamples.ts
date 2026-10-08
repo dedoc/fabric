@@ -1,5 +1,6 @@
-import type {Components, Example, MediaType} from './types'
-import {unreference} from './utils'
+import type {Components, Document, Example, MediaType} from './types'
+import {resolveReference} from './references'
+import type {ReferenceIssue} from './references'
 import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
 import {createXmlExample} from './xmlExamples'
 
@@ -14,11 +15,13 @@ export function isXmlContentType(contentType: string): boolean {
 }
 
 /** Media examples take precedence over schema examples and generated values. */
-export function getMediaExample(media: MediaType | undefined, components: Components, generate = true): unknown {
+export function getMediaExample(media: MediaType | undefined, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void): unknown {
   if (!media) return undefined
   const entry = Object.values(media.examples ?? {})[0]
-  const named = entry && ('$ref' in entry ? unreference<Example>(entry.$ref, components) : entry)
-  const schema = resolveExampleSchema(media.schema, components)
+  const result = resolveReference<Example>(document, entry)
+  result.issues.forEach(issue => report?.(issue))
+  const named = result.value
+  const schema = resolveExampleSchema(media.schema, components, document, report)
   let value = media.example !== undefined ? media.example : named?.value
   if (value === undefined && (generate || schema?.example !== undefined || schema?.examples?.length)) {
     value = createSchemaExample(schema)
@@ -26,16 +29,16 @@ export function getMediaExample(media: MediaType | undefined, components: Compon
   return value
 }
 
-export function formatMediaExample(media: MediaType | undefined, contentType: string, components: Components, generate = true): string {
-  const value = getMediaExample(media, components, generate || isXmlContentType(contentType))
+export function formatMediaExample(media: MediaType | undefined, contentType: string, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void): string {
+  const value = getMediaExample(media, components, generate || isXmlContentType(contentType), document, report)
   if (!media || value === undefined) return ''
   if (!isXmlContentType(contentType)) return JSON.stringify(value, null, 2) ?? ''
 
   // Media-level XML strings are already serialized; keep them exactly as supplied.
   const entry = Object.values(media.examples ?? {})[0]
-  const named = entry && ('$ref' in entry ? unreference<Example>(entry.$ref, components) : entry)
+  const named = resolveReference<Example>(document, entry).value
   if (typeof value === 'string' && (media.example !== undefined || named?.value !== undefined)) return value
-  const schema = resolveExampleSchema(media.schema, components)
+  const schema = resolveExampleSchema(media.schema, components, document)
   const referenceName = media.schema?.$ref?.split('/').pop()?.replace(/~1/g, '/').replace(/~0/g, '~')
   return createXmlExample(value, schema, referenceName ?? 'root')
 }

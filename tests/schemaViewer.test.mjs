@@ -26,6 +26,102 @@ const {operationSecurity, resolveSecurityScheme} = await server.ssrLoadModule('/
 const {provideAuthCredentials, httpAuthForOperation, authorizationForOption} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
 const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
 const {basicAuthorization} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/auth.ts')
+const {resolveReference} = await server.ssrLoadModule('/src/components/OpenApi/references.ts')
+const {resolveExampleSchema, createSchemaExample} = await server.ssrLoadModule('/src/components/OpenApi/schemaExamples.ts')
+const referenceFixture = JSON.parse(await readFile(new URL('./fixtures/local-references.json', import.meta.url), 'utf8'))
+
+async function renderWithDocument(component, props, document) {
+  return renderToString(createSSRApp({setup() {
+    provide(documentKey, ref(document))
+    provideMediaTypeSelections()
+    return () => h(component, props)
+  }}))
+}
+
+test('reference fixture resolves aliases, escaped names and non-component locations in every consumer', async () => {
+  const document = referenceFixture
+  const components = document.components
+  const operations = getInlineOperations(document.paths, document)
+  assert.equal(operations.find(item => item.path === '/alias').operation.summary, 'Source endpoint')
+  assert.equal(resolveSecurityScheme('Alias', components, document).scheme, 'basic')
+  const operation = {...document.paths['/source'].post,
+    parameters: [{$ref: '#/components/parameters/Trace'}],
+    requestBody: {$ref: '#/components/requestBodies/Alias'},
+  }
+  const {default: Operation} = await server.ssrLoadModule('/src/components/OpenApi/Operation.vue')
+  const html = await renderWithDocument(Operation, {base: 'https://api.example.com', path: '/alias', method: 'post', operation, components}, document)
+  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Authorization: Basic/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(html, pattern)
+  assert.doesNotMatch(html, /Reference warning/)
+  const schema = resolveExampleSchema(components.schemas.FromPath, components, document)
+  assert.deepEqual(createSchemaExample(schema), {id: 7})
+})
+
+test('schema sibling semantics match documentation and examples in 3.0 and 3.1', async () => {
+  for (const openapi of ['3.0.3', '3.1.0']) {
+    const document = {...referenceFixture, openapi}
+    const schema = document.components.schemas.Extended
+    const value = createSchemaExample(resolveExampleSchema(schema, document.components, document))
+    assert.deepEqual(value, openapi === '3.1.0' ? {id: 7, name: 'pet'} : {id: 7})
+    const html = await renderWithDocument(Schema, {schema, components: document.components}, document)
+    assert.match(html, /id/)
+    if (openapi === '3.1.0') {
+      assert.match(html, /Must match all schemas/)
+      assert.match(html, /name/)
+    } else assert.doesNotMatch(html, /name|Must match all schemas/)
+  }
+})
+
+test('unresolved, circular and external schema sections render explicit local diagnostics', async () => {
+  for (const [name, message] of [['Missing', /not found/], ['LoopA', /Circular reference/], ['External', /External references are not supported/]]) {
+    const html = await renderWithDocument(Schema, {schema: referenceFixture.components.schemas[name], components: referenceFixture.components}, referenceFixture)
+    assert.match(html, /aria-label="Reference warning"/)
+    assert.match(html, message)
+  }
+  const html = await renderPages(referenceFixture.components, '#overview', {document: referenceFixture, paths: referenceFixture.paths})
+  assert.match(html, /Source endpoint/)
+  assert.match(html, /Reference target was not found/)
+  assert.match(html, /External references are not supported/)
+  assert.match(html, /Circular reference/)
+  assert.doesNotMatch(html, /Unable to display this API/)
+})
+
+test('recursive schema rendering terminates in properties, items and composition', async () => {
+  const document = structuredClone(referenceFixture)
+  document.components.schemas.Array = {type: 'array', items: {$ref: '#/components/schemas/Array'}}
+  document.components.schemas.Composition = {allOf: [{$ref: '#/components/schemas/Composition'}]}
+  for (const name of ['Node', 'Array', 'Composition']) {
+    const html = await renderWithDocument(Schema, {schema: document.components.schemas[name], components: document.components}, document)
+    assert.match(html, /Recursive schema/)
+    assert.doesNotMatch(html, /Circular reference alias/)
+  }
+})
+
+test('bad body, response, header and named-example references stay local and disable incomplete example copies', async () => {
+  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
+  const {default: Response} = await server.ssrLoadModule('/src/components/OpenApi/Response.vue')
+  const components = referenceFixture.components
+  const body = await renderWithDocument(RequestBody, {requestBody: {$ref: 'body.yaml#/Body'}, components}, referenceFixture)
+  assert.match(body, /External references are not supported/)
+  const response = await renderWithDocument(Response, {statusCode: '200', response: {$ref: '#/missing'}, components}, referenceFixture)
+  assert.match(response, /Reference target was not found/)
+  const headers = await renderWithDocument(ResponseContent, {unreferencedResponse: {description: 'Still visible', headers: {Broken: {$ref: '#/components/headers/Broken'}}}, components}, referenceFixture)
+  assert.match(headers, /Still visible/)
+  assert.match(headers, /headers.yaml/)
+  const html = await renderWithDocument(Examples, {base: 'https://api.example.com', path: '/pets', method: 'post', components,
+    operation: {requestBody: {content: {'application/json': {examples: {bad: {$ref: '#/missing'}}}}}, responses: {'200': {$ref: 'responses.yaml#/Success'}}},
+  }, referenceFixture)
+  assert.match(html, /Reference target was not found/)
+  assert.match(html, /External references are not supported/)
+  assert.match(html, /disabled[^>]*aria-label="Copy request example"/)
+  assert.match(html, /disabled[^>]*aria-label="Copy response example"/)
+})
+
+test('example payloads containing literal $ref keys remain data', () => {
+  const document = {openapi: '3.1.0', components: {examples: {Payload: {value: {$ref: 'literal-value.yaml', id: 1}}}}}
+  const resolved = resolveReference(document, {$ref: '#/components/examples/Payload'})
+  assert.deepEqual(resolved.value.value, {$ref: 'literal-value.yaml', id: 1})
+  assert.deepEqual(resolved.issues, [])
+})
 
 test('the selected Petstore fixture loads with its upstream logo', async () => {
   const document = parseSpecification(await readFile(new URL('../public/specs/redocly-petstore.yaml', import.meta.url), 'utf8'))
@@ -165,6 +261,26 @@ test('authenticated request examples have a credential chip before credentials a
   assert.match(html, /Set authentication credentials/)
   assert.match(html, /Authorization: Basic/)
   assert.doesNotMatch(html, /__FABRIC_AUTH_CREDENTIALS__/)
+})
+
+test('request examples omit the credential chip when authentication entry is unsupported', async () => {
+  const components = {securitySchemes: {
+    Key: {type: 'apiKey', in: 'header', name: 'X-API-Key'},
+    OAuth: {type: 'oauth2', flows: {}},
+    OpenID: {type: 'openIdConnect', openIdConnectUrl: 'https://api.example.com/.well-known/openid-configuration'},
+    Digest: {type: 'http', scheme: 'digest'},
+    Basic: {type: 'http', scheme: 'basic'},
+  }}
+  for (const security of [[], [{Key: []}], [{OAuth: []}], [{OpenID: []}], [{Digest: []}], [{Missing: []}], [{Basic: [], Key: []}]]) {
+    const html = await renderToString(createSSRApp({setup() {
+      provideMediaTypeSelections()
+      return () => h(Examples, {base: 'https://api.example.com', path: '/files', method: 'get',
+        operation: {security}, components,
+      })
+    }}))
+    assert.doesNotMatch(html, /Set credentials|Set authentication credentials|__FABRIC_AUTH_CREDENTIALS__/)
+    assert.match(html, /curl/)
+  }
 })
 
 async function renderAuthentication(operation, document) {
@@ -417,7 +533,9 @@ test('webhooks resolve local path items and inherit shared parameters with opera
   assert.equal(entries[0].operation.summary, 'Created event')
   assert.deepEqual(entries[0].operation.parameters, [override])
   assert.deepEqual(entries[1].operation.parameters, [shared])
-  assert.throws(() => getWebhookOperations({webhooks: {broken: {$ref: '#/webhooks/broken'}}}), /Cannot resolve webhook reference/)
+  const issues = []
+  assert.deepEqual(getWebhookOperations({webhooks: {broken: {$ref: '#/webhooks/broken'}}}, issue => issues.push(issue)), [])
+  assert.match(issues[0].message, /Circular reference/)
 })
 
 test('direct endpoint view retains accessible property disclosures', async () => {

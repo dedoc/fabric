@@ -2,7 +2,9 @@
 import type {Operation} from '../types'
 import {computed, inject, ref} from 'vue'
 import {documentKey} from '../../../utils/symbols'
-import {httpAuthKind, operationSecurity, securitySchemeLabel} from '../security'
+import {httpAuthKind, operationSecurity, securitySchemeLabel, resolveSecurityScheme} from '../security'
+import ReferenceDiagnostics from '../ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from '../references'
 import {authorizationForOption, httpAuthForOperation, useAuthCredentials} from '../useAuthCredentials'
 import SecuritySchemeDetails from './SecuritySchemeDetails.vue'
 
@@ -17,6 +19,13 @@ const draft = ref<Record<string, {username: string, password: string, token: str
 const alternatives = computed(() => operationSecurity(props.operation, document.value))
 const optional = computed(() => alternatives.value.some(group => !group.length))
 const authenticated = computed(() => alternatives.value.filter(group => group.length))
+const issues = computed(() => {
+  const result: ReferenceIssue[] = []
+  for (const name of new Set(authenticated.value.flatMap(group => group.map(entry => entry.name)))) {
+    resolveSecurityScheme(name, document.value.components ?? {}, document.value, issue => result.push(issue))
+  }
+  return result
+})
 const editableSchemes = computed(() => {
   const schemes = new Map<string, {name: string, kind: 'basic' | 'bearer'}>()
   for (const group of authenticated.value) for (const {name, scheme} of group) {
@@ -73,6 +82,7 @@ defineExpose({open})
 
 <template>
   <div v-if="authenticated.length" class="text-base text-gray-500 sm:text-sm">
+    <ReferenceDiagnostics :issues="issues" />
     <button type="button" class="relative inline-flex items-center gap-1.5 py-1 underline decoration-gray-950/20 underline-offset-4 hover:text-gray-700 hover:decoration-gray-950/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" @click="open($event.currentTarget as HTMLElement)">
       <svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="hasCredentials ? 'text-green-600' : 'text-gray-400'" aria-hidden="true">
         <path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" />

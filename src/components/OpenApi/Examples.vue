@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {computed, inject, ref} from 'vue'
-import {documentKey} from '../../utils/symbols'
+import {computed, ref} from 'vue'
 import {authorizationForOption, httpAuthForOperation, useAuthCredentials} from './useAuthCredentials'
-import {operationSecurity} from './security'
 import {authPlaceholder} from './requestExamples/auth'
-import type {Components, Operation, Response} from './types'
-import {unreference} from './utils'
+import type {Components, Operation, RequestBody, Response} from './types'
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from './references'
 import MethodChip from './Partials/MethodChip.vue'
 import {formatMediaExample, isJsonContentType, isXmlContentType} from './mediaExamples'
 import {createRequestExample, requestExampleSenders} from './requestExamples'
@@ -14,7 +14,7 @@ import Select from '../UI/Select.vue'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
 const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
-const document = inject(documentKey, undefined)
+const references = useReferences(() => props.components)
 const credentials = useAuthCredentials()
 const requestView = ref('example')
 const preferredRequestExample = ref(requestExampleSenders[0].id)
@@ -22,7 +22,8 @@ const responseView = ref('example')
 const responseStatus = ref(Object.keys(props.operation.responses ?? {})[0] ?? '')
 const copied = ref('')
 const copyError = ref('')
-const {type: requestType, media: requestMedia} = useMediaType(() => props.operation.requestBody?.content, () => 'request')
+const requestBody = computed(() => references.resolve<RequestBody>(props.operation.requestBody))
+const {type: requestType, media: requestMedia} = useMediaType(() => requestBody.value.value?.content, () => 'request')
 const requestExampleOptions = computed(() => {
   const options = requestExampleSenders.map(({id, label}) => ({value: id, label}))
   if (isJsonContentType(requestType.value)) options.push({value: 'payload', label: 'JSON'})
@@ -34,33 +35,39 @@ const requestExample = computed({
     ? preferredRequestExample.value : requestExampleSenders[0].id,
   set: (value: string) => { preferredRequestExample.value = value },
 })
-const responseContent = computed(() => {
+const responseResolution = computed(() => {
   const entry = props.operation.responses?.[responseStatus.value]
-  const response = entry && ('$ref' in entry ? unreference<Response>(entry.$ref, props.components) : entry)
-  return response?.content
+  return references.resolve<Response>(entry)
 })
+const responseContent = computed(() => responseResolution.value.value?.content)
 const {type: responseType, media: responseMedia} = useMediaType(() => responseContent.value, () => `response:${responseStatus.value}`)
+function mediaIssues(media: typeof requestMedia.value, type: string): ReferenceIssue[] {
+  const issues: ReferenceIssue[] = []
+  formatMediaExample(media, type, props.components, true, references.document.value, issue => issues.push(issue))
+  return issues
+}
+const requestIssues = computed(() => [...requestBody.value.issues, ...mediaIssues(requestMedia.value, requestType.value)])
+const responseIssues = computed(() => [...responseResolution.value.issues, ...mediaIssues(responseMedia.value, responseType.value)])
 function format(value: unknown): string {
   return value === undefined ? '' : JSON.stringify(value, null, 2)
 }
-const security = computed(() => operationSecurity(props.operation, document?.value ?? {components: props.components}))
-const hasAuth = computed(() => security.value.some(group => group.length))
-const httpAuth = computed(() => httpAuthForOperation(props.operation, document?.value ?? {components: props.components}, credentials?.value ?? {}))
+const httpAuth = computed(() => httpAuthForOperation(props.operation, references.document.value, credentials?.value ?? {}))
 const savedAuthorization = computed(() => authorizationForOption(httpAuth.value))
 function generateRequestCode(display: boolean) {
+  if (requestIssues.value.length && requestView.value !== 'schema') return ''
   if (requestView.value === 'schema') return format(requestMedia.value?.schema)
-  const request = createRequestExample(props.base, props.path, props.method, requestType.value, requestMedia.value, props.components)
+  const request = createRequestExample(props.base, props.path, props.method, requestType.value, requestMedia.value, props.components, references.document.value)
   if (requestExample.value === 'payload') return request.body
   if (display && httpAuth.value) request.authorization = `${httpAuth.value.kind === 'basic' ? 'Basic' : 'Bearer'} ${authPlaceholder}`
   else if (!display) request.authorization = savedAuthorization.value
   const sender = requestExampleSenders.find(sender => sender.id === requestExample.value) ?? requestExampleSenders[0]
   const code = sender.generate(request)
-  return display && hasAuth.value && !httpAuth.value ? `${authPlaceholder}\n${code}` : code
+  return code
 }
 const requestCode = computed(() => generateRequestCode(false))
 const displayCode = computed(() => {
   const code = generateRequestCode(true)
-  if (requestView.value !== 'example' || requestExample.value === 'payload' || !hasAuth.value) return {before: code, after: '', chip: false}
+  if (requestView.value !== 'example' || requestExample.value === 'payload' || !httpAuth.value) return {before: code, after: '', chip: false}
   const index = code.indexOf(authPlaceholder)
   return index < 0 ? {before: code, after: '', chip: false} : {
     before: code.slice(0, index), after: code.slice(index + authPlaceholder.length), chip: true,
@@ -69,7 +76,8 @@ const displayCode = computed(() => {
 const responseCode = computed(() => {
   const media = responseMedia.value
   if (responseView.value === 'schema') return format(media?.schema)
-  return formatMediaExample(media, responseType.value, props.components)
+  if (responseIssues.value.length) return ''
+  return formatMediaExample(media, responseType.value, props.components, true, references.document.value)
 })
 async function copy(code: string, panel: string) {
   try {
@@ -95,6 +103,7 @@ async function copy(code: string, panel: string) {
             <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
           </button>
         </div>
+        <ReferenceDiagnostics :issues="requestIssues" />
         <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode.before || displayCode.chip"><code class="font-jetbrains-mono">{{ displayCode.before }}<button v-if="displayCode.chip" type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button>{{ displayCode.after }}</code></pre>
         <p v-else class="p-4 text-[13px] text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
       </section>
@@ -109,6 +118,7 @@ async function copy(code: string, panel: string) {
             <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
           </button>
         </div>
+        <ReferenceDiagnostics :issues="responseIssues" />
         <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><code class="font-jetbrains-mono">{{ responseCode }}</code></pre>
         <p v-else class="p-4 text-[13px] text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
       </section>

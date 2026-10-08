@@ -2,8 +2,17 @@
 import {computed, ref} from 'vue'
 import type {Components, Schema} from './types'
 import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from './references'
 
 const props = defineProps<{schema: Schema, components: Components}>()
+const references = useReferences(() => props.components)
+const schemaResolution = computed(() => {
+  const issues: ReferenceIssue[] = []
+  const value = resolveExampleSchema(props.schema, props.components, references.document.value, issue => issues.push(issue))
+  return {value, issues}
+})
 const tabs = [{id: 'example', label: 'Example'}, {id: 'schema', label: 'JSON schema'}, {id: 'typescript', label: 'Typescript'}] as const
 const selectedTab = ref<(typeof tabs)[number]['id']>('example')
 const panelId = 'schema-example'
@@ -11,7 +20,7 @@ const copied = ref(false)
 const copyError = ref('')
 const code = computed(() => {
   if (selectedTab.value === 'typescript') return 'TODO'
-  const value = selectedTab.value === 'schema' ? props.schema : createSchemaExample(resolveExampleSchema(props.schema, props.components))
+  const value = selectedTab.value === 'schema' ? props.schema : schemaResolution.value.issues.length ? undefined : createSchemaExample(schemaResolution.value.value)
   return JSON.stringify(value, null, 2) ?? ''
 })
 
@@ -36,6 +45,7 @@ async function copy() {
 
 <template>
   <aside class="col-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2 min-[1200px]:h-0 min-[1200px]:min-h-full" aria-label="Schema examples">
+    <ReferenceDiagnostics :issues="schemaResolution.issues" />
     <section class="flex max-h-[32rem] min-h-0 flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[min(100%,calc(100dvh-64px))]">
       <div class="flex min-h-12 shrink-0 items-center gap-2 border-b border-gray-950/10 px-4 py-2">
         <div class="flex min-w-0 flex-auto items-center gap-1 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Schema example format">

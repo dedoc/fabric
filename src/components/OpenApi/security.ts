@@ -1,4 +1,6 @@
 import type {Components, Document, Operation, SecurityScheme} from './types'
+import {resolveReference} from './references'
+import type {ReferenceIssue} from './references'
 
 export function httpAuthKind(scheme?: SecurityScheme): 'basic' | 'bearer' | undefined {
   if (scheme?.type !== 'http') return undefined
@@ -6,17 +8,11 @@ export function httpAuthKind(scheme?: SecurityScheme): 'basic' | 'bearer' | unde
   return kind === 'basic' || kind === 'bearer' ? kind : undefined
 }
 
-export function resolveSecurityScheme(name: string, components: Components): SecurityScheme | undefined {
-  let entry = components.securitySchemes?.[name]
-  const seen = new Set<string>()
-  while (entry && '$ref' in entry) {
-    if (seen.has(entry.$ref)) return undefined
-    seen.add(entry.$ref)
-    const tokens = entry.$ref.split('/')
-    if (tokens.length !== 4 || tokens.slice(0, 3).join('/') !== '#/components/securitySchemes') return undefined
-    entry = components.securitySchemes?.[tokens[3].replace(/~1/g, '/').replace(/~0/g, '~')]
-  }
-  return entry
+export function resolveSecurityScheme(name: string, components: Components, document: Document = {components}, report?: (issue: ReferenceIssue) => void): SecurityScheme | undefined {
+  const token = encodeURIComponent(name.replace(/~/g, '~0').replace(/\//g, '~1'))
+  const result = resolveReference<SecurityScheme>(document, {$ref: `#/components/securitySchemes/${token}`})
+  result.issues.forEach(issue => report?.(issue))
+  return result.value
 }
 
 export function securitySchemeLabel(scheme?: SecurityScheme): string {
@@ -34,6 +30,6 @@ export function operationSecurity(operation: Operation, document: Document) {
   return requirements.map(requirement => Object.entries(requirement).map(([name, scopes]) => ({
     name,
     scopes,
-    scheme: resolveSecurityScheme(name, document.components ?? {}),
+    scheme: resolveSecurityScheme(name, document.components ?? {}, document),
   })))
 }

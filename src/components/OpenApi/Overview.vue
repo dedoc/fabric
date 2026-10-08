@@ -7,15 +7,19 @@ import {getInlineOperations} from './utils'
 import {resolveSecurityScheme} from './security'
 import SecuritySchemeDetails from './Partials/SecuritySchemeDetails.vue'
 import {resolveOperationBase} from './servers'
+import {resolveReference} from './references'
+import type {ReferenceIssue} from './references'
+import type {PathItem} from './types'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 
 const props = defineProps<{document: Document, paths: Paths, components: Components, documentUrl?: string}>()
 const emit = defineEmits<{navigate: [id: string]}>()
 const info = computed(() => props.document.info)
-const operations = computed(() => getInlineOperations(props.paths))
+const operations = computed(() => getInlineOperations(props.paths, props.document))
 
 const servers = computed(() => {
   const declared: Server[] = [...(props.document.servers?.length ? props.document.servers : [{url: '/'}])]
-  for (const pathItem of Object.values(props.paths)) declared.push(...(pathItem.servers ?? []))
+  for (const pathItem of Object.values(props.paths)) declared.push(...(resolveReference<PathItem>(props.document, pathItem, 'pathItem').value?.servers ?? []))
   for (const {operation} of operations.value) declared.push(...(operation.servers ?? []))
   const seen = new Set<string>()
   return declared.flatMap(server => {
@@ -27,7 +31,8 @@ const servers = computed(() => {
 })
 
 const schemes = computed(() => Object.keys(props.components.securitySchemes ?? {}).map(name => {
-  return {name, scheme: resolveSecurityScheme(name, props.components)}
+  const issues: ReferenceIssue[] = []
+  return {name, scheme: resolveSecurityScheme(name, props.components, props.document, issue => issues.push(issue)), issues}
 }))
 
 const groups = computed(() => {
@@ -85,7 +90,8 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
         <SectionTitle id="overview-auth">Authentication</SectionTitle>
         <p class="text-pretty text-base text-gray-600 sm:text-sm">Check each endpoint for its authentication requirements.</p>
         <div class="divide-y divide-gray-950/5">
-          <div v-for="{name, scheme} in schemes" :key="name" class="space-y-3 py-4 first:pt-0 last:pb-0">
+          <div v-for="{name, scheme, issues} in schemes" :key="name" class="space-y-3 py-4 first:pt-0 last:pb-0">
+            <ReferenceDiagnostics :issues="issues" />
             <SecuritySchemeDetails :name="name" :scheme="scheme" />
           </div>
         </div>

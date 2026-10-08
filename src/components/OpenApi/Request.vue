@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {Paths, Components, PathItem, RequestBody as RequestBodyType, Parameter} from "./types";
+import type {Paths, Components, PathItem, RequestBody as RequestBodyType, Parameter, Reference} from "./types";
 import Operation from "./Operation.vue";
 import MediaType from "./MediaType.vue";
 import Parameters from "./Parameters.vue";
@@ -7,8 +7,8 @@ import RequestBody from "./RequestBody.vue";
 
 defineProps<{
   components: Components, // todo: should not be here!
-  parameters?: Parameter[],
-  requestBody?: RequestBodyType,
+  parameters?: (Parameter|Reference)[],
+  requestBody?: RequestBodyType|Reference,
 }>()
 </script>
 

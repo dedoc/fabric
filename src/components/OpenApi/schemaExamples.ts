@@ -1,19 +1,19 @@
-import type {Components, Schema} from './types'
-import {unreference} from './utils'
+import type {Components, Document, Schema} from './types'
+import {resolveReference} from './references'
+import type {ReferenceIssue} from './references'
 import {createStringExample} from './stringExamples'
 
 /** Resolve local references without changing the document. Recursive branches end in null. */
-export function resolveExampleSchema(schema: Schema | undefined, components: Components): Schema | undefined {
+export function resolveExampleSchema(schema: Schema | undefined, components: Components, document: Document = {components}, report?: (issue: ReferenceIssue) => void): Schema | undefined {
   function resolve(current: Schema, ancestors: Set<Schema>): Schema {
     if (ancestors.has(current)) return {type: 'null'}
     const next = new Set(ancestors).add(current)
-    let resolved = {...current}
-    if (current.$ref) {
-      const target = unreference<Schema>(current.$ref, components)
-      if (!target) return resolved
-      const {$ref, ...overrides} = current
-      resolved = {...resolve(target, next), ...overrides}
-    }
+    const result = resolveReference<Schema>(document, current, 'schema')
+    result.issues.forEach(issue => report?.(issue))
+    if (!result.value) return {type: 'null'}
+    if (result.value !== current && ancestors.has(result.value)) return {type: 'null'}
+    next.add(result.value)
+    let resolved = {...result.value}
     if (resolved.properties) {
       resolved.properties = Object.fromEntries(Object.entries(resolved.properties).map(([name, property]) => [name, resolve(property, next)]))
     }

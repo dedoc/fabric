@@ -5,9 +5,11 @@ import Description from './Description.vue'
 import Schema from './Schema.vue'
 import SchemaExamples from './SchemaExamples.vue'
 import {resolveExampleSchema} from './schemaExamples'
+import {useReferences} from './useReferences'
 
 const props = defineProps<{name: string, schema: SchemaType, components: Components}>()
-const resolvedSchema = computed(() => resolveExampleSchema(props.schema, props.components))
+const references = useReferences(() => props.components)
+const resolvedSchema = computed(() => resolveExampleSchema(props.schema, props.components, references.document.value))
 </script>
 
 <template>

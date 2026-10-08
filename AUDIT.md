@@ -1,137 +1,164 @@
-# API reference renderer launch audit
+# API reference viewer release audit
 
 Reviewed: 2026-10-08.
 
-The visual foundation is solid, but the renderer is not ready for a general-purpose OpenAPI launch. The main risks are missing or misleading API information, unsafe description rendering, and production failure handling.
+## Current position
 
-This is a code review with targeted rendering probes and automated checks, not a complete security, accessibility, or performance certification. No fixes were made as part of the audit.
+Fabric is a working alpha: usable with selected specifications, but not yet reliable as a general-purpose API reference viewer. Most remaining work concerns correctness and release checks rather than visual polish. Valid specifications can still lose required inputs or schema fields, and copied requests can omit information needed to call an endpoint.
 
-## Remediation update — 2026-10-08
+This assessment combines code review, targeted rendering probes, and automated checks. It does not establish full OpenAPI compatibility, security, accessibility, or large-spec performance.
 
-P0 HTML safety and failure handling have been addressed. Production source hosting remains deferred: this app currently uses switchable test URLs, with no bundled specifications.
+## Implemented
 
-- Descriptions now pass through an HTML allowlist sanitizer. Regression checks cover active HTML, event handlers, unsafe URL schemes, and preservation of useful formatting.
-- Test sources can be switched using the commented URLs in `HelloWorld.vue` or the viewer's `specUrl` prop. The loader checks HTTP responses, parsing, document version/metadata, and key rendering structures, with a 30-second timeout and cancellation of stale loads.
-- Loading and descendant rendering failures show a compact error page with a retry action. Checks exercise failure-to-success recovery and unresolved schema rendering failures.
-- Endpoint authentication now resolves the effective security requirements and referenced schemes. Overview and endpoint pages share scheme-specific instructions, including Basic authentication, API key locations, token authentication, OAuth scopes, optional/public access, and AND/OR combinations. Converterer's API-key username and empty-password instructions are shown from the specification.
-- Endpoints expose authentication through a compact lock label and dialog. Basic credentials can be entered, edited, or cleared in memory for the current specification; Bash and Laravel request examples include them for a complete Basic authentication option. Other authentication types in generated examples remain open.
-- Request examples display a clickable lock chip instead of credentials, including before credentials are set. Copy generates an actual `Authorization: Basic` header from Base64-encoded UTF-8 `username:password`; credentials and encoded values are excluded from displayed code.
-- HTTP Bearer authentication now supports masked token entry, editing, clearing, green configured locks, and raw `Authorization: Bearer` headers in Bash/Laravel copies. Basic and Bearer share selection of a complete authentication alternative. The active unbundled test specification is Scalar Galaxy. SpaceTraders remains a commented source for testing the external-reference limitation.
+- JSON/YAML loading for OpenAPI 3.0/3.1, structural validation, HTTP error handling, timeout, cancellation of stale loads, and loading/error/retry states.
+- Overview, endpoint, schema, and OpenAPI 3.1 webhook pages.
+- Search, grouped navigation, hash deep links, browser history synchronization, and mobile navigation.
+- Request/response schemas, media selection, and JSON/XML/form examples.
+- Bash and Laravel request snippets with copy actions.
+- Effective authentication documentation, including inheritance, optional/public access, referenced schemes, OAuth scopes, and AND/OR requirements.
+- Basic/Bearer credential entry, editing, and clearing in memory. Displayed examples mask credentials; copies include saved credentials for a supported complete authentication alternative. Unsupported methods do not show a “Set credentials” chip.
+- Sanitized Markdown/HTML descriptions and API branding with logo fallbacks.
+- Stable scrollbar space in the left navigation.
 
-Structural validation is deliberately not a full OpenAPI conformance validator. The other P1 correctness and compatibility findings below remain open, including authentication in generated request examples. The original findings and verification results are retained as the audit baseline.
+The active demo is bundled at `public/specs/redocly-petstore.yaml`. `HelloWorld.vue` accepts `specUrl` and `showSchemas`; commented source URLs remain available for development testing. Spotify and Converterer proxies are development-only.
 
 ## Verification
 
-- All 27 schema/viewer tests passed.
-- All 31 example-generation tests passed, loaded through Vite's SSR module loader.
-- `yarn vite build` passed.
-- `yarn build` failed with 13 TypeScript errors across schema rendering, parameters, responses, paths, operations, and the spec loader.
-- Passing tests do not cover all the failures listed below. Targeted probes confirmed several gaps independently.
+Latest checks on 2026-10-08:
 
-## Launch priorities
+| Check | Result |
+| --- | --- |
+| Local-reference, viewer, and specification-safety suites | 71 passed |
+| Schema, form, XML, and request-example suites through Vite SSR | 31 passed |
+| Total automated tests | 102 passed |
+| `yarn vite build` | Passed |
+| `yarn build` | Failed with 4 remaining TypeScript errors |
 
-| Priority | Finding | Impact |
-| --- | --- | --- |
-| P0 — addressed | Unsanitized description HTML | HTML is now sanitized before rendering. |
-| P0 — partially addressed | Production loading and failure handling | Checks, timeout, and an error page are implemented. Production source hosting is deferred; development test URLs remain active. |
-| P1 — addressed | Incorrect authentication rendering | Endpoint and Overview pages share scheme-specific authentication documentation and effective security semantics. |
-| P1 | Incomplete reference and schema resolution | Valid specs can lose fields, show empty sections, or fail rendering. |
-| P1 | Missing request information | Shared parameters and important request-body metadata disappear. |
-| P1 | Inaccurate copied examples | Examples can omit required information or contradict the schema. |
-| P1 | Broken release checks | The normal production build cannot pass. |
+Remaining build errors are in `Partials/ResponseHeader.vue`, `Responses.vue`, and `Paths.vue`. Reference migration corrected the previous schema, parameter, response-header-object, and request-union errors. Passing tests do not cover every compatibility gap below.
 
-### 1. Sanitize description HTML — P0
+## Release task sets
 
-**Evidence:** `src/components/OpenApi/Description.vue` enables `html: true` in Markdown-it and inserts the result using `v-html`. A targeted SSR probe confirmed that an image's `onerror` attribute survives unchanged. The probe checked rendered markup; it did not execute the payload in a browser.
+Each checkbox is a separately reviewable task. Complete sets 1–5 before a scoped beta, implement or remove the unfinished feature in set 6, and complete the beta checks in sets 7–8. Deferred scope is listed separately.
 
-**Impact:** This is a launch blocker when specifications can come from customers or other external sources.
+### 1. Restore the production build
 
-**Recommended fix:** Sanitize rendered HTML with an allowlist that preserves useful formatting and safe links. Cover raw HTML, event attributes, and unsafe URL schemes with regression tests.
+**Finding:** Vite bundles successfully, but the normal release command fails. Several errors expose incomplete handling of optional schemas, references, headers, and response codes.
 
-### 2. Replace the development-only loading path and add failure states — P0
+- [x] B1 — Handle unresolved/optional schemas explicitly and correct property-name typing in `Schema.vue`.
+- [x] B2 — Type the parameter-property accumulator and pass parameter/reference unions consistently through request components.
+- [ ] B3 — Treat response status keys consistently as strings, including `default` and ranges; correct status-label lookup and response grouping types.
+- [x] B4 — Resolve response-header references and handle schema-based and content-based Header Objects explicitly.
+- [ ] B5 — Correct operation method/key typing in `Paths.vue`; rerun the full build after reference and request changes.
 
-**Evidence:** `src/components/HelloWorld.vue` loads `/spotify/open-api-schema.yaml`. That route is supplied by `server.proxy` in `vite.config.ts`; it is not a bundled static asset. Loading has no HTTP-status check, document validation, visible loading state, error message, or retry.
+**Done when:** `yarn build` passes without disabling type checks or concealing errors with broad casts.
 
-**Impact:** A standalone static deployment needs an equivalent route or a bundled specification. Network and parsing failures can otherwise leave the page empty.
+### 2. Make local reference resolution consistent
 
-**Recommended fix:** Define the production spec-loading contract. Validate responses and supported document versions, and render actionable loading/error/retry states. Isolate rendering failures so one unsupported schema does not blank the documentation.
+**Status:** R1–R6 are implemented. Supported consumers share document-root pointer resolution and version-aware sibling handling. Missing, circular, malformed, and external references produce local diagnostics; unresolved schemas no longer replace the whole viewer. External files remain unsupported and are never fetched by the resolver.
 
-### 3. Render effective authentication correctly — P1
+- [x] R1 — Introduce a shared local-document resolver with decoded pointer tokens, including escaped slash and tilde, and documented reference locations beyond components.
+- [x] R2 — Follow reference chains with cycle detection; distinguish unresolved references from recursive schemas.
+- [x] R3 — Adopt the resolver for schemas, parameters, request bodies, responses, headers, examples, security schemes, and Path Items where supported.
+- [x] R4 — Apply version-appropriate reference sibling handling consistently in documentation and generated examples.
+- [x] R5 — Show useful local diagnostics for unsupported/unresolved references rather than silently dropping data or replacing the whole viewer where recovery is possible.
+- [x] R6 — Add fixtures for escaped names, chains, cycles, recursive schemas, missing targets, and non-component pointers; explicitly detect/report external references for the beta.
 
-**Evidence:** `src/components/OpenApi/Partials/OperationDatums.vue` hardcodes `Auth: Bearer token` for every security requirement. It inherits root security but does not describe the referenced scheme, OAuth scopes, AND/OR combinations, or optional authentication accurately. The Overview describes schemes more accurately than endpoint pages.
+**Done when:** Supported local references resolve consistently across documentation and examples, with visible diagnostics for unsupported references.
 
-**Impact:** Basic authentication, API keys, and other security configurations receive incorrect instructions.
+**Dependency:** R1–R2 establish behavior needed by sets 3–5. External-document fetching is deferred.
 
-**Recommended fix:** Resolve effective security requirements and schemes in one shared model. Render scheme-specific instructions, scopes, alternatives, combined requirements, and public access consistently.
+Implementation: `localReferences.ts` exposes document-root pointer lookup and chain diagnostics. `references.ts` applies OpenAPI 3.0/3.1 sibling rules; `useReferences.ts` supplies the original document to component consumers. OpenAPI 3.0 ignores reference siblings; 3.1 schema siblings retain conjunctions, while other Reference Objects accept summary/description overrides. Path Item conflicts warn and prefer referenced fields because the specification leaves conflicts undefined. Recursive property/item/composition rendering terminates with a recursive-schema label. Affected example panels suppress incomplete generated copies while retaining raw schema views.
 
-### 4. Preserve reference and composition semantics — P1
+`tests/fixtures/local-references.json` covers escaped names, aliases, recursion, missing/external targets, and references through paths/webhooks and array entries. Pure, SSR, and mounted-viewer tests cover resolution, version differences, diagnostics, and continued navigation. JSON Schema anchors, `$id` resource scopes, and boolean schema targets remain outside the supported subset and produce resolver diagnostics. Constraint-valid example generation and advanced schema semantics remain in sets 4–5.
 
-**Evidence:** Targeted probes confirmed:
+### 3. Preserve complete request information
 
-- `#/components/schemas/A~1B` does not resolve to a schema named `A/B`.
-- A schema with its own properties alongside `allOf` loses those properties in the rendered documentation.
+**Finding:** Normal endpoints do not inherit path-level parameters. Body descriptions and required state are omitted. Parameter conversion loses parameter-level examples and serialization metadata.
 
-`src/components/OpenApi/utils.ts` resolves references by splitting paths and indexing into components. It does not provide general document-pointer or external-document resolution. `src/components/OpenApi/Schema.vue` has separate composition logic and throws when a schema reference cannot resolve. Referenced request bodies and response headers are also incomplete.
+- [ ] Q1 — Merge path-level and operation-level parameters by name/location, resolving references before comparison and respecting operation overrides.
+- [ ] Q2 — Reuse effective-parameter handling for webhooks so inheritance rules do not diverge.
+- [x] Q3 — Resolve request-body references before rendering and example generation.
+- [ ] Q4 — Display request-body descriptions and whether the body is required.
+- [ ] Q5 — Preserve parameter-level examples, schema/content alternatives, and serialization settings such as `style`, `explode`, and `allowReserved`.
+- [ ] Q6 — Add fixtures for inherited required parameters, overrides, referenced bodies, and parameter metadata.
 
-**Impact:** Valid documents can silently lose information, display empty sections, or fail rendering. Documentation and generated examples can disagree because their resolution paths differ.
+**Done when:** Every required input in supported specifications appears with enough information to encode it correctly.
 
-**Recommended fix:** Introduce shared, cycle-aware reference and composition handling. Decode JSON Pointer tokens, handle reference chains and supported reference locations, preserve composition siblings, and show explicit diagnostics for unsupported or unresolved references. Decide and document the external-reference support boundary.
+### 4. Preserve schema meaning
 
-### 5. Include inherited parameters and request-body metadata — P1
+**Finding:** R4 preserves `allOf` and sibling constraints without flattening them by overwriting fields. Nullable values, maps, read/write-only fields, discriminators, deprecation, patterns, exclusive bounds, and array constraints are not fully represented. Constraint-aware example generation remains incomplete.
 
-**Evidence:** `getInlineOperations` in `src/components/OpenApi/utils.ts` passes operation objects without merging path-level parameters. A probe confirmed that a required path-level `id` parameter is absent from the resulting operation. `src/components/OpenApi/RequestBody.vue` renders media content but omits the request body's description and `required` flag. Parameter transformation also omits parameter-level examples and serialization settings.
+- [x] S1 — Preserve sibling properties and required fields alongside `allOf`; retain composition meaning rather than overwriting incompatible constraints.
+- [ ] S2 — Render OpenAPI 3.0 `nullable` and supported OpenAPI 3.1 null unions consistently.
+- [ ] S3 — Render maps through `additionalProperties`, including typed values and restrictions on extra properties.
+- [ ] S4 — Display `readOnly`, `writeOnly`, and deprecation; carry request/response direction into schema usage and examples.
+- [ ] S5 — Display patterns, exclusive numeric bounds, and array size/uniqueness constraints for the supported subset.
+- [ ] S6 — Document supported schema constructs and visibly warn for unsupported constructs, including discriminators until implemented; add regression fixtures for supported cases.
 
-**Impact:** Users can miss required inputs or receive insufficient instructions for encoding them.
+**Done when:** Supported schema information is preserved, unsupported semantics are disclosed, and rendering/examples agree on composition and direction.
 
-**Recommended fix:** Merge path-level and operation-level parameters using their name and location, respecting operation overrides. Resolve request-body references, render body descriptions and required state, and preserve parameter examples and serialization metadata.
+### 5. Make copied examples trustworthy
 
-Reference: [OpenAPI 3.0.3 Path Item Object](https://spec.openapis.org/oas/v3.0.3.html#path-item-object).
+**Finding:** Request generation lacks effective parameters. URLs retain placeholders; query/header/cookie values are omitted. Generated values can violate constraints, non-XML text is JSON-serialized, and only the first named media example is selected. Complete Basic/Bearer authentication alternatives already work.
 
-### 6. Make examples accurate and explicit about their origin — P1
+- [ ] E1 — Pass effective parameters into the shared request model; substitute encoded path values and include query/header/cookie values using supported serialization rules.
+- [ ] E2 — Respect supported numeric, string, and array constraints when generating values; disclose cases where a valid sample cannot be generated.
+- [ ] E3 — Apply request/response direction: omit read-only fields from generated requests and write-only fields from responses.
+- [ ] E4 — Serialize by media type, preserving plain text without JSON quoting and explicitly handling unsupported/binary formats.
+- [ ] E5 — Add named media-example selection, preserving values/descriptions; distinguish supplied examples from generated samples.
+- [ ] E6 — Keep Bash and Laravel aligned with the shared request model; add fixtures for parameters, encoding, constraints, direction, media types, and saved Basic/Bearer credentials.
 
-**Evidence:** `src/components/OpenApi/requestExamples/index.ts` receives no authentication or parameter information. Generated requests omit required auth headers and query/header/cookie parameter values, and leave URL placeholders such as `/files/{id}` intact.
+**Done when:** Copies include supported required inputs and saved supported authentication, and generated samples do not silently contradict the contract.
 
-Targeted probes also confirmed:
+**Dependency:** Effective parameters from set 3 and schema semantics from set 4.
 
-- `createSchemaExample({type: 'integer', minimum: 5})` returns `0`.
-- A `text/plain` media example of `hello` is serialized as `"hello"`.
+### 6. Remove unfinished visible features
 
-`src/components/OpenApi/schemaExamples.ts` generates all object properties without request/response filtering. `src/components/OpenApi/mediaExamples.ts` serializes non-XML media through JSON. Only the first named media example is selected.
+**Finding:** The schema “Typescript” tab currently returns the literal `TODO`.
 
-**Impact:** Copied requests may not work, and generated payloads may contradict the documented contract.
+- [ ] U1 — Implement TypeScript output or remove the tab for the beta.
+- [ ] U2 — Check remaining visible actions/tabs for placeholder output, including empty and missing-example states.
 
-**Recommended fix:** Include effective parameters and security in request generation, use appropriate placeholders, respect constraints and request/response direction, and serialize media according to its type. Distinguish supplied examples from generated examples. Support selection among named examples or clearly disclose the limitation.
+**Done when:** Every visible action produces a useful result or an explicit supported empty state.
 
-### 7. Restore a passing production build — P1
+### 7. Finish navigation and description behavior
 
-**Evidence:** `yarn build` fails with 13 TypeScript errors. Affected files include `Schema.vue`, `Parameters.vue`, `Partials/ResponseHeader.vue`, `Partials/ResponseContent.vue`, `Responses.vue`, `Operation.vue`, `Paths.vue`, and `HelloWorld.vue`.
+**Finding:** Unknown hashes show empty main content. Page titles and keyboard focus do not follow navigation. Relative description links/images resolve against the viewer rather than the specification URL.
 
-**Impact:** Vite can bundle the application, but the project's normal release command fails. Several errors reflect real gaps around reference unions and response/header types.
+- [ ] N1 — Add an unknown-page state with a route to Overview, including unavailable schema links when schemas are hidden.
+- [ ] N2 — Update the browser title from API metadata and the selected page.
+- [ ] N3 — Add skip-to-content and deliberate content focus after navigation; preserve usable back/forward behavior.
+- [ ] N4 — Resolve relative description links/images against the original source URL, retaining sanitizer protections and mirrored/proxied source URLs.
+- [ ] N5 — Run browser and accessibility checks for deep links, history, disclosures, dialogs, copying, media selection, keyboard operation, and mobile layouts; fix discovered blockers.
 
-**Recommended fix:** Correct the types and their underlying handling rather than bypassing the typecheck. Require the full build and tests to pass in CI.
+**Done when:** Navigation has no blank destinations, works by keyboard, and relative resources resolve correctly. Browser checks cover desktop and mobile.
 
-## Additional gaps before a wider launch
+### 8. Establish a reproducible release
 
-### Schema coverage
+**Finding:** There is no unified test script or CI workflow. Production configuration/CORS needs a documented contract. Large-spec performance has not been established.
 
-The renderer does not fully represent important constructs such as OpenAPI 3.0 `nullable`, maps and `additionalProperties`, `readOnly`/`writeOnly`, discriminators, deprecation, patterns, exclusive numeric bounds, and array constraints. Declare a supported OpenAPI subset and show warnings for unsupported constructs instead of silently hiding them.
+- [ ] L1 — Add one test command for all seven existing suites, including TypeScript suites through a supported runner.
+- [ ] L2 — Add CI for dependency installation, all tests, and `yarn build`.
+- [ ] L3 — Document deployment/embedding: `specUrl`, `showSchemas`, same-origin hosting, remote-source CORS, and development proxy limitations.
+- [ ] L4 — Smoke-test built assets with the bundled demo and a configured production source, including reloads/deep links.
+- [ ] L5 — Publish the supported OpenAPI subset and limitations; keep curated regression specifications for correctness fixes.
+- [ ] L6 — Measure initial load, search, and nested-schema expansion on representative large specifications; record results and acceptable limits before claiming large-spec support.
+- [ ] L7 — Run release checks against the curated beta specifications and update this audit with results and remaining limitations.
 
-### Navigation and accessibility
+**Done when:** A clean checkout reproduces tests/build, deployment loads the intended specification, and compatibility claims match verified fixtures.
 
-Unknown hashes currently yield empty main content. Page titles and keyboard focus do not follow navigation. Add a not-found state, page-title updates, deliberate focus handling, and a keyboard path to main content. Run browser and accessibility checks; this audit does not establish accessibility conformance.
+## Deferred scope
 
-### Description links
+These features are not required for a scoped reference-viewer beta if limitations are explicit:
 
-Relative description links resolve against the viewer URL rather than the original spec URL. Resolve them against the original source consistently, including when the specification is fetched through a proxy.
-
-### Automated release coverage
-
-`package.json` has no unified test command, and the repository has no CI workflow. Add one reproducible command for all suites and CI for tests and the full build. Add browser coverage for deep links, navigation, disclosures, media selection, copying, and mobile behavior. Keep regression fixtures for the failures above.
-
-### Large-spec performance
-
-The current tests do not establish performance limits. Benchmark initial rendering, search, and deeply nested schemas against large fixtures such as GitHub, Stripe, and Box. Set acceptable limits before claiming broad compatibility; optimize based on measurements.
+- External-document references: relative/absolute file fetching, per-file source URLs, caching, cycles, CORS, and fetch failures. Required before claiming support for specifications such as SpaceTraders.
+- Credential entry for API keys, OAuth authorization flows, OpenID Connect, and combined authentication requirements. Scheme documentation exists; entry and generated requests are limited to supported Basic/Bearer alternatives.
+- Interactive “Try it” requests.
+- Additional request-example languages beyond Bash and Laravel.
+- Full OpenAPI/JSON Schema coverage beyond the documented subset, including discriminator behavior and advanced schema constructs.
 
 ## Recommended launch boundary
 
-Start with a documented subset of OpenAPI and curated specifications after fixing the P0 findings, incorrect authentication, dropped request/schema information, and the production build. Unsupported constructs should produce explicit warnings. Expand compatibility only when fixtures and browser checks demonstrate it.
+Release a scoped beta for self-contained OpenAPI 3.0/3.1 documents and curated, verified specifications after the correctness and release tasks above are complete. Disclose unsupported constructs and reference types. Expand compatibility when regression fixtures and browser checks demonstrate it.
+
+Fix dropped or misleading information before adding features. OAuth login, more snippet languages, and an interactive request console are not prerequisites for this launch boundary.

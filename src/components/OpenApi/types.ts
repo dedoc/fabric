@@ -85,7 +85,7 @@ export type Operation = {
     operationId?: string,
     tags?: string[], // @todo may be tag objects as well
     parameters?: (Reference|Parameter)[],
-    requestBody?: RequestBody,
+    requestBody?: RequestBody|Reference,
     security?: SecurityRequirement[],
     responses?: Responses,
 }
@@ -182,6 +182,7 @@ export type Components = {
 }
 
 export type Document = {
+    paths?: Paths,
     openapi?: string,
     webhooks?: Paths,
     info?: {

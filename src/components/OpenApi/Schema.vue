@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type {Components, Schema} from "./types.ts";
-import {computed, ref} from "vue";
+import {computed, inject, provide, ref, toRaw} from "vue";
 import SchemaAttribute from "./SchemaAttribute.vue";
 import SchemaTypePreview from "./SchemaTypePreview.vue";
-import {unreference} from "./utils.ts";
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
+import {schemaAncestorsKey} from './schemaAncestors'
 import Description from "./Description.vue";
 import ToggleButton from "./Partials/ToggleButton.vue";
 
@@ -22,49 +24,16 @@ const props = withDefaults(defineProps<{
   level: 1,
 })
 
-function resolveSchema (schema: Schema): Schema|undefined {
-  if (! schema.$ref) {
-    return schema
-  }
-  return unreference<Schema>(schema.$ref, props.components)
-}
-
-function mergeAllOffSchemas (schema: Schema): Schema {
-  if (! schema.allOf) {
-    return schema
-  }
-
-  const unreferencedSchemas = schema.allOf.map(resolveSchema)
-
-  return mergeAllOffSchemas(unreferencedSchemas.slice(1).reduce((acc, schema) => {
-    return {
-      ...acc,
-      ...(acc?.required || schema?.required ? { required: (acc?.required ?? []).concat(schema?.required ?? []) } : {}),
-      ...(acc?.properties || schema?.properties ? { properties: { ...(acc?.properties ?? {}), ...(schema?.properties ?? {}) } } : {}),
-    }
-  }, { ...(unreferencedSchemas[0])  }))
-}
-
-// will work only for components references
-const resolvedSchema = computed(() => {
-  let unreferencedSchema = resolveSchema(props.schema)
-  if (! unreferencedSchema) {
-    console.error({ schema: props.schema })
-    throw new Error('Cannot unreference schema')
-  }
-  return mergeReferencedAndResolvedSchemas(props.schema, mergeAllOffSchemas(unreferencedSchema))
-})
-
-function mergeReferencedAndResolvedSchemas (possiblyReferencedSchema: Schema, unreferencedSchema: Schema) {
-  if (! possiblyReferencedSchema.$ref) {
-    return unreferencedSchema
-  }
-  const { $ref, ...overrides } = possiblyReferencedSchema
-  return {
-    ...unreferencedSchema,
-    ...overrides
-  }
-}
+const references = useReferences(() => props.components)
+const resolution = computed(() => references.resolve<Schema>(props.schema, 'schema'))
+const resolvedSchema = computed(() => resolution.value.value ?? {})
+const ancestors = inject(schemaAncestorsKey, computed(() => new Set<object>()))
+const recursive = computed(() => ancestors.value.has(toRaw(props.schema)) || (!!resolution.value.value && ancestors.value.has(toRaw(resolution.value.value))))
+provide(schemaAncestorsKey, computed(() => {
+  const next = new Set(ancestors.value).add(toRaw(props.schema))
+  if (resolution.value.value) next.add(toRaw(resolution.value.value))
+  return next
+}))
 
 const normalizedExamples = computed(() => {
   const examples = [
@@ -87,11 +56,13 @@ function isPrimitiveSchema (schema: Schema): boolean {
   return schema.type === 'string' || schema.type === 'number' || schema.type === 'boolean' || schema.type === 'integer'
 }
 
-const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || alternatives.value.length > 0 || (resolvedSchema.value?.items && ! isPrimitiveSchema(resolvedSchema.value?.items))))
+const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!! resolvedSchema.value?.properties || !!resolvedSchema.value.allOf?.length || alternatives.value.length > 0 || (resolvedSchema.value?.items && ! isPrimitiveSchema(resolvedSchema.value?.items))))
 </script>
 
 <template>
-  <div v-if="resolvedSchema" class="flex flex-col gap-1.5">
+  <ReferenceDiagnostics :issues="resolution.issues" />
+  <p v-if="recursive" class="text-sm text-gray-500">Recursive schema<template v-if="schema.$ref">: <code class="break-all">{{ schema.$ref }}</code></template>.</p>
+  <div v-else-if="resolution.value" class="flex flex-col gap-1.5">
 <!--    <pre class="text-xs">{{resolvedSchema}}</pre>-->
 <!--    <pre class="text-xs">{{schema}}</pre>-->
     <div v-if="!shouldHideMainType" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
@@ -166,12 +137,18 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
               :components="components"
               :schema="propertySchema"
               :level="level + 1"
-              :arePropertiesInitiallyVisible="level <= 0 && (! (resolvedSchema['x-hiddenProperties'] ?? []).includes(name))"
+              :arePropertiesInitiallyVisible="level <= 0 && (! (resolvedSchema['x-hiddenProperties'] ?? []).includes(name as string))"
           />
           <div v-if="i !== Object.keys(resolvedSchema.properties).length - 1" class="h-px bg-gray-100 my-3"></div>
         </template>
       </div>
     </template>
+    <div v-if="arePropertiesVisible && resolvedSchema.allOf?.length" class="space-y-3" role="group" :aria-label="`${propertyTitle ?? 'Value'} constraints`">
+      <p class="text-base text-gray-500 sm:text-sm">Must match all schemas.</p>
+      <div v-for="(member, index) in resolvedSchema.allOf" :key="index" class="border-l border-gray-950/10 pl-4">
+        <Schema :schema="member" :components="components" :level="level + 1" :are-properties-initially-visible="true" />
+      </div>
+    </div>
     <div v-if="arePropertiesVisible && alternatives.length" class="space-y-3" role="group" :aria-label="`${propertyTitle ?? 'Value'} options`">
       <p class="text-base text-gray-500 sm:text-sm">{{ resolvedSchema.anyOf ? 'Must match at least one option.' : 'Must match exactly one option.' }}</p>
       <div class="divide-y divide-gray-950/5 border-l border-gray-950/10 pl-4">

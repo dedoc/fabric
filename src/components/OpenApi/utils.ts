@@ -1,4 +1,6 @@
 import type {Components, Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
+import {resolveReference} from './references'
+import type {ReferenceIssue} from './references'
 
 export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 
@@ -84,16 +86,7 @@ function getPrimitiveSchemaTypePreview(type: string, schema: SchemaType|undefine
 }
 
 export function unreference<T>(reference: string, components: Components): T|undefined {
-    const path = reference.split('/').slice(2)
-    let result = components
-    path.forEach((pathItem) => {
-        if (! result) {
-            return
-        }
-        /** @ts-ignore */
-        result = result[pathItem]
-    })
-    return result as T|undefined
+    return resolveReference<T>({components}, {$ref: reference}).value
 }
 
 export function getOperationId (method: string, path: string, operation: Operation) {
@@ -106,23 +99,12 @@ export function getOperationTitle (path: string, operation: Operation) {
     return operation.summary ?? operation.operationId ?? path
 }
 
-export function getWebhookOperations(document: Document): InlineOperation[] {
-    function resolve(item: PathItem, seen = new Set<string>()): PathItem {
-        if (!item.$ref) return item
-        const reference = item.$ref
-        if (!reference.startsWith('#/') || seen.has(reference)) throw new Error(`Cannot resolve webhook reference: ${reference}`)
-        seen.add(reference)
-        let target: any = document
-        for (const part of reference.slice(2).split('/')) {
-            const key = decodeURIComponent(part).replace(/~1/g, '/').replace(/~0/g, '~')
-            target = target && Object.hasOwn(target, key) ? target[key] : undefined
-        }
-        if (!target || typeof target !== 'object' || Array.isArray(target)) throw new Error(`Cannot resolve webhook reference: ${reference}`)
-        const {$ref, ...overrides} = item
-        return {...resolve(target, seen), ...overrides}
-    }
+export function getWebhookOperations(document: Document, report?: (issue: ReferenceIssue) => void): InlineOperation[] {
     return Object.entries(document.webhooks ?? {}).filter(([name]) => !name.startsWith('x-')).flatMap(([name, item]) => {
-        const resolved = resolve(item)
+        const result = resolveReference<PathItem>(document, item, 'pathItem')
+        result.issues.forEach(issue => report?.(issue))
+        const resolved = result.value
+        if (!resolved) return []
         return getInlineOperations({[name]: resolved}).map(entry => ({
             ...entry,
             id: `webhooks/${encodeURIComponent(name)}/${entry.method}`,
@@ -139,8 +121,13 @@ export function getWebhookOperations(document: Document): InlineOperation[] {
     })
 }
 
-export function getInlineOperations (paths: Paths): InlineOperation[] {
-    return Object.entries(paths).reduce<InlineOperation[]>((acc, [path, pathItem]) => {
+export function getInlineOperations (paths: Paths, document: Document = {paths}, report?: (issue: ReferenceIssue) => void): InlineOperation[] {
+    return Object.entries(paths).reduce<InlineOperation[]>((acc, [path, item]) => {
+        if (path.startsWith('x-')) return acc
+        const result = resolveReference<PathItem>(document, item, 'pathItem')
+        result.issues.forEach(issue => report?.(issue))
+        const pathItem = result.value
+        if (!pathItem) return acc
         return acc.concat(httpMethods.filter(method => pathItem[method]).map(method => {
             const operation = pathItem[method]!
             return {

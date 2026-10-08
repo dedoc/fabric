@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type {Components, Paths as PathsType} from "../OpenApi/types.ts";
 import {computed, onMounted, onUnmounted, provide, ref} from "vue";
-import {showSchemasKey} from "../../utils/symbols.ts";
+import {documentKey, showSchemasKey} from "../../utils/symbols.ts";
+import {resolveReference} from '../OpenApi/references'
+import type {ReferenceIssue} from '../OpenApi/references'
+import type {PathItem} from '../OpenApi/types'
+import ReferenceDiagnostics from '../OpenApi/ReferenceDiagnostics.vue'
 import Paths from "../OpenApi/Paths.vue";
 import SchemaPage from "../OpenApi/SchemaPage.vue";
 import Overview from "../OpenApi/Overview.vue";
@@ -25,9 +29,16 @@ const props = withDefaults(defineProps<{
 
 provide(showSchemasKey, computed(() => props.showSchemas))
 provideAuthCredentials()
+const sourceDocument = computed(() => ({...props.document, paths: props.paths, components: props.components}))
+provide(documentKey, sourceDocument)
 
-const operations = computed(() => getInlineOperations(props.paths))
-const webhooks = computed(() => getWebhookOperations(props.document))
+const navigation = computed(() => {
+  const issues: ReferenceIssue[] = []
+  const report = (issue: ReferenceIssue) => issues.push(issue)
+  return {operations: getInlineOperations(props.paths, sourceDocument.value, report), webhooks: getWebhookOperations(sourceDocument.value, report), issues}
+})
+const operations = computed(() => navigation.value.operations)
+const webhooks = computed(() => navigation.value.webhooks)
 const selectedWebhook = computed(() => webhooks.value.find(item => item.id === selectedPageId.value))
 
 function getPageIdFromUrl (): string|undefined {
@@ -61,7 +72,7 @@ const operationBase = computed(() => {
   if (!selected) return ''
   return resolveOperationBase(
     props.document.servers ?? (props.base === undefined ? undefined : [{url: props.base}]),
-    props.paths[selected.path], selected.operation, props.documentUrl,
+    resolveReference<PathItem>(sourceDocument.value, props.paths[selected.path], 'pathItem').value ?? {}, selected.operation, props.documentUrl,
   )
 })
 
@@ -157,7 +168,7 @@ onUnmounted(() => {
       </button>
     </header>
     <div class="flex items-start md:min-h-dvh">
-      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] md:px-6 md:pt-2 min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
+      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto [scrollbar-gutter:stable] overscroll-contain px-5 pb-6 pt-4 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] md:px-6 md:pt-2 min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
         <label class="mb-6 flex items-center gap-2 rounded-xl border border-gray-200 px-2.5 py-2 text-gray-500 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
           <input class="min-w-0 w-full bg-transparent text-base outline-none sm:text-sm" v-model="search" name="reference-search" type="search" placeholder="Search reference…" aria-label="Search reference">
@@ -186,7 +197,8 @@ onUnmounted(() => {
         </template>
       </aside>
       <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
-        <Overview v-if="selectedPageId === 'overview'" :document="document" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
+        <ReferenceDiagnostics :issues="navigation.issues" />
+        <Overview v-if="selectedPageId === 'overview'" :document="sourceDocument" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <article v-if="selectedWebhook" :key="selectedWebhook.id" class="min-w-0 [overflow-wrap:anywhere]">
           <Operation webhook base="https://your-app.example" :path="`/webhooks/${encodeURIComponent(selectedWebhook.path)}`" :method="selectedWebhook.method" :operation="selectedWebhook.operation" :components="components" />

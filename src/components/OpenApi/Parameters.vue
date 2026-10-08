@@ -2,7 +2,8 @@
 import type {Paths, Components, PathItem, Schema as SchemaType, Parameter, Operation, Reference} from "./types";
 import Schema from "./Schema.vue";
 import {computed} from "vue";
-import {unreference} from "./utils.ts";
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 import SectionTitle from "./Partials/SectionTitle.vue";
 
 const props = defineProps<{
@@ -10,9 +11,10 @@ const props = defineProps<{
   parameters: (Reference|Parameter)[],
 }>()
 
-const unreferencedParameters = computed(() => props.parameters.map(p => {
-  return '$ref' in p ? unreference<Parameter>(p.$ref, props.components) : p
-}).filter((p): p is Parameter => !!p))
+const references = useReferences(() => props.components)
+const resolutions = computed(() => props.parameters.map(p => references.resolve<Parameter>(p)))
+const issues = computed(() => resolutions.value.flatMap(result => result.issues))
+const unreferencedParameters = computed(() => resolutions.value.flatMap(result => result.value ? [result.value] : []))
 
 const groupedParameters = computed(() => unreferencedParameters.value.reduce<Partial<Record<Parameter['in'], Parameter[]>>>((acc, param) => {
   if (! acc[param.in]) {
@@ -25,11 +27,9 @@ const groupedParameters = computed(() => unreferencedParameters.value.reduce<Par
 const transformParamsToSchema = (params: Parameter[]): SchemaType => {
   return {
     type: 'object',
-    properties: params.reduce((acc, p) => {
+    properties: params.reduce<Record<string, SchemaType>>((acc, p) => {
       acc[p.name] = {
-        name: p.name,
         description: p.description,
-        required: p.required,
         ...p.schema,
       }
       return acc
@@ -41,6 +41,7 @@ const transformParamsToSchema = (params: Parameter[]): SchemaType => {
 
 <template>
   <div class="space-y-[--sections-gap]">
+    <ReferenceDiagnostics :issues="issues" />
     <div v-for="(params, group) of groupedParameters">
       <div class="flex gap-1.5 items-baseline">
         <SectionTitle class="capitalize">

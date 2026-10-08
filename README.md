@@ -27,10 +27,20 @@ The loader checks HTTP status, JSON/YAML parsing, supported versions, required d
 
 Description Markdown and embedded HTML are sanitized with an allowlist before rendering. Formatting, safe links, images, and tables are preserved; active elements, event handlers, inline styles, and unsafe URL schemes are removed.
 
+## Reference support
+
+The shared resolver accepts the complete source document and resolves local URI-fragment JSON Pointers, including percent encoding, escaped slash/tilde tokens, array entries, reference chains, and locations outside components. Schemas, parameters, request bodies, responses, headers, examples, security schemes, and Path Items use this resolver. Recursive schemas remain navigable and terminate with a recursive-schema label rather than expanding indefinitely.
+
+Reference siblings follow the document version: OpenAPI 3.0 ignores Reference Object siblings; OpenAPI 3.1 applies schema siblings as additional constraints and permits summary/description overrides on other Reference Objects. Schema conjunctions are displayed as “Must match all schemas” rather than flattened by overwriting fields. Path Item siblings keep non-conflicting fields; overlapping fields produce a warning and use the referenced field, since the specification leaves conflicts undefined. See the [OpenAPI 3.0 reference rules](https://spec.openapis.org/oas/v3.0.3.html#reference-object) and [OpenAPI 3.1 reference rules](https://spec.openapis.org/oas/v3.1.0.html#reference-object).
+
+Missing targets, circular alias chains, malformed/unsupported pointers, and external references show warnings in the affected section. Incomplete request/response examples cannot be copied as generated samples; raw schema views remain available. External files are never fetched by the reference resolver: bundle them before loading. JSON Schema anchors, resource scopes using `$id`, and boolean schema targets are outside the current supported subset and produce diagnostics when encountered by the resolver. Advanced schema validation and constraint-aware sample generation remain release tasks in `AUDIT.md`.
+
+For programmatic use, `resolveReference(document, entry, kind)` in `src/components/OpenApi/references.ts` returns a value plus diagnostics; `kind` is `schema`, `reference`, or `pathItem`. Pure example helpers accept an optional complete document for full pointer and version support. Their components-only fallback treats references with the OpenAPI 3.0 sibling policy.
+
 ## Checks
 
 ```sh
-node --test tests/schemaViewer.test.mjs tests/specSafety.test.mjs
+node --test tests/localReferences.test.mjs tests/schemaViewer.test.mjs tests/specSafety.test.mjs
 yarn vite build
 yarn build
 ```

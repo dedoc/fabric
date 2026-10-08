@@ -49,7 +49,8 @@ test('resolves nested references and leaves the original schema intact', () => {
   const original = JSON.stringify({schema, components})
   assert.deepEqual(createSchemaExample(resolveExampleSchema(schema, components)), [{id: 0}])
   assert.equal(JSON.stringify({schema, components}), original)
-  assert.deepEqual(createSchemaExample(resolveExampleSchema({$ref: '#/components/schemas/Item', example: {id: 7}}, components)), {id: 7})
+  assert.deepEqual(createSchemaExample(resolveExampleSchema({$ref: '#/components/schemas/Item', example: {id: 7}}, components, {openapi: '3.1.0', components})), {id: 7})
+  assert.deepEqual(createSchemaExample(resolveExampleSchema({$ref: '#/components/schemas/Item', example: {id: 7}}, components, {openapi: '3.0.3', components})), {id: 0})
 })
 
 test('terminates recursive schemas and handles missing schemas', () => {

@@ -3,7 +3,8 @@ import type {Paths, Components, PathItem, Response, Reference, Parameter} from "
 import MediaType from "./MediaType.vue";
 import Description from "./Description.vue";
 import {computed, ref} from "vue";
-import {unreference} from "./utils.ts";
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 import ResponseHeader from "./Partials/ResponseHeader.vue";
 import ResponseContent from "./Partials/ResponseContent.vue";
 import ToggleButton from "./Partials/ToggleButton.vue";
@@ -15,14 +16,15 @@ const props = defineProps<{
   secondary?: boolean,
 }>()
 
-const unreferencedResponse = computed(() => {
-  return '$ref' in props.response ? unreference<Response>(props.response.$ref, props.components) : props.response
-})
+const references = useReferences(() => props.components)
+const resolution = computed(() => references.resolve<Response>(props.response))
+const unreferencedResponse = computed(() => resolution.value.value)
 
 const isExpanded = ref(! props.secondary)
 </script>
 
 <template>
+  <ReferenceDiagnostics :issues="resolution.issues" />
   <div v-if="unreferencedResponse" class="">
     <ResponseHeader class="min-w-0" :statusCode="String(statusCode)">
 <!--      <template v-if="! isExpanded && props.secondary && unreferencedResponse.description">-->

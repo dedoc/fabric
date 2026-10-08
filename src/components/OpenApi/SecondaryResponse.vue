@@ -3,7 +3,8 @@ import type {Paths, Components, PathItem, Response, Reference, Parameter} from "
 import MediaType from "./MediaType.vue";
 import Description from "./Description.vue";
 import {computed} from "vue";
-import {unreference} from "./utils.ts";
+import {useReferences} from './useReferences'
+import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 
 const props = defineProps<{
   components: Components, // todo: should not be here!
@@ -11,12 +12,13 @@ const props = defineProps<{
   response: Response|Reference,
 }>()
 
-const unreferencedResponse = computed(() => {
-  return '$ref' in props.response ? unreference<Response>(props.response.$ref, props.components) : props.response
-})
+const references = useReferences(() => props.components)
+const resolution = computed(() => references.resolve<Response>(props.response))
+const unreferencedResponse = computed(() => resolution.value.value)
 </script>
 
 <template>
+  <ReferenceDiagnostics :issues="resolution.issues" />
   <div v-if="unreferencedResponse">
     <div class="flex items-baseline gap-1.5 text-sm">
       <div class="font-jetbrains-mono rounded-lg leading-[18px] font-medium uppercase border border-green-300 bg-green-50 text-green-600 px-1.5 py-[3px]">
