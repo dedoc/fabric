@@ -1,4 +1,4 @@
-import type {Components, HttpMethod, Operation, Paths, Schema as SchemaType} from "./types.ts";
+import type {Components, Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
 
 export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 
@@ -104,6 +104,39 @@ export function getOperationId (method: string, path: string, operation: Operati
 
 export function getOperationTitle (path: string, operation: Operation) {
     return operation.summary ?? operation.operationId ?? path
+}
+
+export function getWebhookOperations(document: Document): InlineOperation[] {
+    function resolve(item: PathItem, seen = new Set<string>()): PathItem {
+        if (!item.$ref) return item
+        const reference = item.$ref
+        if (!reference.startsWith('#/') || seen.has(reference)) throw new Error(`Cannot resolve webhook reference: ${reference}`)
+        seen.add(reference)
+        let target: any = document
+        for (const part of reference.slice(2).split('/')) {
+            const key = decodeURIComponent(part).replace(/~1/g, '/').replace(/~0/g, '~')
+            target = target && Object.hasOwn(target, key) ? target[key] : undefined
+        }
+        if (!target || typeof target !== 'object' || Array.isArray(target)) throw new Error(`Cannot resolve webhook reference: ${reference}`)
+        const {$ref, ...overrides} = item
+        return {...resolve(target, seen), ...overrides}
+    }
+    return Object.entries(document.webhooks ?? {}).filter(([name]) => !name.startsWith('x-')).flatMap(([name, item]) => {
+        const resolved = resolve(item)
+        return getInlineOperations({[name]: resolved}).map(entry => ({
+            ...entry,
+            id: `webhooks/${encodeURIComponent(name)}/${entry.method}`,
+            operation: {
+                ...entry.operation,
+                summary: entry.operation.summary ?? resolved.summary ?? name,
+                description: entry.operation.description ?? resolved.description,
+                parameters: [...(resolved.parameters ?? []).filter(parameter => !entry.operation.parameters?.some(override =>
+                    '$ref' in parameter && '$ref' in override ? parameter.$ref === override.$ref :
+                    !('$ref' in parameter) && !('$ref' in override) && parameter.name === override.name && parameter.in === override.in
+                )), ...(entry.operation.parameters ?? [])],
+            },
+        }))
+    })
 }
 
 export function getInlineOperations (paths: Paths): InlineOperation[] {

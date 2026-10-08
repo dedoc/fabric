@@ -5,11 +5,13 @@ import {showSchemasKey} from "../../utils/symbols.ts";
 import Paths from "../OpenApi/Paths.vue";
 import SchemaPage from "../OpenApi/SchemaPage.vue";
 import Overview from "../OpenApi/Overview.vue";
+import Operation from "../OpenApi/Operation.vue";
 import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
 import NavigationItem from "./Partials/NavigationItem.vue";
-import {getInlineOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
+import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
 import {resolveOperationBase} from "../OpenApi/servers.ts";
+import {provideAuthCredentials} from '../OpenApi/useAuthCredentials'
 
 const props = withDefaults(defineProps<{
   base?: string,
@@ -21,8 +23,11 @@ const props = withDefaults(defineProps<{
 }>(), {showSchemas: true})
 
 provide(showSchemasKey, computed(() => props.showSchemas))
+provideAuthCredentials()
 
 const operations = computed(() => getInlineOperations(props.paths))
+const webhooks = computed(() => getWebhookOperations(props.document))
+const selectedWebhook = computed(() => webhooks.value.find(item => item.id === selectedPageId.value))
 
 function getPageIdFromUrl (): string|undefined {
   const url = new URL(window.location.href)
@@ -116,6 +121,10 @@ const filteredNavigation = computed(() => buildNavigationTree(operations.value.f
   `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
     .toLowerCase().includes(search.value.toLowerCase())
 )))
+const filteredWebhooks = computed(() => buildNavigationTree(webhooks.value.filter(operation =>
+  `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
+    .toLowerCase().includes(search.value.toLowerCase())
+)))
 function syncLocation() {
   selectedPageId.value = getPageIdFromUrl() || 'overview'
   window.scrollTo(0, 0)
@@ -160,6 +169,13 @@ onUnmounted(() => {
           <Navigation v-for="item of filteredNavigation" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
           <p v-if="!filteredNavigation.length" class="p-4 text-[13px] text-gray-500">No matching operations.</p>
         </nav>
+        <template v-if="webhooks.length">
+          <div class="-mx-2 mb-3 mt-6 px-2 text-[13px] font-medium">Webhooks</div>
+          <nav aria-label="Webhooks" class="-mx-2">
+            <Navigation v-for="item of filteredWebhooks" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
+            <p v-if="!filteredWebhooks.length" class="p-4 text-[13px] text-gray-500">No matching webhooks.</p>
+          </nav>
+        </template>
         <template v-if="showSchemas && schemas.length">
           <div class="-mx-2 mb-3 mt-6 px-2 text-[13px] font-medium">Schemas</div>
           <nav aria-label="Schemas" class="-mx-2">
@@ -171,6 +187,9 @@ onUnmounted(() => {
       <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
         <Overview v-if="selectedPageId === 'overview'" :document="document" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
+        <article v-if="selectedWebhook" :key="selectedWebhook.id" class="min-w-0 [overflow-wrap:anywhere]">
+          <Operation webhook base="https://your-app.example" :path="`/webhooks/${encodeURIComponent(selectedWebhook.path)}`" :method="selectedWebhook.method" :operation="selectedWebhook.operation" :components="components" />
+        </article>
         <div v-if="selectedOperation" :key="selectedOperation.id">
           <article class="min-w-0 [overflow-wrap:anywhere]">
             <Paths :base="operationBase" :components="components" :paths="{[selectedOperation.path]: {[selectedOperation.method]: selectedOperation.operation}}" />

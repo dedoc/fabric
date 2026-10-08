@@ -183,6 +183,7 @@ export type Components = {
 
 export type Document = {
     openapi?: string,
+    webhooks?: Paths,
     info?: {
         title?: string,
         summary?: string,

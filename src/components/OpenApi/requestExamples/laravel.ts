@@ -43,6 +43,10 @@ export const laravelSender: RequestExampleSender = {
     } else if (request.contentType) {
       client = `withHeaders(['Content-Type' => ${quote(request.contentType)}])`
     }
+    if (request.authorization) {
+      const auth = `withHeaders(['Authorization' => ${quote(request.authorization)}])`
+      client = auth + (client ? '\n    ->' + client : '')
+    }
     const send = `send(${quote(request.method)}, ${quote(request.url)}${options ? ', ' + php(options, client ? 1 : 0) : ''});`
     lines[2] += client ? client + '\n    ->' + send : send
     return lines.join('\n')

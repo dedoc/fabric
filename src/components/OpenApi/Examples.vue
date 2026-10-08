@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
+import {computed, inject, ref} from 'vue'
+import {documentKey} from '../../utils/symbols'
+import {authorizationForOption, httpAuthForOperation, useAuthCredentials} from './useAuthCredentials'
+import {operationSecurity} from './security'
+import {authPlaceholder} from './requestExamples/auth'
 import type {Components, Operation, Response} from './types'
 import {unreference} from './utils'
 import MethodChip from './Partials/MethodChip.vue'
@@ -9,6 +13,9 @@ import {useMediaType} from './useMediaType'
 import Select from '../UI/Select.vue'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
+const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
+const document = inject(documentKey, undefined)
+const credentials = useAuthCredentials()
 const requestView = ref('example')
 const preferredRequestExample = ref(requestExampleSenders[0].id)
 const responseView = ref('example')
@@ -36,12 +43,28 @@ const {type: responseType, media: responseMedia} = useMediaType(() => responseCo
 function format(value: unknown): string {
   return value === undefined ? '' : JSON.stringify(value, null, 2)
 }
-const requestCode = computed(() => {
+const security = computed(() => operationSecurity(props.operation, document?.value ?? {components: props.components}))
+const hasAuth = computed(() => security.value.some(group => group.length))
+const httpAuth = computed(() => httpAuthForOperation(props.operation, document?.value ?? {components: props.components}, credentials?.value ?? {}))
+const savedAuthorization = computed(() => authorizationForOption(httpAuth.value))
+function generateRequestCode(display: boolean) {
   if (requestView.value === 'schema') return format(requestMedia.value?.schema)
   const request = createRequestExample(props.base, props.path, props.method, requestType.value, requestMedia.value, props.components)
   if (requestExample.value === 'payload') return request.body
+  if (display && httpAuth.value) request.authorization = `${httpAuth.value.kind === 'basic' ? 'Basic' : 'Bearer'} ${authPlaceholder}`
+  else if (!display) request.authorization = savedAuthorization.value
   const sender = requestExampleSenders.find(sender => sender.id === requestExample.value) ?? requestExampleSenders[0]
-  return sender.generate(request)
+  const code = sender.generate(request)
+  return display && hasAuth.value && !httpAuth.value ? `${authPlaceholder}\n${code}` : code
+}
+const requestCode = computed(() => generateRequestCode(false))
+const displayCode = computed(() => {
+  const code = generateRequestCode(true)
+  if (requestView.value !== 'example' || requestExample.value === 'payload' || !hasAuth.value) return {before: code, after: '', chip: false}
+  const index = code.indexOf(authPlaceholder)
+  return index < 0 ? {before: code, after: '', chip: false} : {
+    before: code.slice(0, index), after: code.slice(index + authPlaceholder.length), chip: true,
+  }
 })
 const responseCode = computed(() => {
   const media = responseMedia.value
@@ -72,7 +95,7 @@ async function copy(code: string, panel: string) {
             <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
           </button>
         </div>
-        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="requestCode"><code class="font-jetbrains-mono">{{ requestCode }}</code></pre>
+        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode.before || displayCode.chip"><code class="font-jetbrains-mono">{{ displayCode.before }}<button v-if="displayCode.chip" type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button>{{ displayCode.after }}</code></pre>
         <p v-else class="p-4 text-[13px] text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
       </section>
       <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">

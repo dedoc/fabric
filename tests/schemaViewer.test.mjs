@@ -17,7 +17,188 @@ const {default: ResponseContent} = await server.ssrLoadModule('/src/components/O
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
 const {default: Select} = await server.ssrLoadModule('/src/components/UI/Select.vue')
 const {resolveOperationBase} = await server.ssrLoadModule('/src/components/OpenApi/servers.ts')
-const {getInlineOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
+const {getInlineOperations, getWebhookOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
+const {default: OperationDatums} = await server.ssrLoadModule('/src/components/OpenApi/Partials/OperationDatums.vue')
+const {operationSecurity, resolveSecurityScheme} = await server.ssrLoadModule('/src/components/OpenApi/security.ts')
+const {provideAuthCredentials, httpAuthForOperation, authorizationForOption} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
+const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
+const {basicAuthorization} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/auth.ts')
+
+test('saved Basic credentials respect endpoint overrides and complete authentication alternatives', () => {
+  const document = {security: [{Basic: []}], components: {securitySchemes: {
+    Basic: {type: 'http', scheme: 'basic'}, Key: {type: 'apiKey', in: 'header', name: 'X-Key'},
+  }}}
+  const credentials = {Basic: {username: 'test-key', password: ''}}
+  assert.deepEqual(httpAuthForOperation({}, document, credentials).credentials, credentials.Basic)
+  assert.equal(httpAuthForOperation({security: []}, document, credentials), undefined)
+  assert.equal(httpAuthForOperation({security: [{Key: []}]}, document, credentials), undefined)
+  assert.equal(httpAuthForOperation({security: [{Basic: [], Key: []}]}, document, credentials), undefined)
+  assert.equal(authorizationForOption(httpAuthForOperation({}, document, {})), undefined)
+})
+
+test('Bearer auth selects a configured complete alternative and sends the token unchanged', () => {
+  const document = {security: [{Basic: []}, {Token: []}], components: {securitySchemes: {
+    Basic: {type: 'http', scheme: 'basic'}, Token: {type: 'http', scheme: 'Bearer'},
+    Alias: {$ref: '#/components/securitySchemes/Token'},
+  }}}
+  const credentials = {Token: {token: '  test.jwt-token.value  '}}
+  const option = httpAuthForOperation({}, document, credentials)
+  assert.equal(option.kind, 'bearer')
+  assert.equal(authorizationForOption(option), 'Bearer test.jwt-token.value')
+  assert.equal(httpAuthForOperation({security: []}, document, credentials), undefined)
+  assert.equal(httpAuthForOperation({security: [{Basic: [], Token: []}]}, document, credentials), undefined)
+  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Token: []}]}, document, {Token: {username: 'wrong-kind', password: ''}})), undefined)
+  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Alias: []}]}, document, {Alias: {token: 'alias-token'}})), 'Bearer alias-token')
+  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Token: []}]}, document, {Token: {token: '  '}})), undefined)
+})
+
+test('Bearer tokens are masked in endpoint and example chips with green locks when set', async () => {
+  const document = {security: [{Token: []}], components: {securitySchemes: {Token: {type: 'http', scheme: 'bearer'}}}}
+  async function render(token) {
+    return renderToString(createSSRApp({setup() {
+      provide(documentKey, ref(document))
+      provideMediaTypeSelections()
+      const credentials = provideAuthCredentials()
+      if (token) credentials.value.Token = {token}
+      return () => h('div', [h(OperationDatums, {operation: {}}), h(Examples, {
+        base: 'https://api.example.com', path: '/files', method: 'get', operation: {}, components: document.components,
+      })])
+    }}))
+  }
+  const empty = await render()
+  assert.match(empty, /Auth: Bearer/)
+  assert.match(empty, /Set authentication credentials/)
+  assert.match(empty, /Authorization: Bearer/)
+  const configured = await render('private-demo-token')
+  assert.doesNotMatch(configured, /private-demo-token/)
+  assert.match(configured, /Edit authentication credentials/)
+  assert.equal((configured.match(/text-green-600/g) ?? []).length, 2)
+})
+
+test('Basic credentials are Base64 encoded in Bash and Laravel examples, including Unicode and empty passwords', () => {
+  const request = createRequestExample('https://api.example.com', '/files', 'post', 'application/json', {example: {id: 1}}, {})
+  const username = "test'keyé"
+  const password = "pass'\\word"
+  const encoded = Buffer.from(`${username}:${password}`, 'utf8').toString('base64')
+  request.authorization = basicAuthorization(username, password)
+  assert.equal(request.authorization, `Basic ${encoded}`)
+  const bash = requestExampleSenders.find(sender => sender.id === 'bash').generate(request)
+  const laravel = requestExampleSenders.find(sender => sender.id === 'laravel').generate(request)
+  assert.ok(bash.includes(`-H 'Authorization: Basic ${encoded}'`))
+  assert.ok(laravel.includes(`withHeaders(['Authorization' => 'Basic ${encoded}'])`))
+  assert.doesNotMatch(bash + laravel, /test'key|pass/)
+  request.authorization = basicAuthorization('test-key', '')
+  assert.equal(request.authorization, `Basic ${Buffer.from('test-key:').toString('base64')}`)
+  delete request.authorization
+  assert.doesNotMatch(requestExampleSenders[0].generate(request), /Authorization:/)
+})
+
+test('endpoint and example chips hide credentials, including their Base64 value, in rendered HTML', async () => {
+  const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
+  const html = await renderToString(createSSRApp({setup() {
+    provide(documentKey, ref(document))
+    provideMediaTypeSelections()
+    const credentials = provideAuthCredentials()
+    credentials.value.Basic = {username: 'demo-username', password: 'demo-password'}
+    return () => h('div', [h(OperationDatums, {operation: {}}), h(Examples, {
+      base: 'https://api.example.com', path: '/files', method: 'get', operation: {}, components: document.components,
+    })])
+  }}))
+  const trigger = html.match(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?<\/button>/)?.[0]
+  assert.ok(trigger)
+  assert.match(trigger.replace(/<[^>]*>/g, ''), /Auth: Basic/)
+  assert.doesNotMatch(trigger, /demo-username|demo-password/)
+  assert.match(html, /<dialog[^>]*aria-label="Authentication"/)
+  assert.match(html, /Edit authentication credentials/)
+  assert.match(html, /Authorization: Basic/)
+  assert.doesNotMatch(html, /demo-username|demo-password/)
+  assert.ok(!html.includes(Buffer.from('demo-username:demo-password').toString('base64')))
+})
+
+test('authenticated request examples have a credential chip before credentials are entered', async () => {
+  const html = await renderToString(createSSRApp({setup() {
+    provideMediaTypeSelections()
+    return () => h(Examples, {base: 'https://api.example.com', path: '/files', method: 'get',
+      operation: {security: [{Basic: []}]}, components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}},
+    })
+  }}))
+  assert.match(html, /Set authentication credentials/)
+  assert.match(html, /Authorization: Basic/)
+  assert.doesNotMatch(html, /__FABRIC_AUTH_CREDENTIALS__/)
+})
+
+async function renderAuthentication(operation, document) {
+  return renderToString(createSSRApp({setup() {
+    provide(documentKey, ref(document))
+    return () => h(OperationDatums, {operation})
+  }}))
+}
+
+test('Basic authentication inherits Converterer instructions without redundant cURL guidance', async () => {
+  const document = {security: [{ConvertererApiKey: []}], components: {securitySchemes: {
+    ConvertererApiKey: {type: 'http', scheme: 'basic', description: 'Use your Converterer API key as the username.\nLeave the password empty.'},
+  }}}
+  const html = await renderAuthentication({}, document)
+  assert.match(html, /Basic authentication/)
+  assert.match(html, /Use your Converterer API key as the username/)
+  assert.match(html, /Leave the password empty/)
+  assert.match(html, /Base64-encoded/)
+  assert.doesNotMatch(html, /With cURL|trailing colon|--user/)
+  assert.doesNotMatch(html, /Bearer/)
+  const overview = await renderPages(document.components, '#overview', {document})
+  assert.match(overview, /Basic authentication/)
+  assert.match(overview, /Leave the password empty/)
+})
+
+test('operation authentication overrides inheritance and distinguishes public and optional access', async () => {
+  const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
+  assert.doesNotMatch(await renderAuthentication({security: []}, document), /No authentication required|Auth:|<dialog/)
+  assert.doesNotMatch(await renderAuthentication({security: []}, document), /Basic authentication/)
+  assert.doesNotMatch(await renderAuthentication({}, {}), /No authentication required|Auth:|<dialog/)
+  const optional = await renderAuthentication({security: [{}, {Basic: []}]}, document)
+  assert.match(optional, /Authentication is optional/)
+  assert.match(optional, /Basic authentication/)
+})
+
+test('authentication alternatives, combined requirements, scopes and API key locations are explicit', async () => {
+  const document = {components: {securitySchemes: {
+    OAuth: {type: 'oauth2', flows: {}},
+    Key: {type: 'apiKey', name: 'X-API-Key', in: 'header'},
+    Token: {type: 'http', scheme: 'Bearer', bearerFormat: 'JWT'},
+  }}}
+  const html = await renderAuthentication({security: [{OAuth: ['files:read'], Key: []}, {Token: []}]}, document)
+  assert.match(html, /Use one of the following/)
+  assert.match(html, /All of these methods are required together/)
+  assert.match(html, /Or — Option 2/)
+  assert.match(html, /files:read/)
+  assert.match(html, /X-API-Key<\/code> header/)
+  assert.match(html, /Authorization: Bearer &lt;token&gt;/)
+  assert.match(html, /Token format: JWT/)
+  for (const location of ['query', 'cookie']) {
+    const result = await renderAuthentication({security: [{Key: []}]}, {components: {securitySchemes: {
+      Key: {type: 'apiKey', name: 'key', in: location},
+    }}})
+    assert.match(result, new RegExp(location === 'query' ? 'query parameter' : 'cookie'))
+  }
+})
+
+test('security scheme references decode JSON pointers, follow chains and report unresolved schemes', async () => {
+  const components = {securitySchemes: {
+    Alias: {$ref: '#/components/securitySchemes/A~1B~0C'},
+    'A/B~C': {$ref: '#/components/securitySchemes/Basic'},
+    Basic: {type: 'http', scheme: 'basic'},
+    Cycle: {$ref: '#/components/securitySchemes/Cycle'},
+    External: {$ref: 'https://example.com/schemes.json#/Basic'},
+  }}
+  assert.equal(resolveSecurityScheme('Alias', components), components.securitySchemes.Basic)
+  assert.equal(resolveSecurityScheme('Cycle', components), undefined)
+  assert.equal(resolveSecurityScheme('External', components), undefined)
+  const document = {components, security: [{Alias: []}]}
+  assert.equal(operationSecurity({}, document)[0][0].scheme, components.securitySchemes.Basic)
+  const html = await renderAuthentication({security: [{Missing: []}]}, document)
+  assert.match(html, /could not be resolved/)
+  assert.doesNotMatch(html, /Bearer/)
+})
 
 test('server resolution respects overrides, defaults, variables and document-relative URLs', () => {
   const root = [{url: 'https://api.converterer.com'}]
@@ -161,6 +342,44 @@ test('only shows schema navigation when component schemas exist', async () => {
   assert.match(await renderPages({schemas: {Person: {type: 'object'}}}), /aria-label="Schemas"/)
 })
 
+test('webhooks sit between reference and schemas and render a separate incoming request page', async () => {
+  const components = {schemas: {Event: {type: 'object', properties: {event_id: {type: 'string'}}}}}
+  const document = {webhooks: {'planet/created': {post: {
+    operationId: 'shared-id', summary: 'Planet created', description: 'Receive a newly discovered planet.',
+    requestBody: {content: {'application/json': {schema: {$ref: '#/components/schemas/Event'}}}},
+    responses: {'204': {description: 'Event accepted'}},
+  }}}}
+  const html = await renderPages(components, '#webhooks/planet%2Fcreated/post', {document,
+    paths: {'/planets': {get: {operationId: 'shared-id', summary: 'List planets', responses: {}}}},
+  })
+  assert.ok(html.indexOf('aria-label="API reference"') < html.indexOf('aria-label="Webhooks"'))
+  assert.ok(html.indexOf('aria-label="Webhooks"') < html.indexOf('aria-label="Schemas"'))
+  assert.match(html, /aria-current="page"[^>]*>.*?Planet created/s)
+  assert.match(html, /Your webhook URL/)
+  assert.match(html, /Receive a newly discovered planet/)
+  assert.match(html, /event_id/)
+  assert.match(html, /Event accepted/)
+  assert.doesNotMatch(html, /<h1[^>]*>List planets/)
+  assert.doesNotMatch(await renderPages({}), /aria-label="Webhooks"/)
+})
+
+test('webhooks resolve local path items and inherit shared parameters with operation overrides', () => {
+  const shared = {name: 'signature', in: 'header', description: 'Shared'}
+  const override = {...shared, description: 'Operation'}
+  const document = {components: {pathItems: {'Event/created': {
+    summary: 'Created event', parameters: [shared],
+    post: {parameters: [override], responses: {'200': {description: 'Accepted'}}},
+    put: {responses: {'200': {description: 'Accepted'}}},
+  }}}, webhooks: {required: {$ref: '#/components/pathItems/Event~1created'}}}
+  const entries = getWebhookOperations(document)
+  assert.equal(entries.length, 2)
+  assert.equal(entries[0].id, 'webhooks/required/post')
+  assert.equal(entries[0].operation.summary, 'Created event')
+  assert.deepEqual(entries[0].operation.parameters, [override])
+  assert.deepEqual(entries[1].operation.parameters, [shared])
+  assert.throws(() => getWebhookOperations({webhooks: {broken: {$ref: '#/webhooks/broken'}}}), /Cannot resolve webhook reference/)
+})
+
 test('direct endpoint view retains accessible property disclosures', async () => {
   const html = await renderPages({}, '#operations/list-files', {paths: {'/files': {get: {
     operationId: 'list-files', summary: 'List files',
@@ -229,7 +448,7 @@ test('overview includes server overrides, resolves templates and renders declare
   })
   assert.match(html, /https:\/\/api.example.com\/v2/)
   assert.equal((html.match(/https:\/\/download.example.com/g) ?? []).length, 1)
-  assert.match(html, /HTTP Basic/)
+  assert.match(html, /Basic authentication/)
   assert.match(html, /Use your API key as the username\./)
   assert.doesNotMatch(html, /Bearer token/)
 })

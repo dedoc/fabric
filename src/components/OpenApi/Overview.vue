@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Components, Document, Paths, SecurityScheme, Server} from './types'
+import type {Components, Document, Paths, Server} from './types'
 import Description from './Description.vue'
 import SectionTitle from './Partials/SectionTitle.vue'
-import {getInlineOperations, unreference} from './utils'
+import {getInlineOperations} from './utils'
+import {resolveSecurityScheme} from './security'
+import SecuritySchemeDetails from './Partials/SecuritySchemeDetails.vue'
 import {resolveOperationBase} from './servers'
 
 const props = defineProps<{document: Document, paths: Paths, components: Components, documentUrl?: string}>()
@@ -24,19 +26,9 @@ const servers = computed(() => {
   })
 })
 
-const schemes = computed(() => Object.entries(props.components.securitySchemes ?? {}).flatMap(([name, entry]) => {
-  const scheme = '$ref' in entry ? unreference<SecurityScheme>(entry.$ref, props.components) : entry
-  return scheme ? [{name, scheme}] : []
+const schemes = computed(() => Object.keys(props.components.securitySchemes ?? {}).map(name => {
+  return {name, scheme: resolveSecurityScheme(name, props.components)}
 }))
-
-function schemeLabel(scheme: SecurityScheme): string {
-  if (scheme.type === 'apiKey') return 'API key'
-  if (scheme.type === 'oauth2') return 'OAuth 2.0'
-  if (scheme.type === 'openIdConnect') return 'OpenID Connect'
-  if (scheme.scheme.toLowerCase() === 'basic') return 'HTTP Basic'
-  if (scheme.scheme.toLowerCase() === 'bearer') return 'Bearer token'
-  return `HTTP ${scheme.scheme}`
-}
 
 const groups = computed(() => {
   const groups = new Map<string, {name: string, id: string, count: number}>()
@@ -94,13 +86,7 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
         <p class="text-pretty text-base text-gray-600 sm:text-sm">Check each endpoint for its authentication requirements.</p>
         <div class="divide-y divide-gray-950/5">
           <div v-for="{name, scheme} in schemes" :key="name" class="space-y-3 py-4 first:pt-0 last:pb-0">
-            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
-              <h3 class="font-medium text-gray-900">{{ schemeLabel(scheme) }}</h3>
-              <div class="text-gray-500">{{ name }}</div>
-            </div>
-            <Description v-if="scheme.description" class="max-w-[70ch]" :content="scheme.description" />
-            <p v-if="scheme.type === 'apiKey'" class="text-base text-gray-600 sm:text-sm">Send <code class="font-jetbrains-mono">{{ scheme.name }}</code> in the {{ scheme.in }}.</p>
-            <a v-if="scheme.type === 'openIdConnect' && link(scheme.openIdConnectUrl)" :href="link(scheme.openIdConnectUrl)" class="inline-flex text-sm text-gray-700 underline underline-offset-4 hover:text-gray-900" target="_blank" rel="noopener noreferrer">OpenID Connect configuration</a>
+            <SecuritySchemeDetails :name="name" :scheme="scheme" />
           </div>
         </div>
       </section>

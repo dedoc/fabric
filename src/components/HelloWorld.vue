@@ -10,8 +10,10 @@ import type {Specification} from './OpenApi/specification'
 const props = withDefaults(defineProps<{showSchemas?: boolean, specUrl?: string}>(), {showSchemas: true})
 
 // Uncomment one URL at a time to switch the test specification.
-const specUrl = '/spotify/open-api-schema.yaml'
+// const specUrl = '/spotify/open-api-schema.yaml'
 // const specUrl = '/converterer/openapi.json'
+const specUrl = 'https://galaxy.scalar.com/openapi.json'
+// const specUrl = 'https://raw.githubusercontent.com/SpaceTradersAPI/api-docs/main/reference/SpaceTraders.json'
 // const specUrl = 'https://petstore3.swagger.io/api/v3/openapi.json'
 // const specUrl = 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json'
 // const specUrl = 'https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json'

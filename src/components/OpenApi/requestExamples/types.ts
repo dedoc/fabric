@@ -5,6 +5,7 @@ export interface RequestExample {
   body: string
   value: unknown
   formFields: [string, string][]
+  authorization?: string
 }
 
 /** Implement and register a sender to expose it in the request example picker. */

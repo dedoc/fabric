@@ -28,7 +28,20 @@ export function parseSpecification(source: string): Specification {
       throw new SpecificationError(`info.${field} must be a non-empty string.`)
     }
   }
+  if (value.paths === undefined && value.webhooks !== undefined && value.openapi.startsWith('3.1.')) value.paths = {}
   requireObject(value.paths, 'paths')
+  if (value.webhooks !== undefined) {
+    requireObject(value.webhooks, 'webhooks')
+    for (const [name, item] of Object.entries(value.webhooks)) {
+      if (name.startsWith('x-')) continue
+      requireObject(item, `webhooks.${name}`)
+      for (const method of httpMethods) {
+        if (item[method] === undefined) continue
+        requireObject(item[method], `webhooks.${name}.${method}`)
+        requireObject(item[method].responses, `Responses for webhook ${name}`)
+      }
+    }
+  }
   if (value.components !== undefined) {
     requireObject(value.components, 'components')
     for (const [name, entries] of Object.entries(value.components)) {
@@ -48,8 +61,8 @@ export function parseSpecification(source: string): Specification {
 
   // Payload examples and extensions are data, not schema keywords.
   const ancestors = new Set<object>()
-  const maps = ['paths', 'schemas', 'properties', 'content', 'responses', 'headers', 'securitySchemes', 'requestBodies', 'callbacks', 'links', 'pathItems', 'variables', 'scopes']
-  function inspect(node: unknown, location: string, depth = 0, dictionary = false) {
+  const maps = ['paths', 'webhooks', 'schemas', 'properties', 'content', 'responses', 'headers', 'securitySchemes', 'requestBodies', 'callbacks', 'links', 'pathItems', 'variables', 'scopes']
+  function inspect(node: unknown, location: string, depth = 0, dictionary = false, context?: 'links' | 'link') {
     if (node === null || typeof node !== 'object') return
     if (depth > 100 || ancestors.has(node)) throw new SpecificationError('The specification contains cyclic or excessively nested data.')
     ancestors.add(node)
@@ -60,6 +73,12 @@ export function parseSpecification(source: string): Specification {
       for (const [key, item] of Object.entries(node)) {
         if (key.startsWith('x-') || (!dictionary && !components && ['example', 'examples', 'default', 'const', 'enum'].includes(key))) continue
         const at = `${location}.${key}`
+        // Link values are runtime expressions or arbitrary payloads, rather than
+        // the operation's parameter array and Request Body Object.
+        if (context === 'link' && ['parameters', 'requestBody'].includes(key)) {
+          if (key === 'parameters') requireObject(item, at)
+          continue
+        }
         if (!dictionary && !components) {
           if (['description', 'summary', '$ref'].includes(key) && typeof item !== 'string') throw new SpecificationError(`${at} must be a string.`)
           if (['properties', 'content', 'responses', 'headers', 'requestBody', 'items'].includes(key)) requireObject(item, at)
@@ -75,7 +94,8 @@ export function parseSpecification(source: string): Specification {
             }
           }
         }
-        inspect(item, at, depth + 1, components || (!dictionary && (maps.includes(key) || key === 'security')))
+        inspect(item, at, depth + 1, components || (!dictionary && (maps.includes(key) || key === 'security')),
+          context === 'links' ? 'link' : (!dictionary && key === 'links') || (components && key === 'links') ? 'links' : undefined)
       }
     }
     ancestors.delete(node)

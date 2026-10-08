@@ -3,7 +3,7 @@ import {createServer as createHttpServer} from 'node:http'
 import {after, test} from 'node:test'
 import {createServer, transformWithEsbuild} from 'vite'
 import {compileScript, compileTemplate, parse as parseVue} from '@vue/compiler-sfc'
-import {createRenderer, h, nextTick, ref} from 'vue'
+import {createRenderer, h, nextTick, provide, ref} from 'vue'
 
 // Compile client render functions so the lightweight host can exercise mounted UI states.
 const server = await createServer({configFile: false, plugins: [{
@@ -22,7 +22,20 @@ after(() => server.close())
 const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/descriptionHtml.ts')
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
 const {default: Viewer} = await server.ssrLoadModule('/src/components/HelloWorld.vue')
+const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
+const {provideAuthCredentials} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
+const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
+const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
 const valid = {openapi: '3.0.3', info: {title: 'Recovered API', version: '1.0'}, paths: {}}
+
+test('OpenAPI 3.1 supports webhook-only documents and validates webhook operations', () => {
+  const specification = {openapi: '3.1.0', info: valid.info, webhooks: {
+    required: {post: {responses: {'204': {description: 'Accepted'}}}},
+  }}
+  assert.deepEqual(parseSpecification(JSON.stringify(specification)).paths, {})
+  assert.throws(() => parseSpecification(JSON.stringify({...specification, webhooks: []})), /webhooks must be an object/)
+  assert.throws(() => parseSpecification(JSON.stringify({...specification, webhooks: {event: {post: {}}}})), /Responses for webhook/)
+})
 
 test('description sanitizer preserves formatting and safe links while removing active HTML', () => {
   const html = renderDescription(`## Guide
@@ -64,6 +77,14 @@ test('invalid documents fail with readable messages instead of reaching the rend
   ]) assert.throws(() => parseSpecification(source), error => error.name === 'Error' && error.message.length > 0)
 })
 
+test('response and component links accept parameter maps and request-body expressions', () => {
+  const link = {operationId: 'getPlanet', parameters: {id: '$response.body#/id', description: 42}, requestBody: '$response.body'}
+  assert.doesNotThrow(() => parseSpecification(JSON.stringify({...valid, paths: {'/planets': {get: {responses: {
+    200: {description: 'OK', links: {GetPlanet: link}},
+  }}}}, components: {links: {GetPlanet: link}}})))
+  assert.throws(() => parseSpecification(JSON.stringify({...valid, paths: {'/planets': {get: {parameters: {}, responses: {}}}}})), /parameters must be an array/)
+})
+
 test('remote loading handles HTTP, network, and HTML fallback failures', async () => {
   const original = globalThis.fetch
   try {
@@ -92,11 +113,12 @@ test('slow remote loads time out and abort the outstanding fetch', async t => {
   } finally { globalThis.fetch = original; t.mock.timers.reset() }
 })
 
-function mountViewer(url = '/spec.json', hash = '#overview') {
+function mountViewer(url = '/spec.json', hash = '#overview', component) {
   const originalWindow = globalThis.window
   globalThis.window = {location: {href: `https://example.com/${hash}`}, scrollTo() {}, addEventListener() {}, removeEventListener() {},
     matchMedia: () => ({addEventListener() {}, removeEventListener() {}})}
   const node = (type, text = '') => ({type, tagName: type.toUpperCase(), text, children: [], props: {}, parent: null,
+    get options() { return this.children.filter(child => child.type === 'option') },
     addEventListener() {}, removeEventListener() {}, getAttribute(key) { return this.props[key] }})
   const renderer = createRenderer({
     createElement: type => node(type), createText: text => node('#text', text), createComment: text => node('#comment', text),
@@ -108,7 +130,7 @@ function mountViewer(url = '/spec.json', hash = '#overview') {
       return [el, el]
     },
     setText: (el, text) => { el.text = text }, setElementText: (el, text) => { el.text = text; el.children = [] },
-    patchProp: (el, key, previous, value) => { el.props[key] = value },
+    patchProp: (el, key, previous, value) => { el.props[key] = value; if (key === 'value') el.value = value },
     insert(el, parent, anchor) {
       if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1)
       el.parent = parent
@@ -121,12 +143,13 @@ function mountViewer(url = '/spec.json', hash = '#overview') {
   })
   const root = node('root')
   const source = ref(url)
-  const app = renderer.createApp({render: () => h(Viewer, {specUrl: source.value})})
+  const app = renderer.createApp(component ?? {render: () => h(Viewer, {specUrl: source.value})})
   app.config.warnHandler = () => {}
   app.mount(root)
   const text = el => el.text + el.children.map(text).join(' ')
   const find = (el, type) => el.type === type ? el : el.children.map(child => find(child, type)).find(Boolean)
-  return {source, text: () => text(root), button: () => find(root, 'button'), close() {
+  const matching = (el, predicate) => predicate(el) ? el : el.children.map(child => matching(child, predicate)).find(Boolean)
+  return {source, text: () => text(root), button: () => find(root, 'button'), find: predicate => matching(root, predicate), close() {
     app.unmount()
     if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow
   }}
@@ -140,6 +163,92 @@ async function until(check) {
   }
   assert.ok(check(), 'Viewer did not reach expected state')
 }
+
+test('Copy uses encoded credentials while the visible example stays masked and its chip opens authentication', async () => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  let copied = ''
+  let opened = 0
+  let saved
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {clipboard: {writeText: async value => { copied = value }}}})
+  const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
+  const viewer = mountViewer('/spec.json', '#overview', {setup() {
+    provide(documentKey, ref(document))
+    provideMediaTypeSelections()
+    saved = provideAuthCredentials()
+    saved.value.Basic = {username: 'demo-key', password: ''}
+    return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {},
+      components: document.components, onAuthenticate: () => { opened++ },
+    })
+  }})
+  globalThis.window.setTimeout = () => 0
+  try {
+    const encoded = Buffer.from('demo-key:').toString('base64')
+    assert.doesNotMatch(viewer.text(), /demo-key/)
+    assert.ok(!viewer.text().includes(encoded))
+    const chip = viewer.find(el => el.props['aria-label'] === 'Edit authentication credentials')
+    chip.props.onClick({currentTarget: chip})
+    assert.equal(opened, 1)
+    await viewer.find(el => el.props['aria-label'] === 'Copy request example').props.onClick()
+    assert.ok(copied.includes(`Authorization: Basic ${encoded}`))
+    assert.doesNotMatch(copied, /demo-key|__FABRIC|••••/)
+    saved.value.Basic = {username: 'demo-key', password: 'new-password'}
+    await nextTick()
+    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
+    assert.ok(copied.includes(Buffer.from('demo-key:new-password').toString('base64')))
+    viewer.find(el => el.props['aria-label'] === 'Request example sender').props['onUpdate:modelValue']('laravel')
+    await nextTick()
+    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
+    assert.ok(copied.includes(`withHeaders(['Authorization' => 'Basic ${Buffer.from('demo-key:new-password').toString('base64')}'])`))
+    assert.doesNotMatch(viewer.text(), /demo-key|new-password/)
+    delete saved.value.Basic
+    await nextTick()
+    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
+  } finally {
+    viewer.close()
+    if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
+    else delete globalThis.navigator
+  }
+})
+
+test('Bearer copy includes the original token while display, editing and clearing remain masked', async () => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  let copied = ''
+  let saved
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {clipboard: {writeText: async value => { copied = value }}}})
+  const document = {security: [{Token: []}], components: {securitySchemes: {Token: {type: 'http', scheme: 'bearer'}}}}
+  const viewer = mountViewer('/spec.json', '#overview', {setup() {
+    provide(documentKey, ref(document))
+    provideMediaTypeSelections()
+    saved = provideAuthCredentials()
+    return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {}, components: document.components})
+  }})
+  globalThis.window.setTimeout = () => 0
+  try {
+    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
+    saved.value.Token = {token: 'opaque.demo-token'}
+    await nextTick()
+    assert.ok(viewer.find(el => el.props['aria-label'] === 'Edit authentication credentials'))
+    assert.doesNotMatch(viewer.text(), /opaque.demo-token/)
+    await viewer.find(el => el.props['aria-label'] === 'Copy request example').props.onClick()
+    assert.ok(copied.includes("-H 'Authorization: Bearer opaque.demo-token'"))
+    assert.doesNotMatch(copied, /Basic|__FABRIC|••••/)
+    viewer.find(el => el.props['aria-label'] === 'Request example sender').props['onUpdate:modelValue']('laravel')
+    saved.value.Token = {token: 'updated.demo-token'}
+    await nextTick()
+    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
+    assert.ok(copied.includes("withHeaders(['Authorization' => 'Bearer updated.demo-token'])"))
+    assert.doesNotMatch(viewer.text(), /opaque.demo-token|updated.demo-token/)
+    delete saved.value.Token
+    await nextTick()
+    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
+    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
+    assert.doesNotMatch(copied, /Authorization|opaque.demo-token|updated.demo-token/)
+  } finally {
+    viewer.close()
+    if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
+    else delete globalThis.navigator
+  }
+})
 
 test('the small error page retries loading and recovers to the API reference', async () => {
   const original = globalThis.fetch

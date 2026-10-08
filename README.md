@@ -9,11 +9,11 @@ yarn install
 yarn dev
 ```
 
-Spotify is the active test specification. Specifications are fetched at runtime; none are bundled.
+Scalar Galaxy is the active test specification, with HTTP Bearer authentication among its supported methods. Specifications are fetched at runtime; none are bundled.
 
 ## Use another specification
 
-In `src/components/HelloWorld.vue`, comment out the active `specUrl` and uncomment another. Choices include Spotify, Converterer, Petstore, GitHub, Stripe, Box, and local test APIs.
+In `src/components/HelloWorld.vue`, comment out the active `specUrl` and uncomment another. Choices include Scalar Galaxy, SpaceTraders, Spotify, Converterer, Petstore, GitHub, Stripe, Box, and local test APIs. SpaceTraders uses external schema references, which the renderer does not yet resolve.
 
 The URL can serve JSON or YAML. Spotify and Converterer use development proxies configured in `vite.config.ts`. Other cross-origin sources must allow browser requests through CORS. These proxies are for local testing; production source hosting remains a separate deployment concern.
 
