@@ -5,12 +5,16 @@ import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
 import {useReferences} from './useReferences'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 import type {ReferenceIssue} from './references'
+import {useCompositionSelections} from './useCompositionSelections'
+import {selectExampleSchema} from './compositionExamples'
 
 const props = defineProps<{schema: Schema, components: Components}>()
 const references = useReferences(() => props.components)
+const {selections} = useCompositionSelections()
 const schemaResolution = computed(() => {
   const issues: ReferenceIssue[] = []
-  const value = resolveExampleSchema(props.schema, props.components, references.document.value, issue => issues.push(issue))
+  const selected = selectExampleSchema(props.schema, references.document.value, selections.value).schema
+  const value = resolveExampleSchema(selected, props.components, references.document.value, issue => issues.push(issue))
   return {value, issues}
 })
 const tabs = [{id: 'example', label: 'Example'}, {id: 'schema', label: 'JSON schema'}, {id: 'typescript', label: 'Typescript'}] as const

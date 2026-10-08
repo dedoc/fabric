@@ -9,12 +9,12 @@ export type {RequestExample, RequestExampleSender} from './types'
 export const requestExampleSenders: RequestExampleSender[] = [bashSender, laravelSender]
 
 export function createRequestExample(base: string, path: string, method: string, contentType: string, media: MediaType | undefined, components: Components, document: Document = {components}): RequestExample {
-  const value = getMediaExample(media, components, true, document)
+  const value = getMediaExample(media, components, true, document, undefined, 'request')
   return {
     url: `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`,
     method: method.toUpperCase(),
     contentType: media ? contentType : '',
-    body: isFormContentType(contentType) && typeof value === 'string' ? value : formatMediaExample(media, contentType, components, true, document),
+    body: isFormContentType(contentType) && typeof value === 'string' ? value : formatMediaExample(media, contentType, components, true, document, undefined, 'request'),
     value,
     formFields: createFormFields(media, components, document),
   }

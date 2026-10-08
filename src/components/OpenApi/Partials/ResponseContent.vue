@@ -39,11 +39,12 @@ const headerSchema = computed<SchemaType>(() => ({
       <Schema
           :components="components"
           :schema="headerSchema"
+          direction="response"
           :shouldHideMainType="true"
           :shouldDisablePropertiesPadding="true"
       />
     </div>
   </div>
-  <MediaType :components="components" :content="unreferencedResponse.content" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
+  <MediaType :components="components" :content="unreferencedResponse.content" direction="response" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
 </div>
 </template>

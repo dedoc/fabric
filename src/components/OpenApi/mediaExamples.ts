@@ -3,6 +3,8 @@ import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
 import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
 import {createXmlExample} from './xmlExamples'
+import {directionalExample} from './schemaUsage'
+import type {SchemaDirection} from './schemaUsage'
 
 export function isJsonContentType(contentType: string): boolean {
   const type = contentType.split(';')[0].trim().toLowerCase()
@@ -15,7 +17,7 @@ export function isXmlContentType(contentType: string): boolean {
 }
 
 /** Media examples take precedence over schema examples and generated values. */
-export function getMediaExample(media: MediaType | undefined, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void): unknown {
+export function getMediaExample(media: MediaType | undefined, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void, direction: SchemaDirection = 'neutral'): unknown {
   if (!media) return undefined
   const entry = Object.values(media.examples ?? {})[0]
   const result = resolveReference<Example>(document, entry)
@@ -24,13 +26,13 @@ export function getMediaExample(media: MediaType | undefined, components: Compon
   const schema = resolveExampleSchema(media.schema, components, document, report)
   let value = media.example !== undefined ? media.example : named?.value
   if (value === undefined && (generate || schema?.example !== undefined || schema?.examples?.length)) {
-    value = createSchemaExample(schema)
+    value = createSchemaExample(schema, direction)
   }
-  return value
+  return directionalExample(value, schema, direction)
 }
 
-export function formatMediaExample(media: MediaType | undefined, contentType: string, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void): string {
-  const value = getMediaExample(media, components, generate || isXmlContentType(contentType), document, report)
+export function formatMediaExample(media: MediaType | undefined, contentType: string, components: Components, generate = true, document: Document = {components}, report?: (issue: ReferenceIssue) => void, direction: SchemaDirection = 'neutral'): string {
+  const value = getMediaExample(media, components, generate || isXmlContentType(contentType), document, report, direction)
   if (!media || value === undefined) return ''
   if (!isXmlContentType(contentType)) return JSON.stringify(value, null, 2) ?? ''
 

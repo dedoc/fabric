@@ -1,12 +1,14 @@
 import {computed, inject, provide, reactive, ref} from 'vue'
 import type {InjectionKey} from 'vue'
 import type {MediaType} from './types'
+import {provideCompositionSelections} from './useCompositionSelections'
 
 const selectionsKey: InjectionKey<Map<string, string>> = Symbol('mediaTypeSelections')
 
 /** Keep documentation and example selections together within one operation. */
 export function provideMediaTypeSelections() {
   provide(selectionsKey, reactive(new Map<string, string>()))
+  provideCompositionSelections()
 }
 
 export function useMediaType(content: () => Record<string, MediaType> | undefined, selectionKey?: () => string) {

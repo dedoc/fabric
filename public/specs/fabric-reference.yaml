@@ -14,6 +14,10 @@ info:
     has an optional body. The **project.updated** webhook uses the same parameter
     inheritance rules as normal endpoints.
 
+    [Schema Lab](#operations/schemaLab) demonstrates null unions, maps, and
+    read-only/write-only fields in requests and responses. Compare with the
+    [OpenAPI 3.0 nullable fixture](?spec=/specs/fabric-reference-3.0.yaml#operations/nullableLab).
+
     Generated request snippets currently illustrate the URL and body; parameter
     substitution and query/header/cookie values are a separate upcoming fix.
 servers:
@@ -168,6 +172,34 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ProjectAlias'}
+  /schema-lab:
+    post:
+      operationId: schemaLab
+      tags: [Schema Lab]
+      summary: Inspect schema semantics
+      description: |
+        Compare the same schema in request and response views. The server-issued
+        `id` is read-only and appears only in the response; `secret` is write-only
+        and appears only in the request. Required fields follow the same direction.
+        Open the Schema Lab model to see both annotations together.
+
+        Nullable fields show `null` as a type alternative. Expand `labels` and
+        `metrics` to inspect dictionary values. `settings` disallows extra keys;
+        `extras` accepts any value. The deprecated field remains documented.
+      requestBody:
+        required: true
+        description: Supply a name and secret. Generated JSON and form examples omit the server-issued id.
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SchemaLab'}
+          application/x-www-form-urlencoded:
+            schema: {$ref: '#/components/schemas/SchemaLab'}
+      responses:
+        '200':
+          description: The returned object includes its id and omits the secret, including in the generated example.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SchemaLab'}
 webhooks:
   project.updated:
     parameters:
@@ -282,6 +314,62 @@ components:
         name: {type: string, example: Reference Lab}
         status: {type: string, enum: [active, archived], example: active}
     ProjectAlias: {$ref: '#/components/schemas/Project'}
+    SchemaLab:
+      type: object
+      additionalProperties: false
+      required: [id, name, secret]
+      description: Shared request/response model. This standalone view shows both read-only and write-only fields.
+      properties:
+        id: {type: string, readOnly: true, description: Assigned by the server., example: lab_123}
+        name: {type: string, description: The display name., example: Schema Lab}
+        secret: {type: string, writeOnly: true, description: Accepted on input and never returned., example: demo-secret}
+        nickname: {type: [string, 'null'], description: A nullable scalar expressed as an OpenAPI 3.1 type union., example: null}
+        note:
+          description: A nullable scalar expressed using anyOf.
+          anyOf: [{type: string}, {type: 'null'}]
+        paper:
+          description: Choose a preset string or an explicit size. Changing the pill updates the request or response example for this property.
+          oneOf:
+            - {type: string, example: a4}
+            - {$ref: '#/components/schemas/PaperSize'}
+        contact:
+          description: Expand to inspect both constraints. Both allOf members contribute to the complete example.
+          allOf:
+            - type: object
+              title: Name
+              properties:
+                name: {type: string, example: Alex}
+            - type: object
+              title: Email
+              properties:
+                email: {type: string, example: alex@example.com}
+        legacyName: {type: string, deprecated: true, description: Use name instead., example: old-name}
+        labels:
+          type: object
+          description: Arbitrary keys whose values must be strings.
+          additionalProperties: {type: string, example: design}
+        metrics:
+          type: object
+          description: Arbitrary keys with referenced numeric values.
+          additionalProperties: {$ref: '#/components/schemas/MetricValue'}
+        settings:
+          type: object
+          description: Only the documented keys are accepted.
+          additionalProperties: false
+          properties:
+            enabled: {type: boolean, example: true}
+        extras:
+          type: object
+          description: Extra keys can hold any value.
+          additionalProperties: true
+    MetricValue: {type: number, minimum: 0, description: A nonnegative measurement., example: 42}
+    PaperSize:
+      type: object
+      description: Explicit dimensions in millimeters.
+      required: [width, height]
+      properties:
+        width: {type: number, example: 210}
+        height: {type: number, example: 297}
   examples:
     Europe:
       summary: Europe

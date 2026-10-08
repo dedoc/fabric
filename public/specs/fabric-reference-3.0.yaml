@@ -1,0 +1,38 @@
+openapi: 3.0.3
+info:
+  title: Fabric Reference Lab — OpenAPI 3.0
+  version: 0.1.0
+  description: |
+    Compatibility cases for OpenAPI 3.0. Nullable types should look the same
+    as the null unions in the [OpenAPI 3.1 Schema Lab](?spec=/specs/fabric-reference.yaml#operations/schemaLab).
+servers:
+  - url: https://reference.example.com/v1
+paths:
+  /nullable:
+    post:
+      operationId: nullableLab
+      summary: Inspect OpenAPI 3.0 nullability
+      description: The nullable keyword allows null alongside the explicit type. Null does not mean the field is optional.
+      requestBody:
+        required: true
+        description: nickname is required but may be null; tags is an optional array whose individual items may be null.
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NullableRecord'}
+      responses:
+        '200':
+          description: The same nullable types and explicit null example appear in the response.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NullableRecord'}
+components:
+  schemas:
+    NullableRecord:
+      type: object
+      required: [nickname]
+      properties:
+        nickname: {type: string, nullable: true, example: null, description: Required key with a nullable string value.}
+        tags:
+          type: array
+          description: Optional array containing nullable strings.
+          items: {type: string, nullable: true}

@@ -5,6 +5,11 @@ export type Schema = {
     title?: string,
     $ref?: string,
     type?: string|string[],
+    nullable?: boolean,
+    additionalProperties?: boolean|Schema,
+    readOnly?: boolean,
+    writeOnly?: boolean,
+    deprecated?: boolean,
     properties?: {
         [name: string]: Schema,
     },

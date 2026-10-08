@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Components, Example, Reference} from './types'
+import type {Components, Example, Reference, Schema} from './types'
 import Description from './Description.vue'
 import SchemaAttribute from './SchemaAttribute.vue'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 import {useReferences} from './useReferences'
+import {resolveExampleSchema} from './schemaExamples'
+import {directionalExample} from './schemaUsage'
+import type {SchemaDirection} from './schemaUsage'
 
-const props = defineProps<{example?: unknown, examples?: Record<string, Example|Reference>, components: Components}>()
+const props = defineProps<{example?: unknown, examples?: Record<string, Example|Reference>, components: Components, schema?: Schema, direction?: SchemaDirection}>()
 const references = useReferences(() => props.components)
-const named = computed(() => Object.entries(props.examples ?? {}).map(([name, entry]) => ({name, ...references.resolve<Example>(entry)})))
+const resolvedSchema = computed(() => props.direction ? resolveExampleSchema(props.schema, props.components, references.document.value) : undefined)
+const displayedExample = computed(() => directionalExample(props.example, resolvedSchema.value, props.direction ?? 'neutral'))
+const named = computed(() => Object.entries(props.examples ?? {}).map(([name, entry]) => {
+  const result = references.resolve<Example>(entry)
+  return {name, ...result, value: result.value ? {...result.value, value: directionalExample(result.value.value, resolvedSchema.value, props.direction ?? 'neutral')} : undefined}
+}))
 const issues = computed(() => named.value.flatMap(result => result.issues))
 </script>
 
 <template>
   <div v-if="example !== undefined || named.length" class="space-y-1">
   <ReferenceDiagnostics :issues="issues" />
-  <SchemaAttribute v-if="example !== undefined" title="Example" :value="example" />
+  <SchemaAttribute v-if="example !== undefined" title="Example" :value="displayedExample" />
   <template v-else>
     <template v-for="(entry, index) in named" :key="entry.name">
       <template v-if="entry.value">

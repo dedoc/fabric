@@ -11,6 +11,7 @@ import {formatMediaExample, isJsonContentType, isXmlContentType} from './mediaEx
 import {createRequestExample, requestExampleSenders} from './requestExamples'
 import {useMediaType} from './useMediaType'
 import Select from '../UI/Select.vue'
+import {useCompositionExample} from './useCompositionSelections'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
 const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
@@ -23,7 +24,8 @@ const responseStatus = ref(Object.keys(props.operation.responses ?? {})[0] ?? ''
 const copied = ref('')
 const copyError = ref('')
 const requestBody = computed(() => references.resolve<RequestBody>(props.operation.requestBody))
-const {type: requestType, media: requestMedia} = useMediaType(() => requestBody.value.value?.content, () => 'request')
+const {type: requestType, media: originalRequestMedia} = useMediaType(() => requestBody.value.value?.content, () => 'request')
+const requestMedia = useCompositionExample(() => originalRequestMedia.value, () => `request:${requestType.value}`, () => props.components)
 const requestExampleOptions = computed(() => {
   const options = requestExampleSenders.map(({id, label}) => ({value: id, label}))
   if (isJsonContentType(requestType.value)) options.push({value: 'payload', label: 'JSON'})
@@ -40,7 +42,8 @@ const responseResolution = computed(() => {
   return references.resolve<Response>(entry)
 })
 const responseContent = computed(() => responseResolution.value.value?.content)
-const {type: responseType, media: responseMedia} = useMediaType(() => responseContent.value, () => `response:${responseStatus.value}`)
+const {type: responseType, media: originalResponseMedia} = useMediaType(() => responseContent.value, () => `response:${responseStatus.value}`)
+const responseMedia = useCompositionExample(() => originalResponseMedia.value, () => `response:${responseStatus.value}:${responseType.value}`, () => props.components)
 function mediaIssues(media: typeof requestMedia.value, type: string): ReferenceIssue[] {
   const issues: ReferenceIssue[] = []
   formatMediaExample(media, type, props.components, true, references.document.value, issue => issues.push(issue))
@@ -55,7 +58,7 @@ const httpAuth = computed(() => httpAuthForOperation(props.operation, references
 const savedAuthorization = computed(() => authorizationForOption(httpAuth.value))
 function generateRequestCode(display: boolean) {
   if (requestIssues.value.length && requestView.value !== 'schema') return ''
-  if (requestView.value === 'schema') return format(requestMedia.value?.schema)
+  if (requestView.value === 'schema') return format(originalRequestMedia.value?.schema)
   const request = createRequestExample(props.base, props.path, props.method, requestType.value, requestMedia.value, props.components, references.document.value)
   if (requestExample.value === 'payload') return request.body
   if (display && httpAuth.value) request.authorization = `${httpAuth.value.kind === 'basic' ? 'Basic' : 'Bearer'} ${authPlaceholder}`
@@ -75,9 +78,9 @@ const displayCode = computed(() => {
 })
 const responseCode = computed(() => {
   const media = responseMedia.value
-  if (responseView.value === 'schema') return format(media?.schema)
+  if (responseView.value === 'schema') return format(originalResponseMedia.value?.schema)
   if (responseIssues.value.length) return ''
-  return formatMediaExample(media, responseType.value, props.components, true, references.document.value)
+  return formatMediaExample(media, responseType.value, props.components, true, references.document.value, undefined, 'response')
 })
 async function copy(code: string, panel: string) {
   try {

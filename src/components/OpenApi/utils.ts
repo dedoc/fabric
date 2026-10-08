@@ -13,6 +13,11 @@ export type InlineOperation = {
 }
 
 export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, schema: SchemaType|undefined = undefined): string {
+    const preview = schemaTypePreview(unreferencedSchema, schema)
+    return unreferencedSchema?.nullable && typeof unreferencedSchema.type === 'string' && unreferencedSchema.type !== 'null' ? `${preview} | null` : preview
+}
+
+function schemaTypePreview(unreferencedSchema: SchemaType|undefined, schema: SchemaType|undefined): string {
     if (schema?.$ref) {
         return schema.$ref.split('/').at(-1) ?? ''
     }
@@ -21,6 +26,9 @@ export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, 
     }
     if (unreferencedSchema?.$ref) {
         return unreferencedSchema.$ref.split('/').at(-1) ?? ''
+    }
+    if (unreferencedSchema && Object.keys(unreferencedSchema).length === 0) {
+        return 'any'
     }
     const alternatives = unreferencedSchema?.anyOf ?? unreferencedSchema?.oneOf
     if (alternatives?.length) {
@@ -33,9 +41,9 @@ export function getSchemaTypePreview (unreferencedSchema: SchemaType|undefined, 
         }
         const itemType = getSchemaTypePreview(unreferencedSchema?.items)
         const item = unreferencedSchema.items
-        return `${!item?.$ref && (item?.anyOf?.length || item?.oneOf?.length) ? `(${itemType})` : itemType}[]`
+        return `${!item?.$ref && (item?.anyOf?.length || item?.oneOf?.length || Array.isArray(item?.type) && item.type.length > 1 || item?.nullable) ? `(${itemType})` : itemType}[]`
     }
-    const type = unreferencedSchema?.type ?? ''
+    const type = unreferencedSchema?.type ?? (unreferencedSchema?.properties || unreferencedSchema?.additionalProperties !== undefined ? 'object' : '')
     return Array.isArray(type) ? type.map(t => getPrimitiveSchemaTypePreview(t, unreferencedSchema)).join(' | ') : getPrimitiveSchemaTypePreview(type, unreferencedSchema)
 }
 

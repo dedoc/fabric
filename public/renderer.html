@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API renderer</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; }
+      #status { padding: 32px; font: 14px/1.5 system-ui, sans-serif; color: #737373; }
+      #status button { margin-top: 12px; padding: 6px 12px; cursor: pointer; }
+      elements-api { display: block; height: 100vh; }
+      rapi-doc, openapi-explorer { display: block; min-height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div id="status" role="status">Loading renderer…</div>
+    <div id="renderer"></div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

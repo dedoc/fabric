@@ -13,6 +13,8 @@ Redocly's Petstore demo is the active test specification, loaded from `public/sp
 
 ## Use another specification
 
+Open the [comparison canvas](http://localhost:5173/?view=compare) to switch between Fabric, Stoplight Elements, Redoc 2.5.2, Redoc 3.0.0-rc.0, Swagger UI, Scalar, RapiDoc, and OpenAPI Explorer. The specification selector includes the bundled fixtures and every commented alternative in `HelloWorld.vue`, including upstream demos, public APIs, development proxies, and local test servers. The two selects stay above an isolated renderer frame, and selections are retained in the URL. Stoplight Elements is a single renderer (Elements is Stoplight's component library). Third-party renderer scripts/styles load from jsDelivr or Redocly's CDN and require an internet connection. Remote documents need CORS permission; local URLs need their corresponding development server. A custom HTTP(S) document can also be supplied with the `spec` query parameter.
+
 Open the growing [Fabric Reference Lab](http://localhost:5173/?spec=/specs/fabric-reference.yaml#overview) while the development server is running. The fixture lives in `public/specs/fabric-reference.yaml`; its descriptions explain what to inspect for inheritance, overrides, schema/content parameters, serialization, examples, request bodies, responses, and webhooks. Extend this specification with new supported cases as fixes land, retaining existing cases as regression coverage. The example server is illustrative and has no live endpoints.
 
 The standalone app accepts a `spec` query parameter, for example `/?spec=/specs/fabric-reference.yaml#operations/updateProject`. Query selection overrides the default demo for that page load and works with static deployments too.

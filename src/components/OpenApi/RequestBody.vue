@@ -19,12 +19,12 @@ const hasContent = computed(() => Object.keys(resolution.value.value?.content ??
 <template>
   <ReferenceDiagnostics :issues="resolution.issues" />
   <section v-if="resolution.value" class="space-y-4" aria-label="Request body">
-    <MediaType v-if="hasContent" :components="components" :content="resolution.value.content" selection-key="request" label="Request body content type">
+    <MediaType v-if="hasContent" :components="components" :content="resolution.value.content" direction="request" selection-key="request" label="Request body content type">
       <template #title>
-        <div class="flex flex-wrap items-baseline gap-2">
-          <SectionTitle>Request Body</SectionTitle>
-          <span class="text-sm" :class="resolution.value.required ? 'text-amber-700' : 'text-gray-500'">{{ resolution.value.required ? 'required' : 'optional' }}</span>
-        </div>
+        <SectionTitle>Request Body</SectionTitle>
+      </template>
+      <template #type-suffix>
+        <span class="text-sm" :class="resolution.value.required ? 'text-amber-700' : 'text-gray-500'">{{ resolution.value.required ? 'required' : 'optional' }}</span>
       </template>
       <template v-if="resolution.value.description" #description>
         <Description class="text-base leading-normal text-gray-700 sm:text-sm" :content="resolution.value.description" />

@@ -93,13 +93,15 @@ Regression tests cover both override directions (inline/reference), required inp
 **Finding:** R4 preserves `allOf` and sibling constraints without flattening them by overwriting fields. Nullable values, maps, read/write-only fields, discriminators, deprecation, patterns, exclusive bounds, and array constraints are not fully represented. Constraint-aware example generation remains incomplete.
 
 - [x] S1 — Preserve sibling properties and required fields alongside `allOf`; retain composition meaning rather than overwriting incompatible constraints.
-- [ ] S2 — Render OpenAPI 3.0 `nullable` and supported OpenAPI 3.1 null unions consistently.
-- [ ] S3 — Render maps through `additionalProperties`, including typed values and restrictions on extra properties.
-- [ ] S4 — Display `readOnly`, `writeOnly`, and deprecation; carry request/response direction into schema usage and examples.
+- [x] S2 — Render OpenAPI 3.0 `nullable` and supported OpenAPI 3.1 null unions consistently.
+- [x] S3 — Render maps through `additionalProperties`, including typed values and restrictions on extra properties.
+- [x] S4 — Display `readOnly`, `writeOnly`, and deprecation; carry request/response direction into schema usage and examples.
 - [ ] S5 — Display patterns, exclusive numeric bounds, and array size/uniqueness constraints for the supported subset.
 - [ ] S6 — Document supported schema constructs and visibly warn for unsupported constructs, including discriminators until implemented; add regression fixtures for supported cases.
 
 **Done when:** Supported schema information is preserved, unsupported semantics are disclosed, and rendering/examples agree on composition and direction.
+
+S2–S4: type previews support 3.0 nullable types and 3.1 type-array/anyOf/oneOf null unions, including nullable array items. Explicit null examples are retained; generated unions prefer a non-null branch. Maps display `[key: string]` value schemas and explicit extra-property permissions; typed maps generate a sample key. Request usage omits read-only properties; response usage omits write-only properties, including nested fields, referenced properties, and structured authored/generated examples. Standalone schema pages retain both annotations. Serialized XML strings remain authored literals. `/schema-lab` in the Reference Lab covers both usage directions, maps, null unions, deprecation, and JSON/form switching. The linked `fabric-reference-3.0.yaml` fixture covers nullable compatibility. Regression checks cover documentation, JSON, form, XML, composed annotations, and authored examples without mutating source data.
 
 ### 5. Make copied examples trustworthy
 

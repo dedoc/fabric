@@ -32,6 +32,8 @@ const referenceFixture = JSON.parse(await readFile(new URL('./fixtures/local-ref
 const requestFixture = parseSpecification(await readFile(new URL('../public/specs/fabric-reference.yaml', import.meta.url), 'utf8'))
 const {effectiveParameters} = await server.ssrLoadModule('/src/components/OpenApi/parameters.ts')
 const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/OpenApi/ParameterDetails.vue')
+const {selectExampleSchema, compositionPathKey} = await server.ssrLoadModule('/src/components/OpenApi/compositionExamples.ts')
+const {useCompositionSelections, useCompositionExample} = await server.ssrLoadModule('/src/components/OpenApi/useCompositionSelections.ts')
 
 test('effective parameters resolve aliases before replacing by name/location and preserve unresolved entries', () => {
   const inherited = {name: 'view', in: 'query', required: true, example: 'old', description: 'Inherited'}
@@ -143,6 +145,95 @@ async function renderWithDocument(component, props, document) {
   }}))
 }
 
+test('nullable types agree across OpenAPI 3.0, 3.1 unions, arrays and null examples', async () => {
+  const text = schema => getSchemaTypeParts(schema).map(part => part.text).join('')
+  assert.equal(text({type: 'string', nullable: true}), 'string | null')
+  assert.equal(text({type: ['string', 'null']}), 'string | null')
+  assert.equal(text({anyOf: [{type: 'string'}, {type: 'null'}]}), 'string | null')
+  assert.equal(text({type: 'array', items: {type: ['string', 'null']}}), '(string | null)[]')
+  assert.equal(text({type: ['array', 'null'], items: {type: 'string'}}), 'string[] | null')
+  assert.equal(createSchemaExample({oneOf: [{type: 'null'}, {type: 'string'}]}), 'string')
+  assert.equal(createSchemaExample({type: 'string', nullable: true, example: null}), null)
+  for (const [openapi, schema] of [['3.0.3', {type: 'string', nullable: true}], ['3.1.0', {type: ['string', 'null']}]]) {
+    const html = await renderWithDocument(Schema, {schema, components: {}}, {openapi})
+    assert.match(html, /string/)
+    assert.match(html, /null/)
+  }
+})
+
+test('typed maps resolve references, generate values and display extra-property restrictions', async () => {
+  const document = {openapi: '3.1.0', components: {schemas: {Count: {type: 'integer', minimum: 0}}}}
+  const schema = {type: 'object', additionalProperties: {$ref: '#/components/schemas/Count'}}
+  assert.deepEqual(createSchemaExample(resolveExampleSchema(schema, document.components, document)), {additionalProp1: 0})
+  const html = await renderWithDocument(Schema, {schema, components: document.components}, document)
+  assert.match(html, /\[key: string\]/)
+  assert.match(html, /Count/)
+  assert.match(html, /&gt;=<\/span> 0/)
+  for (const additionalProperties of [false, true]) {
+    const html = await renderWithDocument(Schema, {schema: {type: 'object', additionalProperties}, components: {}}, {})
+    if (additionalProperties) assert.match(html, /any value/)
+    else assert.doesNotMatch(html, /not allowed/)
+    assert.deepEqual(createSchemaExample({type: 'object', additionalProperties}), {})
+  }
+})
+
+test('schema direction filters referenced and nested fields in documentation and authored/generated examples', async () => {
+  const document = {openapi: '3.1.0', components: {schemas: {Id: {type: 'string', readOnly: true, example: 'id'}}}}
+  const schema = {type: 'object', required: ['id', 'secret', 'name'], properties: {
+    id: {$ref: '#/components/schemas/Id'}, secret: {type: 'string', writeOnly: true, example: 'secret'},
+    name: {type: 'string', deprecated: true, example: 'old'},
+    nested: {type: 'object', properties: {hidden: {type: 'string', writeOnly: true}, visible: {type: 'boolean'}}},
+  }}
+  const before = JSON.stringify(schema)
+  const resolved = resolveExampleSchema(schema, document.components, document)
+  assert.deepEqual(createSchemaExample(resolved, 'request'), {secret: 'secret', name: 'old', nested: {hidden: 'string', visible: true}})
+  assert.deepEqual(createSchemaExample(resolved, 'response'), {id: 'id', name: 'old', nested: {visible: true}})
+  const authored = {...resolved, example: {id: 'real-id', secret: 'real-secret', nested: {hidden: 'hidden', visible: false}}}
+  assert.deepEqual(createSchemaExample(authored, 'response'), {id: 'real-id', nested: {visible: false}})
+  for (const direction of ['request', 'response', 'neutral']) {
+    const html = await renderWithDocument(Schema, {schema, components: document.components, direction}, document)
+    assert.match(html, /deprecated/)
+    if (direction === 'request') { assert.doesNotMatch(html, />id<\/div>/); assert.match(html, /write-only/) }
+    if (direction === 'response') { assert.doesNotMatch(html, />secret<\/div>/); assert.match(html, /read-only/) }
+    if (direction === 'neutral') { assert.match(html, /read-only/); assert.match(html, /write-only/) }
+  }
+  const media = {schema}
+  const request = createRequestExample('https://example.com', '/objects', 'post', 'application/json', media, document.components, document)
+  assert.doesNotMatch(request.body, /"id"/)
+  assert.match(request.body, /"secret"/)
+  const html = await renderWithDocument(Examples, {base: 'https://example.com', path: '/objects', method: 'post', components: document.components,
+    operation: {requestBody: {content: {'application/json': media}}, responses: {'200': {description: 'OK', content: {'application/json': media}}}},
+  }, document)
+  const responsePanel = html.slice(html.indexOf('aria-label="Response example"'))
+  assert.doesNotMatch(responsePanel, /&quot;secret&quot;|&quot;hidden&quot;/)
+  assert.match(responsePanel, /&quot;id&quot;/)
+  assert.equal(JSON.stringify(schema), before)
+})
+
+test('direction follows allOf flags, maps, arrays and structured media examples across transports', async () => {
+  const {getMediaExample, formatMediaExample} = await server.ssrLoadModule('/src/components/OpenApi/mediaExamples.ts')
+  const schema = {type: 'object', properties: {
+    id: {allOf: [{type: 'string', readOnly: true}]},
+    secret: {type: 'string', writeOnly: true},
+    entries: {type: 'array', items: {type: 'object', properties: {secret: {type: 'string', writeOnly: true}, name: {type: 'string'}}}},
+    dictionary: {type: 'object', additionalProperties: {type: 'object', properties: {secret: {type: 'string', writeOnly: true}, name: {type: 'string'}}}},
+  }}
+  const value = {id: 'id', secret: 'password', entries: [{secret: 'nested', name: 'entry'}], dictionary: {a: {secret: 'mapped', name: 'map'}}}
+  const media = {schema, examples: {named: {summary: 'Authored', value}}}
+  const before = JSON.stringify(media)
+  assert.deepEqual(getMediaExample(media, {}, true, {}, undefined, 'response'), {id: 'id', entries: [{name: 'entry'}], dictionary: {a: {name: 'map'}}})
+  const form = createRequestExample('https://example.com', '/objects', 'post', 'application/x-www-form-urlencoded', media, {})
+  assert.equal(form.formFields.some(([name]) => name === 'id'), false)
+  assert.equal(form.formFields.some(([name]) => name === 'secret'), true)
+  const xml = formatMediaExample(media, 'application/xml', {}, true, {}, undefined, 'response')
+  assert.doesNotMatch(xml, /<secret>/)
+  assert.match(xml, /<id>id<\/id>/)
+  const parameterHtml = await renderWithDocument(ParameterDetails, {components: {}, parameter: {name: 'filter', in: 'query', schema, examples: media.examples}}, {})
+  assert.doesNotMatch(parameterHtml, /&quot;id&quot;/)
+  assert.match(parameterHtml, /Authored/)
+  assert.equal(JSON.stringify(media), before)
+})
+
 test('reference fixture resolves aliases, escaped names and non-component locations in every consumer', async () => {
   const document = referenceFixture
   const components = document.components
@@ -171,6 +262,7 @@ test('schema sibling semantics match documentation and examples in 3.0 and 3.1',
     assert.match(html, /id/)
     if (openapi === '3.1.0') {
       assert.match(html, /Must match all schemas/)
+      assert.doesNotMatch(html, /aria-label="all of"/)
       assert.match(html, /name/)
     } else assert.doesNotMatch(html, /name|Must match all schemas/)
   }
@@ -542,27 +634,28 @@ test('renders a referenced oneOf schema without a top-level type', async () => {
   })
   assert.match(html, /Metadata value\./)
   assert.match(html, /reviewed/)
-  assert.match(html.replace(/<[^>]*>/g, ''), /string \| integer \| number \| string\[\]/)
+  assert.match(html, /aria-label="one of"/)
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 4)
+  assert.doesNotMatch(html, /Show options|Hide options/)
 })
 
-test('union details distinguish matching rules and expose inline object requirements', async () => {
+test('composition tabs show only the selected member and keep referenced labels as buttons', async () => {
   const options = [
     {type: 'string', enum: ['a4', 'letter']},
     {type: 'object', required: ['width', 'height'], properties: {
       width: {type: ['string', 'number']}, height: {type: ['string', 'number']},
     }},
   ]
-  for (const [keyword, rule] of [['anyOf', 'at least one'], ['oneOf', 'exactly one']]) {
+  for (const [keyword, label] of [['anyOf', 'any of'], ['oneOf', 'one of']]) {
     const html = await renderReference({[keyword]: options, default: 'a4'})
-    assert.ok(html.includes(`Must match ${rule} option.`))
-    assert.match(html, /role="group" aria-label="value options"/)
-    assert.match(html, /Option 1/)
-    assert.match(html, /Option 2/)
-    const text = html.replace(/<[^>]*>/g, '')
-    assert.match(text, /width\s*string\s*\|\s*number\s*required/)
-    assert.match(text, /height\s*string\s*\|\s*number\s*required/)
-    assert.match(html, /Hide options/)
+    assert.ok(html.includes(`aria-label="${label}"`))
+    assert.match(html, /role="tab" aria-selected="true"/)
+    assert.match(html, /role="tabpanel"/)
+    assert.doesNotMatch(html, /width|height|Hide options|Option 1/)
   }
+  const html = await renderReference({oneOf: [{$ref: '#/components/schemas/Label'}, {type: 'number'}]})
+  assert.match(html, /role="tab"[^>]*>Label<\/button>/)
+  assert.doesNotMatch(html, /<a[^>]*>Label<\/a>/)
 })
 
 test('renders const constraints, including falsy and structured values', async () => {
@@ -578,7 +671,7 @@ test('renders const constraints, including falsy and structured values', async (
 test('accepts other referenced schemas without a top-level type', async () => {
   for (const target of [{}, {anyOf: [{type: 'string'}, {type: 'number'}]}, {description: 'Free-form value.', example: {key: 'value'}}]) {
     const html = await renderReference(target)
-    assert.match(html, /MetadataInstanceValue/)
+    assert.match(html, target.anyOf ? /aria-label="any of"/ : /MetadataInstanceValue/)
   }
 })
 
@@ -885,6 +978,60 @@ test('documentation and examples share selections separately for requests and ea
   assert.equal(selections.responseExample.media.value.example, 'JSON')
   status.value = '200'
   assert.equal(selections.responseExample.media.value.example, 'XML')
+  app.unmount()
+})
+
+test('selected nested alternatives regenerate parent examples and preserve allOf members without mutating the spec', () => {
+  const schema = {type: 'object', example: {paper: 'letter'}, properties: {
+    paper: {oneOf: [{type: 'string', example: 'a4'}, {$ref: '#/components/schemas/Size'}]},
+    combined: {allOf: [{type: 'object', properties: {a: {const: 1}}}, {type: 'object', properties: {b: {const: 2}}}]},
+    items: {type: 'array', items: {anyOf: [{type: 'string'}, {type: 'null'}]}},
+  }}
+  const document = {components: {schemas: {Size: {type: 'object', properties: {width: {const: 210}}}}}}
+  const before = JSON.stringify({schema, document})
+  const selections = new Map([
+    [compositionPathKey(['properties', 'paper', 'oneOf']), 1],
+    [compositionPathKey(['properties', 'combined', 'allOf']), 1],
+    [compositionPathKey(['properties', 'items', 'items', 'anyOf']), 1],
+  ])
+  const projected = selectExampleSchema(schema, document, selections)
+  assert.equal(projected.changed, true)
+  assert.deepEqual(createSchemaExample(resolveExampleSchema(projected.schema, document.components, document)), {
+    paper: {width: 210}, combined: {a: 1, b: 2}, items: [null],
+  })
+  assert.equal(JSON.stringify({schema, document}), before)
+  selections.set(compositionPathKey(['properties', 'paper', 'oneOf']), 0)
+  assert.equal(createSchemaExample(selectExampleSchema(schema, document, selections).schema).paper, 'a4')
+})
+
+test('composition selections synchronize examples and isolate request, response status and media type', () => {
+  const media = {example: 'authored', schema: {oneOf: [{type: 'string', example: 'a4'}, {type: 'number', example: 42}]}}
+  let docs, request, response, xml
+  const Consumer = {setup() {
+    docs = useCompositionSelections(() => 'request:application/json')
+    request = useCompositionExample(() => media, () => 'request:application/json', () => ({}))
+    response = useCompositionExample(() => media, () => 'response:200:application/json', () => ({}))
+    xml = useCompositionExample(() => media, () => 'request:application/xml', () => ({}))
+    return () => h('div')
+  }}
+  const renderer = createRenderer({
+    createElement: () => ({}), createText: () => ({}), createComment: () => ({}),
+    insert() {}, remove() {}, setText() {}, setElementText() {}, patchProp() {},
+    parentNode: () => null, nextSibling: () => null,
+  })
+  const app = renderer.createApp({setup() {
+    provideMediaTypeSelections()
+    return () => h(Consumer)
+  }})
+  app.mount({})
+  assert.equal(request.value.example, 'authored')
+  docs.select(compositionPathKey(['oneOf']), 1)
+  assert.equal(request.value.example, undefined)
+  assert.equal(createSchemaExample(request.value.schema), 42)
+  assert.equal(response.value.example, 'authored')
+  assert.equal(xml.value.example, 'authored')
+  docs.select(compositionPathKey(['oneOf']), 0)
+  assert.equal(createSchemaExample(request.value.schema), 'a4')
   app.unmount()
 })
 

@@ -6,8 +6,10 @@ import Schema from './Schema.vue'
 import SchemaExamples from './SchemaExamples.vue'
 import {resolveExampleSchema} from './schemaExamples'
 import {useReferences} from './useReferences'
+import {provideCompositionSelections} from './useCompositionSelections'
 
 const props = defineProps<{name: string, schema: SchemaType, components: Components}>()
+provideCompositionSelections()
 const references = useReferences(() => props.components)
 const resolvedSchema = computed(() => resolveExampleSchema(props.schema, props.components, references.document.value))
 </script>
