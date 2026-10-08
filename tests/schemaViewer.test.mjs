@@ -29,6 +29,111 @@ const {basicAuthorization} = await server.ssrLoadModule('/src/components/OpenApi
 const {resolveReference} = await server.ssrLoadModule('/src/components/OpenApi/references.ts')
 const {resolveExampleSchema, createSchemaExample} = await server.ssrLoadModule('/src/components/OpenApi/schemaExamples.ts')
 const referenceFixture = JSON.parse(await readFile(new URL('./fixtures/local-references.json', import.meta.url), 'utf8'))
+const requestFixture = parseSpecification(await readFile(new URL('../public/specs/fabric-reference.yaml', import.meta.url), 'utf8'))
+const {effectiveParameters} = await server.ssrLoadModule('/src/components/OpenApi/parameters.ts')
+const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/OpenApi/ParameterDetails.vue')
+
+test('effective parameters resolve aliases before replacing by name/location and preserve unresolved entries', () => {
+  const inherited = {name: 'view', in: 'query', required: true, example: 'old', description: 'Inherited'}
+  const override = {name: 'view', in: 'query', example: 'new'}
+  const header = {name: 'view', in: 'header', example: 'editor'}
+  const document = {components: {parameters: {Inherited: inherited, Alias: {$ref: '#/components/parameters/Inherited'}, Override: override}}}
+  for (const [shared, own] of [
+    [[{$ref: '#/components/parameters/Alias'}], [override, header]],
+    [[inherited], [{$ref: '#/components/parameters/Override'}, header]],
+  ]) {
+    const before = JSON.stringify({document, shared, own})
+    const values = effectiveParameters(shared, own, document)
+    assert.deepEqual(values, [override, header])
+    assert.equal(values[0].required, undefined)
+    assert.equal(values[0].description, undefined)
+    assert.equal(JSON.stringify({document, shared, own}), before)
+  }
+  const issues = []
+  const missing = {$ref: '#/components/parameters/Missing'}
+  assert.deepEqual(effectiveParameters([missing], [], document, issue => issues.push(issue)), [missing])
+  assert.match(issues[0].message, /not found/)
+})
+
+test('Reference Lab fixture verifies normal and webhook inheritance with one override policy', () => {
+  const before = JSON.stringify(requestFixture)
+  const operations = getInlineOperations(requestFixture.paths, requestFixture)
+  const get = operations.find(entry => entry.method === 'get' && entry.path === '/projects/{projectId}').operation
+  const patch = operations.find(entry => entry.method === 'patch').operation
+  assert.equal(get.parameters.find(p => p.name === 'projectId').required, true)
+  assert.equal(get.parameters.find(p => p.name === 'X-Trace-Id').required, true)
+  assert.equal(get.parameters.find(p => p.name === 'view').example, 'summary')
+  assert.deepEqual(patch.parameters.filter(p => p.name === 'view').map(p => [p.in, p.example]), [['query', 'full'], ['header', 'editor']])
+  const webhook = getWebhookOperations(requestFixture)[0].operation
+  assert.equal(webhook.parameters.find(p => p.name === 'X-Trace-Id').required, true)
+  assert.deepEqual(webhook.parameters.filter(p => p.name === 'delivery').map(p => p.example), ['retry'])
+  const item = requestFixture.webhooks['project.updated']
+  assert.deepEqual(webhook.parameters, getInlineOperations({'/delivery': item}, requestFixture)[0].operation.parameters)
+  assert.equal(JSON.stringify(requestFixture), before)
+})
+
+test('required referenced and optional inline request bodies retain descriptions even without content', async () => {
+  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
+  const components = requestFixture.components
+  const required = await renderWithDocument(RequestBody, {components, requestBody: {$ref: '#/components/requestBodies/ProjectUpdateAlias'}}, requestFixture)
+  assert.match(required, /Required referenced request body/)
+  assert.match(required, />required<\/span>/)
+  assert.match(required, /aria-label="Request body content type"/)
+  assert.match(required, /<option value="application\/x-www-form-urlencoded"/)
+  assert.doesNotMatch(required, />Content<\//)
+  const optional = await renderWithDocument(RequestBody, {components, requestBody: requestFixture.paths['/projects/preview'].post.requestBody}, requestFixture)
+  assert.match(optional, /Omit the body to preview a default project/)
+  assert.match(optional, />optional<\/span>/)
+  const noContent = await renderWithDocument(RequestBody, {components, requestBody: {description: 'Visible without content', required: false}}, requestFixture)
+  assert.match(noContent, /Visible without content/)
+  assert.match(noContent, />optional<\/span>/)
+})
+
+test('parameter display hides serialization and preserves content alternatives and named examples', async () => {
+  const components = requestFixture.components
+  const parameters = requestFixture.paths['/projects/search'].get.parameters
+  for (const name of ['tags', 'fields', 'label', 'filter', 'region']) {
+    const parameter = parameters.find(p => p.name === name)
+    const html = await renderWithDocument(ParameterDetails, {components, parameter}, requestFixture)
+    assert.doesNotMatch(html, /aria-label="Serialization"|<dt>style:|<dt>explode:|<dt>allowReserved:/)
+    assert.doesNotMatch(html.replace(/<!--[\s\S]*?-->/g, ''), /<pre/)
+    if (name === 'tags') {
+      assert.match(html, /design/)
+      assert.match(html, /review/)
+      assert.doesNotMatch(html, /schema-fallback/)
+    }
+    if (name === 'filter') {
+      assert.match(html, /application\/json/)
+      assert.match(html, /aria-expanded="false"[^>]*>\+ Show properties<\/button>/)
+      assert.doesNotMatch(html, />status<\/div>|>Content<\/|parameter content type/)
+      assert.match(html, /Active projects/)
+      assert.match(html, /JSON-encode this object/)
+      assert.match(html, /&quot;status&quot;:&quot;active&quot;/)
+      assert.doesNotMatch(html, /aria-label="Serialization"/)
+    }
+    if (name === 'region') {
+      assert.match(html, /European region/)
+      assert.match(html, /US region/)
+      assert.match(html, />eu<\/div>/)
+      assert.match(html, />us<\/div>/)
+    }
+  }
+})
+
+test('parameter examples preserve falsy values and precedence over referenced schema examples', async () => {
+  for (const example of [false, 0, '', null]) {
+    const document = {openapi: '3.0.3', components: {schemas: {Value: {type: 'string', example: 'schema-fallback'}}}}
+    const html = await renderWithDocument(ParameterDetails, {components: document.components, parameter: {
+      name: 'value', in: 'query', schema: {$ref: '#/components/schemas/Value'}, example,
+    }}, document)
+    assert.doesNotMatch(html, /schema-fallback/)
+    assert.ok(html.includes(example === '' ? '&#39;&#39;' : String(example)))
+  }
+  const html = await renderWithDocument(ParameterDetails, {components: {}, parameter: {
+    name: 'flag', in: 'query', schema: {type: 'boolean'}, examples: {missing: {$ref: '#/missing'}},
+  }}, {})
+  assert.match(html, /Reference target was not found/)
+})
 
 async function renderWithDocument(component, props, document) {
   return renderToString(createSSRApp({setup() {

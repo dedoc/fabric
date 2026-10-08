@@ -1,0 +1,289 @@
+openapi: 3.1.0
+info:
+  title: Fabric Reference Lab
+  version: 0.1.0
+  description: |
+    A growing, browsable specification for the behaviors Fabric supports.
+    Each operation explains what to inspect. This is a documentation fixture;
+    the example server does not implement these endpoints.
+
+    Start with [Read a project](#operations/readProject) to inspect inherited
+    parameters, then [Update a project](#operations/updateProject) for operation
+    overrides and a required referenced body. [Search projects](#operations/searchProjects)
+    covers parameter examples and serialization. [Preview a project](#operations/previewProject)
+    has an optional body. The **project.updated** webhook uses the same parameter
+    inheritance rules as normal endpoints.
+
+    Generated request snippets currently illustrate the URL and body; parameter
+    substitution and query/header/cookie values are a separate upcoming fix.
+servers:
+  - url: https://reference.example.com/v1
+    description: Illustrative server only; no live requests are sent by the viewer.
+tags:
+  - name: Projects
+    description: Parameter inheritance, reference resolution, and body metadata.
+  - name: Search
+    description: Examples and parameter encoding instructions.
+paths:
+  /projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdAlias'
+      - $ref: '#/components/parameters/TraceId'
+      - $ref: '#/components/parameters/View'
+    get:
+      operationId: readProject
+      tags: [Projects]
+      summary: Read a project
+      description: |
+        **Inspect inheritance:** `projectId` (path), `X-Trace-Id` (header), and
+        `view` (query) are declared on the Path Item, not on this GET operation.
+        All three must appear below, including the required path/header markers.
+        `projectId` is reached through a reference chain.
+
+        This GET retains the shared `view=summary` example. Compare it with
+        [Update a project](#operations/updateProject), which overrides that query
+        parameter while keeping a separate header also named `view`.
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectResponse'
+    patch:
+      operationId: updateProject
+      tags: [Projects]
+      summary: Update a project
+      description: |
+        **Inspect overrides:** the operation replaces the inherited query `view`
+        with a required version whose example is `full`. It is a replacement,
+        not a merge: the shared `summary` example should not remain on this parameter.
+        `projectId` and `X-Trace-Id` remain inherited.
+
+        The header `view` is a different parameter because its location differs.
+        The request body is a component reference: its description and **required**
+        status should appear above the media/schema details.
+      parameters:
+        - $ref: '#/components/parameters/FullView'
+        - name: view
+          in: header
+          description: A separate header with the same name as the query parameter. Both must remain visible.
+          schema: {type: string}
+          example: editor
+      requestBody:
+        $ref: '#/components/requestBodies/ProjectUpdateAlias'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProjectResponse'
+  /projects/search:
+    get:
+      operationId: searchProjects
+      tags: [Search]
+      summary: Search projects
+      description: |
+        **Inspect parameter metadata:** every input below uses an OpenAPI encoding
+        rule or parameter-level example. `tags` uses repeated values; `fields`
+        uses comma-separated values; `filter` uses JSON content instead of a
+        `schema` field directly on the parameter. The cookie example includes
+        named examples with their own descriptions.
+
+        Parameter examples take precedence over a schema example without
+        overwriting or modifying the original specification. Examples use the
+        same value display as schema properties; encoding settings stay in the source.
+      parameters:
+        - name: tags
+          in: query
+          description: Repeat the query key for each tag, for example `tags=design&tags=review`.
+          style: form
+          explode: true
+          allowReserved: false
+          schema: {type: array, items: {type: string}, example: [schema-fallback]}
+          example: [design, review]
+        - name: fields
+          in: query
+          description: Serialize this array as one comma-separated query value, for example `fields=name,status`.
+          style: form
+          explode: false
+          schema: {type: array, items: {type: string}}
+          example: [name, status]
+        - name: filter
+          in: query
+          description: A JSON object passed as one query value. Expand its properties to inspect the accepted fields.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string, enum: [active, archived]}
+              examples:
+                active:
+                  summary: Active projects
+                  description: JSON-encode this object as the value of the filter query parameter.
+                  value: {status: active}
+        - name: label
+          in: query
+          description: Reserved characters are allowed in this query value, such as the slash in `design/review`.
+          style: form
+          explode: false
+          allowReserved: true
+          schema: {type: string}
+          example: design/review
+        - name: region
+          in: cookie
+          description: Named parameter examples, including a referenced Example Object. Both names and descriptions should be visible.
+          style: form
+          explode: false
+          schema: {type: string}
+          examples:
+            europe:
+              $ref: '#/components/examples/Europe'
+            us:
+              summary: United States
+              description: Use this cookie to inspect projects in the US region.
+              value: us
+      responses:
+        '200':
+          description: |
+            The response example is supplied by the specification. The input
+            examples above belong to parameters and must not be confused with this payload.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/ProjectAlias'}}
+              example: [{id: project_123, name: Reference Lab, status: active}]
+  /projects/preview:
+    post:
+      operationId: previewProject
+      tags: [Projects]
+      summary: Preview a project
+      description: |
+        **Inspect optional bodies:** this inline request body intentionally omits
+        `required`. OpenAPI defaults it to false, so the body should be labeled
+        **optional**. Compare this with the required referenced body on Update a project.
+      requestBody:
+        description: Omit the body to preview a default project, or provide a candidate name. This text belongs to the body, not its schema.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {name: {type: string, example: Draft project}}
+      responses:
+        '200':
+          description: Preview response. A successful preview does not persist any changes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectAlias'}
+webhooks:
+  project.updated:
+    parameters:
+      - $ref: '#/components/parameters/TraceId'
+      - name: delivery
+        in: header
+        description: Shared delivery mode, replaced by the POST operation below.
+        schema: {type: string}
+        example: shared
+    post:
+      operationId: projectUpdated
+      tags: [Projects]
+      summary: Receive a project update
+      description: |
+        **Inspect webhook parity:** X-Trace-Id is inherited from the webhook
+        Path Item. The operation overrides the shared `delivery` header through
+        a reference and uses `retry` as its example. Only one delivery header
+        should remain. The referenced body is required, just as on normal endpoints.
+      parameters:
+        - $ref: '#/components/parameters/Delivery'
+      requestBody: {$ref: '#/components/requestBodies/ProjectUpdateAlias'}
+      responses:
+        '204':
+          description: Your application acknowledges delivery with no response body. Header inheritance is independent of body presence.
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      description: Inherited required path parameter. This definition is reached through ProjectIdAlias.
+      style: simple
+      explode: false
+      schema: {type: string}
+      example: project_123
+    ProjectIdAlias: {$ref: '#/components/parameters/ProjectId'}
+    TraceId:
+      name: X-Trace-Id
+      in: header
+      required: true
+      description: Inherited required header used by both normal endpoints and webhooks.
+      style: simple
+      explode: false
+      schema: {type: string}
+      example: trace_456
+    View:
+      name: view
+      in: query
+      description: Shared query view. GET retains this definition; PATCH replaces it entirely.
+      schema: {type: string}
+      example: summary
+    FullView:
+      name: view
+      in: query
+      required: true
+      description: Operation-specific query view. This replaces the inherited view by matching name AND location.
+      schema: {type: string}
+      example: full
+    Delivery:
+      name: delivery
+      in: header
+      description: Operation-specific webhook delivery mode. The inherited shared example should be replaced.
+      schema: {type: string}
+      example: retry
+  requestBodies:
+    ProjectUpdateAlias: {$ref: '#/components/requestBodies/ProjectUpdate'}
+    ProjectUpdate:
+      required: true
+      description: |
+        Required referenced request body. At least a name must be provided.
+        This description is attached to the Request Body Object and should
+        remain visible even though the operation uses a reference chain.
+        Switch between JSON and form encoding beside the Request Body heading.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name: {type: string, description: The new display name., example: Reference Lab}
+          example: {name: Reference Lab}
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name: {type: string, description: The new display name sent as a form field., example: Reference Lab}
+          example: {name: Reference Lab}
+  responses:
+    ProjectResponse:
+      description: |
+        Referenced response with a referenced header and schema. Inspect the
+        request parameters independently: the response's id is output data,
+        whereas projectId is an inherited input.
+      headers:
+        X-Trace-Id: {$ref: '#/components/headers/Trace'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ProjectAlias'}
+          example: {id: project_123, name: Reference Lab, status: active}
+  headers:
+    Trace:
+      description: Echoed trace identifier; this reference exercises response-header resolution.
+      schema: {type: string, example: trace_456}
+  schemas:
+    Project:
+      type: object
+      description: Shared response schema. Its alias demonstrates local reference chains without duplicating the object definition.
+      required: [id, name]
+      properties:
+        id: {type: string, example: project_123}
+        name: {type: string, example: Reference Lab}
+        status: {type: string, enum: [active, archived], example: active}
+    ProjectAlias: {$ref: '#/components/schemas/Project'}
+  examples:
+    Europe:
+      summary: Europe
+      description: Use this cookie to inspect projects in the European region.
+      value: eu

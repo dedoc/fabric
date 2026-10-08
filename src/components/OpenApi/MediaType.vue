@@ -6,12 +6,14 @@ import SchemaTypePreview from "./SchemaTypePreview.vue";
 import {getSchemaTypePreview} from "./utils.ts";
 import Select from "../UI/Select.vue";
 import {useMediaType} from "./useMediaType";
+import ValueExamples from './ValueExamples.vue'
 
 const props = defineProps<{
   components: Components,
   content?: Record<string, MediaType>,
   label?: string,
   selectionKey?: string,
+  showExamples?: boolean,
 }>()
 
 const {types, type, media} = useMediaType(() => props.content, () => props.selectionKey ?? '')
@@ -29,13 +31,16 @@ const schemaNamePreview = computed(() => getSchemaTypePreview(media.value?.schem
       <div v-if="schemaNamePreview" class="col-span-2 col-start-1 row-start-2 min-w-0 break-words text-base font-normal text-gray-500 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:text-sm"><SchemaTypePreview :schema="media.schema" :components="components" /></div>
       <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="col-start-2 row-start-1 max-w-full justify-self-end text-base font-normal text-gray-500 sm:col-start-3 sm:text-sm" :aria-label="label ?? 'Body content type'" :title="type" />
     </div>
+    <div v-if="$slots.description" class="mt-4"><slot name="description" /></div>
     <div v-if="media.schema" :key="type" class="mt-4">
       <Schema
           :components="components"
           :schema="media.schema"
+          :should-hide-examples="showExamples && (media.example !== undefined || Object.keys(media.examples ?? {}).length > 0)"
           :shouldHideMainType="true"
           :shouldDisablePropertiesPadding="true"
       />
     </div>
+    <ValueExamples v-if="showExamples" class="mt-3" :example="media.example" :examples="media.examples" :components="components" />
   </div>
 </template>

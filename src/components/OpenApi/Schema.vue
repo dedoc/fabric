@@ -12,13 +12,14 @@ import ToggleButton from "./Partials/ToggleButton.vue";
 const props = withDefaults(defineProps<{
   shouldHideMainType?: boolean, // used to hide top type for schemas
   shouldHideDescription?: boolean,
+  shouldHideExamples?: boolean,
   shouldDisablePropertiesPadding?: boolean, // used to make properties not padded from left for top level objects
   propertyTitle?: string, // when schema is rendered for object property
   propertyRequired?: boolean, // when schema is rendered for object property
   components: Components,
   schema: Schema,
   arePropertiesInitiallyVisible?: boolean,
-  level: number,
+  level?: number,
 }>(), {
   arePropertiesInitiallyVisible: true,
   level: 1,
@@ -62,7 +63,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
 <template>
   <ReferenceDiagnostics :issues="resolution.issues" />
   <p v-if="recursive" class="text-sm text-gray-500">Recursive schema<template v-if="schema.$ref">: <code class="break-all">{{ schema.$ref }}</code></template>.</p>
-  <div v-else-if="resolution.value" class="flex flex-col gap-1.5">
+  <div v-else-if="resolution.value" class="flex flex-col gap-1.5 empty:hidden">
 <!--    <pre class="text-xs">{{resolvedSchema}}</pre>-->
 <!--    <pre class="text-xs">{{schema}}</pre>-->
     <div v-if="!shouldHideMainType" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
@@ -73,10 +74,13 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
           <SchemaTypePreview :schema="resolvedSchema" :original="schema" :components="components" />
           <template v-if="schema.$ref && alternatives.length">{{ ' ' }}<template v-for="(alternative, index) of alternatives" :key="index"><span v-if="index"> | </span><SchemaTypePreview :schema="alternative" :components="components" /></template></template>
         </div>
+        <slot name="type-suffix" />
       </div>
       <div v-if="propertyRequired" class="text-amber-700">required</div>
     </div>
-    <Description v-if="resolvedSchema.description && !shouldHideDescription" class="leading-normal" :content="resolvedSchema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
+    <slot name="description">
+      <Description v-if="resolvedSchema.description && !shouldHideDescription" class="leading-normal" :content="resolvedSchema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
+    </slot>
 
     <div v-if="
       resolvedSchema.minLength !== undefined
@@ -90,18 +94,18 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
       <div v-if="resolvedSchema.maximum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maximum }}</div>
     </div>
 
-    <div v-if="resolvedSchema.default != undefined || normalizedExamples.length" class="flex flex-col gap-2">
+    <div v-if="resolvedSchema.default != undefined || (!shouldHideExamples && normalizedExamples.length)" class="flex flex-col gap-2">
       <SchemaAttribute
           v-if="resolvedSchema.default != undefined"
           title="Default"
           :value="resolvedSchema.default === '' ? '\'\'' : resolvedSchema.default"
       />
       <SchemaAttribute
-          v-if="canGroupExamples"
+          v-if="!shouldHideExamples && canGroupExamples"
           title="Examples"
           :value="normalizedExamples.map(example => example.value)"
       />
-      <template v-else>
+      <template v-else-if="!shouldHideExamples">
         <SchemaAttribute
             v-for="(example, index) of normalizedExamples"
             :key="index"
@@ -146,7 +150,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
     <div v-if="arePropertiesVisible && resolvedSchema.allOf?.length" class="space-y-3" role="group" :aria-label="`${propertyTitle ?? 'Value'} constraints`">
       <p class="text-base text-gray-500 sm:text-sm">Must match all schemas.</p>
       <div v-for="(member, index) in resolvedSchema.allOf" :key="index" class="border-l border-gray-950/10 pl-4">
-        <Schema :schema="member" :components="components" :level="level + 1" :are-properties-initially-visible="true" />
+        <Schema :schema="member" :components="components" :level="level + 1" :are-properties-initially-visible="true" :should-hide-examples="shouldHideExamples" />
       </div>
     </div>
     <div v-if="arePropertiesVisible && alternatives.length" class="space-y-3" role="group" :aria-label="`${propertyTitle ?? 'Value'} options`">
@@ -163,7 +167,7 @@ const canHideNestedProperties = computed(() => ! props.shouldHideMainType && (!!
         </div>
       </div>
     </div>
-    <div v-if="(arePropertiesVisible || !canHideNestedProperties) && resolvedSchema.type === 'array' && resolvedSchema.items">
+    <div v-if="(arePropertiesVisible || !canHideNestedProperties) && resolvedSchema.type === 'array' && resolvedSchema.items" class="contents">
       <Schema
           :components="components"
           :schema="resolvedSchema.items"

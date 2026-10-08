@@ -13,6 +13,10 @@ Redocly's Petstore demo is the active test specification, loaded from `public/sp
 
 ## Use another specification
 
+Open the growing [Fabric Reference Lab](http://localhost:5173/?spec=/specs/fabric-reference.yaml#overview) while the development server is running. The fixture lives in `public/specs/fabric-reference.yaml`; its descriptions explain what to inspect for inheritance, overrides, schema/content parameters, serialization, examples, request bodies, responses, and webhooks. Extend this specification with new supported cases as fixes land, retaining existing cases as regression coverage. The example server is illustrative and has no live endpoints.
+
+The standalone app accepts a `spec` query parameter, for example `/?spec=/specs/fabric-reference.yaml#operations/updateProject`. Query selection overrides the default demo for that page load and works with static deployments too.
+
 In `src/components/HelloWorld.vue`, comment out the active `specUrl` and uncomment another. Keep added specifications as commented alternatives when switching. Choices include Redocly Petstore, SavvyCal, Scalar Galaxy, SpaceTraders, Spotify, Converterer, Petstore, GitHub, Stripe, Box, and local test APIs. SpaceTraders uses external schema references, which the renderer does not yet resolve.
 
 The URL can serve JSON or YAML. Spotify and Converterer use development proxies configured in `vite.config.ts`. Other cross-origin sources must allow browser requests through CORS. These proxies are for local testing; production source hosting remains a separate deployment concern.

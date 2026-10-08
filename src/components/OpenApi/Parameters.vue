@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type {Paths, Components, PathItem, Schema as SchemaType, Parameter, Operation, Reference} from "./types";
-import Schema from "./Schema.vue";
+import type {Components, Parameter, Reference} from "./types";
+import ParameterDetails from './ParameterDetails.vue'
 import {computed} from "vue";
 import {useReferences} from './useReferences'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
@@ -24,37 +24,19 @@ const groupedParameters = computed(() => unreferencedParameters.value.reduce<Par
   return acc
 }, {}))
 
-const transformParamsToSchema = (params: Parameter[]): SchemaType => {
-  return {
-    type: 'object',
-    properties: params.reduce<Record<string, SchemaType>>((acc, p) => {
-      acc[p.name] = {
-        description: p.description,
-        ...p.schema,
-      }
-      return acc
-    }, {}),
-    required: params.filter(p => p.required).map(p => p.name),
-  }
-}
 </script>
 
 <template>
   <div class="space-y-[--sections-gap]">
     <ReferenceDiagnostics :issues="issues" />
-    <div v-for="(params, group) of groupedParameters">
+    <div v-for="(params, group) of groupedParameters" :key="group">
       <div class="flex gap-1.5 items-baseline">
         <SectionTitle class="capitalize">
           {{ group }} Parameters
         </SectionTitle>
       </div>
-      <div class="mt-4">
-        <Schema
-            :components="components"
-            :schema="transformParamsToSchema(params!)"
-            :shouldHideMainType="true"
-            :shouldDisablePropertiesPadding="true"
-        />
+      <div class="mt-4 divide-y divide-gray-100">
+        <ParameterDetails v-for="parameter in params" :key="parameter.name" class="py-3 first:pt-0 last:pb-0" :parameter="parameter" :components="components" />
       </div>
     </div>
   </div>

@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{showSchemas?: boolean, specUrl?: string}
 // const specUrl = '/spotify/open-api-schema.yaml'
 // const specUrl = '/converterer/openapi.json'
 const specUrl = '/specs/redocly-petstore.yaml'
+// const specUrl = '/specs/fabric-reference.yaml'
 // const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml'
 // const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/openapi.yaml'
 // const specUrl = 'https://api.savvycal.com/v1/spec'

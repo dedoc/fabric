@@ -1,6 +1,7 @@
 import type {Components, Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
 import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
+import {effectiveParameters} from './parameters'
 
 export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 
@@ -105,17 +106,13 @@ export function getWebhookOperations(document: Document, report?: (issue: Refere
         result.issues.forEach(issue => report?.(issue))
         const resolved = result.value
         if (!resolved) return []
-        return getInlineOperations({[name]: resolved}).map(entry => ({
+        return getInlineOperations({[name]: resolved}, document, report).map(entry => ({
             ...entry,
             id: `webhooks/${encodeURIComponent(name)}/${entry.method}`,
             operation: {
                 ...entry.operation,
                 summary: entry.operation.summary ?? resolved.summary ?? name,
                 description: entry.operation.description ?? resolved.description,
-                parameters: [...(resolved.parameters ?? []).filter(parameter => !entry.operation.parameters?.some(override =>
-                    '$ref' in parameter && '$ref' in override ? parameter.$ref === override.$ref :
-                    !('$ref' in parameter) && !('$ref' in override) && parameter.name === override.name && parameter.in === override.in
-                )), ...(entry.operation.parameters ?? [])],
             },
         }))
     })
@@ -134,7 +131,10 @@ export function getInlineOperations (paths: Paths, document: Document = {paths},
                 id: getOperationId(method, path, operation),
                 method,
                 path,
-                operation,
+                operation: pathItem.parameters || operation.parameters ? {
+                    ...operation,
+                    parameters: effectiveParameters(pathItem.parameters, operation.parameters, document, report),
+                } : operation,
             }
         }))
     }, [])

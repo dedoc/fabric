@@ -28,9 +28,9 @@ Latest checks on 2026-10-08:
 
 | Check | Result |
 | --- | --- |
-| Local-reference, viewer, and specification-safety suites | 71 passed |
+| Local-reference, viewer, and specification-safety suites | 76 passed |
 | Schema, form, XML, and request-example suites through Vite SSR | 31 passed |
-| Total automated tests | 102 passed |
+| Total automated tests | 107 passed |
 | `yarn vite build` | Passed |
 | `yarn build` | Failed with 4 remaining TypeScript errors |
 
@@ -73,16 +73,20 @@ Implementation: `localReferences.ts` exposes document-root pointer lookup and ch
 
 ### 3. Preserve complete request information
 
-**Finding:** Normal endpoints do not inherit path-level parameters. Body descriptions and required state are omitted. Parameter conversion loses parameter-level examples and serialization metadata.
+**Status:** Q1–Q6 are implemented. Normal endpoints and webhooks share `effectiveParameters`, which resolves references before comparing the case-sensitive name/location pair and replaces inherited definitions with operation definitions. Request-body descriptions and required/optional status are visible. Parameter metadata stays on Parameter Objects rather than being reduced to schema properties.
 
-- [ ] Q1 — Merge path-level and operation-level parameters by name/location, resolving references before comparison and respecting operation overrides.
-- [ ] Q2 — Reuse effective-parameter handling for webhooks so inheritance rules do not diverge.
+- [x] Q1 — Merge path-level and operation-level parameters by name/location, resolving references before comparison and respecting operation overrides.
+- [x] Q2 — Reuse effective-parameter handling for webhooks so inheritance rules do not diverge.
 - [x] Q3 — Resolve request-body references before rendering and example generation.
-- [ ] Q4 — Display request-body descriptions and whether the body is required.
-- [ ] Q5 — Preserve parameter-level examples, schema/content alternatives, and serialization settings such as `style`, `explode`, and `allowReserved`.
-- [ ] Q6 — Add fixtures for inherited required parameters, overrides, referenced bodies, and parameter metadata.
+- [x] Q4 — Display request-body descriptions and whether the body is required.
+- [x] Q5 — Preserve parameter-level examples, schema/content alternatives, and serialization settings such as `style`, `explode`, and `allowReserved`.
+- [x] Q6 — Add fixtures for inherited required parameters, overrides, referenced bodies, and parameter metadata.
 
 **Done when:** Every required input in supported specifications appears with enough information to encode it correctly.
+
+`public/specs/fabric-reference.yaml` is the growing Reference Lab fixture, selectable with `?spec=/specs/fabric-reference.yaml`. Its operation, parameter, body, response, header, schema, and example descriptions explain each case. GET/PATCH project endpoints demonstrate inheritance, alias chains, replacement semantics, and same-name parameters in different locations. Search demonstrates schema/content parameters, explicit serialization settings, and named/referenced examples. Preview has an optional inline body; the webhook shares normal inheritance behavior. Parameter examples override root schema examples without mutating the specification, including falsy values, and reuse the schema-property example display. Serialization settings remain preserved in the source/model and are hidden from parameter rows; content-based parameters display their media type and examples.
+
+Regression tests cover both override directions (inline/reference), required inputs, immutable merging, unresolved diagnostics, webhook parity, referenced/inline bodies, metadata, and example precedence. Browser checks verified endpoint/body/webhook behavior at normal width and the parameter layout at phone width. Adding parameter values to generated request snippets remains E1.
 
 ### 4. Preserve schema meaning
 

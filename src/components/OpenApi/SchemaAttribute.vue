@@ -1,13 +1,11 @@
 <script setup lang="ts">
-type AttributeValue = string | number | boolean | null | AttributeValue[] | {[key: string]: AttributeValue}
-
 const props = defineProps<{
   title: string,
-  value: AttributeValue,
+  value: unknown,
   description?: string,
 }>()
 
-function formatValue(value: AttributeValue): string {
+function formatValue(value: unknown): string {
   if (value === '') {
     return '\'\''
   }
@@ -21,18 +19,21 @@ function formatValue(value: AttributeValue): string {
 <template>
   <div class="flex items-baseline gap-2.5 text-sm sm:text-xs">
     <div class="w-14 shrink-0 whitespace-nowrap text-gray-500 sm:w-12">{{ title }}</div>
-    <div class="flex min-w-0 flex-wrap items-baseline gap-1">
+    <div class="min-w-0" :class="$slots.default ? 'leading-relaxed' : 'flex flex-wrap items-baseline gap-1'">
       <template v-if="Array.isArray(value)">
         <div
           v-for="(item, index) in value"
           :key="`${item}-${index}`"
-          class="max-w-full break-words rounded bg-gray-100 px-1.5 py-0.5 text-gray-600"
+          class="inline-block max-w-full break-words rounded bg-gray-100 px-1.5 py-0.5 text-gray-600"
+          :class="{'mr-1': $slots.default}"
         >
           {{ formatValue(item) }}
         </div>
       </template>
-      <div v-else class="max-w-full break-words rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">{{ formatValue(value) }}</div>
-      <div v-if="description" class="text-gray-500">{{ description }}</div>
+      <div v-else class="inline-block max-w-full break-words rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">{{ formatValue(value) }}</div>
+      <slot>
+        <div v-if="description" class="text-gray-500">{{ description }}</div>
+      </slot>
     </div>
   </div>
 </template>

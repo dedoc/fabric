@@ -99,6 +99,12 @@ export type Parameter = {
     required?: boolean,
     deprecated?: boolean,
     allowEmptyValue?: boolean,
+    style?: 'matrix'|'label'|'form'|'simple'|'spaceDelimited'|'pipeDelimited'|'deepObject',
+    explode?: boolean,
+    allowReserved?: boolean,
+    example?: unknown,
+    examples?: Record<string, Example|Reference>,
+    content?: Record<string, MediaType>,
     schema?: Schema,
 }
 
