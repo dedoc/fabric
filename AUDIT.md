@@ -124,12 +124,14 @@ E1–E6: both senders consume one parameter-aware request model. The browsable `
 
 ### 6. Remove unfinished visible features
 
-**Finding:** The schema “Typescript” tab currently returns the literal `TODO`.
+**Status:** The schema TypeScript tab produces copyable, self-contained type declarations. Remaining visible actions still need the U2 review.
 
-- [ ] U1 — Implement TypeScript output or remove the tab for the beta.
+- [x] U1 — Implement TypeScript output or remove the tab for the beta.
 - [ ] U2 — Check remaining visible actions/tabs for placeholder output, including empty and missing-example states.
 
 **Done when:** Every visible action produces a useful result or an explicit supported empty state.
+
+U1: schema output preserves required/optional fields, primitives, arrays, literals, nullability, typed maps, unions and intersections. Local references use named types with their reachable declarations included once, backed by the shared version-aware schema graph; recursive objects and arrays retain named aliases. Output includes all composition branches independently of example selection. Missing/unsupported references and generation limits disable copying and show an explanation. Regression tests compile declarations with TypeScript, check accepted/rejected assignments, and exercise tab switching and copying. Structural typing limits are documented in [SCHEMA_SUPPORT.md](./SCHEMA_SUPPORT.md).
 
 ### 7. Finish navigation and description behavior
 

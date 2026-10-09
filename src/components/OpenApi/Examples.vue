@@ -13,13 +13,14 @@ import {useMediaType} from './useMediaType'
 import Select from '../UI/Select.vue'
 import Description from './Description.vue'
 import {useCompositionExample} from './useCompositionSelections'
+import {useStoredChoice} from './useStoredChoice'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
 const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
 const references = useReferences(() => props.components)
 const credentials = useAuthCredentials()
 const requestView = ref('example')
-const preferredRequestExample = ref(requestExampleSenders[0].id)
+const preferredRequestExample = useStoredChoice('fabric:request-sender', requestExampleSenders.map(sender => sender.id), requestExampleSenders[0].id)
 const responseView = ref('example')
 const responseStatus = ref(Object.keys(props.operation.responses ?? {})[0] ?? '')
 const copied = ref('')

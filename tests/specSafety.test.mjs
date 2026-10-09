@@ -77,6 +77,26 @@ test('invalid documents fail with readable messages instead of reaching the rend
   ]) assert.throws(() => parseSpecification(source), error => error.name === 'Error' && error.message.length > 0)
 })
 
+test('component example values remain arbitrary payloads without weakening metadata or schema checks', () => {
+  const payload = [{repository: {description: null, summary: 42, parameters: {}, required: 'data',
+    properties: [], $ref: 123, servers: [{url: false}], value: {description: false},
+  }}]
+  const example = {summary: 'Organization alerts', description: 'A response payload', value: payload}
+  const specification = {...valid, components: {examples: {
+    'dependabot-alerts-for-organization': example,
+    value: {value: {description: null}},
+    Alias: {$ref: '#/components/examples/dependabot-alerts-for-organization'},
+  }}}
+  const parsed = parseSpecification(JSON.stringify(specification))
+  assert.deepEqual(parsed.components.examples['dependabot-alerts-for-organization'].value, payload)
+  for (const field of ['summary', 'description', '$ref']) {
+    assert.throws(() => parseSpecification(JSON.stringify({...valid, components: {examples: {Bad: {[field]: 42, value: payload}}}})), new RegExp(`examples\\.Bad\\.${field === '$ref' ? '\\$ref' : field} must be a string`))
+  }
+  assert.throws(() => parseSpecification(JSON.stringify({...valid, components: {schemas: {
+    WithValue: {type: 'object', properties: {value: {description: null}}},
+  }}})), /properties\.value\.description must be a string/)
+})
+
 test('response and component links accept parameter maps and request-body expressions', () => {
   const link = {operationId: 'getPlanet', parameters: {id: '$response.body#/id', description: 42}, requestBody: '$response.body'}
   assert.doesNotThrow(() => parseSpecification(JSON.stringify({...valid, paths: {'/planets': {get: {responses: {

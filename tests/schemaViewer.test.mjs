@@ -35,6 +35,48 @@ const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/
 const {selectExampleSchema, compositionPathKey} = await server.ssrLoadModule('/src/components/OpenApi/compositionExamples.ts')
 const {useCompositionSelections, useCompositionExample} = await server.ssrLoadModule('/src/components/OpenApi/useCompositionSelections.ts')
 const {getSchemaBounds} = await server.ssrLoadModule('/src/components/OpenApi/schemaBounds.ts')
+const {schemaDisplay} = await server.ssrLoadModule('/src/components/OpenApi/schemaDisplay.ts')
+
+test('allOf displays inherited and local properties once at the root without changing source examples', async () => {
+  const document = {openapi: '3.1.0', components: {schemas: {Base: {
+    type: 'object', required: ['id'], properties: {id: {type: 'string', minLength: 2}, secret: {type: 'string', writeOnly: true}},
+  }}}}
+  const schema = {properties: {local: {type: 'boolean'}}, allOf: [
+    {$ref: '#/components/schemas/Base'},
+    {type: 'object', required: ['local'], properties: {id: {maxLength: 10}, extra: {type: 'number'}}},
+  ]}
+  const before = JSON.stringify({document, schema})
+  const exampleBefore = createSchemaExample(schema, document.components, document)
+  const display = schemaDisplay(schema, document)
+  assert.deepEqual([...display.properties.keys()], ['local', 'id', 'secret', 'extra'])
+  assert.deepEqual([...display.required], ['id', 'local'])
+  const html = await renderWithDocument(Schema, {schema, components: document.components, direction: 'response', shouldHideMainType: true}, document)
+  assert.doesNotMatch(html, /Must match all schemas|Show properties|Hide properties/)
+  assert.equal((html.match(/>id<\/div>/g) ?? []).length, 1)
+  assert.equal((html.match(/>required<\/div>/g) ?? []).length, 2)
+  assert.match(html, /2 characters/)
+  assert.match(html, /10 characters/)
+  assert.match(html, />extra<\/div>/)
+  assert.doesNotMatch(html, />secret<\/div>/)
+  assert.equal(JSON.stringify({document, schema}), before)
+  assert.deepEqual(createSchemaExample(schema, document.components, document), exampleBefore)
+})
+
+test('allOf preserves original selection paths for duplicate fields, maps and array items', () => {
+  const alternative = {oneOf: [{type: 'string'}, {type: 'number'}]}
+  const schema = {allOf: [
+    {properties: {value: alternative}, additionalProperties: alternative, items: alternative},
+    {properties: {value: {description: 'Extra constraint'}}, additionalProperties: {maxLength: 5}, items: {minimum: 0}},
+  ]}
+  const display = schemaDisplay(schema, {}, ['properties', 'nested'])
+  for (const [field, keyword] of [[display.properties.get('value'), 'properties'], [display.additionalProperties, 'additionalProperties'], [display.items, 'items']]) {
+    const tail = keyword === 'properties' ? ['properties', 'value'] : [keyword]
+    assert.deepEqual(field.allOfPaths, [0, 1].map(index => ['properties', 'nested', 'allOf', index, ...tail]))
+    const nested = schemaDisplay(field.schema, {}, field.path, field.allOfPaths)
+    assert.deepEqual(nested.layers[1].path, field.allOfPaths[0])
+    assert.equal(nested.layers[1].schema.oneOf, alternative.oneOf)
+  }
+})
 
 test('numeric bounds preserve exclusivity, zero and the strongest applicable endpoint', () => {
   const cases = [
@@ -322,7 +364,7 @@ test('schema sibling semantics match documentation and examples in 3.0 and 3.1',
     const html = await renderWithDocument(Schema, {schema, components: document.components}, document)
     assert.match(html, /id/)
     if (openapi === '3.1.0') {
-      assert.match(html, /Must match all schemas/)
+      assert.doesNotMatch(html, /Must match all schemas/)
       assert.doesNotMatch(html, /aria-label="all of"/)
       assert.match(html, /name/)
     } else assert.doesNotMatch(html, /name|Must match all schemas/)
@@ -877,7 +919,7 @@ test('opens schema hashes and renders the title, description and tabbed example'
   assert.match(html, /<h1[^>]*>Person details<\/h1>/)
   assert.equal((html.match(/A person in the workspace\./g) ?? []).length, 1)
   assert.match(html, /JSON schema/)
-  assert.match(html, /Typescript/)
+  assert.match(html, /TypeScript/)
   assert.match(html, /&quot;id&quot;: 42/)
   assert.match(html, /aria-current="page"/)
 })

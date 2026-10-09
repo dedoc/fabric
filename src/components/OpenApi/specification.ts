@@ -62,7 +62,7 @@ export function parseSpecification(source: string): Specification {
   // Payload examples and extensions are data, not schema keywords.
   const ancestors = new Set<object>()
   const maps = ['paths', 'webhooks', 'schemas', 'properties', 'content', 'encoding', 'responses', 'headers', 'securitySchemes', 'requestBodies', 'callbacks', 'links', 'pathItems', 'variables', 'scopes']
-  function inspect(node: unknown, location: string, depth = 0, dictionary = false, context?: 'links' | 'link') {
+  function inspect(node: unknown, location: string, depth = 0, dictionary = false, context?: 'links' | 'link' | 'examples' | 'example') {
     if (node === null || typeof node !== 'object') return
     if (depth > 100 || ancestors.has(node)) throw new SpecificationError('The specification contains cyclic or excessively nested data.')
     ancestors.add(node)
@@ -72,6 +72,8 @@ export function parseSpecification(source: string): Specification {
       const components = location === 'specification.components'
       for (const [key, item] of Object.entries(node)) {
         if (key.startsWith('x-') || (!dictionary && !components && ['example', 'examples', 'default', 'const', 'enum'].includes(key))) continue
+        // Example Object metadata is structural; its value is arbitrary API data.
+        if (context === 'example' && key === 'value') continue
         const at = `${location}.${key}`
         // Link values are runtime expressions or arbitrary payloads, rather than
         // the operation's parameter array and Request Body Object.
@@ -95,7 +97,8 @@ export function parseSpecification(source: string): Specification {
           }
         }
         inspect(item, at, depth + 1, components || (!dictionary && (maps.includes(key) || key === 'security')),
-          context === 'links' ? 'link' : (!dictionary && key === 'links') || (components && key === 'links') ? 'links' : undefined)
+          context === 'examples' ? 'example' : components && key === 'examples' ? 'examples'
+            : context === 'links' ? 'link' : (!dictionary && key === 'links') || (components && key === 'links') ? 'links' : undefined)
       }
     }
     ancestors.delete(node)

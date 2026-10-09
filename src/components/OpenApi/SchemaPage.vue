@@ -21,6 +21,6 @@ const resolvedSchema = computed(() => resolveExampleSchema(props.schema, props.c
       <Description v-if="resolvedSchema?.description" class="text-gray-700" :content="resolvedSchema.description" />
       <Schema :schema="schema" :components="components" :level="1" :shouldHideDescription="true" :shouldHideMainType="true" :shouldDisablePropertiesPadding="true" />
     </div>
-    <SchemaExamples :schema="schema" :components="components" />
+    <SchemaExamples :schema="schema" :components="components" :name="name" />
   </article>
 </template>
