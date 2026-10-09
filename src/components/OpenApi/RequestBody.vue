@@ -24,7 +24,7 @@ const hasContent = computed(() => Object.keys(resolution.value.value?.content ??
         <SectionTitle>Request Body</SectionTitle>
       </template>
       <template #type-suffix>
-        <span class="text-sm" :class="resolution.value.required ? 'text-amber-700' : 'text-gray-500'">{{ resolution.value.required ? 'required' : 'optional' }}</span>
+        <span v-if="resolution.value.required" class="text-sm text-amber-700">required</span>
       </template>
       <template v-if="resolution.value.description" #description>
         <Description class="text-base leading-normal text-gray-700 sm:text-sm" :content="resolution.value.description" />
@@ -33,7 +33,7 @@ const hasContent = computed(() => Object.keys(resolution.value.value?.content ??
     <template v-else>
       <div class="flex flex-wrap items-baseline gap-2">
         <SectionTitle>Request Body</SectionTitle>
-        <span class="text-sm" :class="resolution.value.required ? 'text-amber-700' : 'text-gray-500'">{{ resolution.value.required ? 'required' : 'optional' }}</span>
+        <span v-if="resolution.value.required" class="text-sm text-amber-700">required</span>
       </div>
       <Description v-if="resolution.value.description" class="text-base leading-normal text-gray-700 sm:text-sm" :content="resolution.value.description" />
     </template>

@@ -86,7 +86,7 @@ Implementation: `localReferences.ts` exposes document-root pointer lookup and ch
 
 `public/specs/fabric-reference.yaml` is the growing Reference Lab fixture, selectable with `?spec=/specs/fabric-reference.yaml`. Its operation, parameter, body, response, header, schema, and example descriptions explain each case. GET/PATCH project endpoints demonstrate inheritance, alias chains, replacement semantics, and same-name parameters in different locations. Search demonstrates schema/content parameters, explicit serialization settings, and named/referenced examples. Preview has an optional inline body; the webhook shares normal inheritance behavior. Parameter examples override root schema examples without mutating the specification, including falsy values, and reuse the schema-property example display. Serialization settings remain preserved in the source/model and are hidden from parameter rows; content-based parameters display their media type and examples.
 
-Regression tests cover both override directions (inline/reference), required inputs, immutable merging, unresolved diagnostics, webhook parity, referenced/inline bodies, metadata, and example precedence. Browser checks verified endpoint/body/webhook behavior at normal width and the parameter layout at phone width. Adding parameter values to generated request snippets remains E1.
+Regression tests cover both override directions (inline/reference), required inputs, immutable merging, unresolved diagnostics, webhook parity, referenced/inline bodies, metadata, and example precedence. Browser checks verified endpoint/body/webhook behavior at normal width and the parameter layout at phone width. Effective parameter values now feed generated request snippets through E1.
 
 ### 4. Preserve schema meaning
 
@@ -96,23 +96,27 @@ Regression tests cover both override directions (inline/reference), required inp
 - [x] S2 — Render OpenAPI 3.0 `nullable` and supported OpenAPI 3.1 null unions consistently.
 - [x] S3 — Render maps through `additionalProperties`, including typed values and restrictions on extra properties.
 - [x] S4 — Display `readOnly`, `writeOnly`, and deprecation; carry request/response direction into schema usage and examples.
-- [ ] S5 — Display patterns, exclusive numeric bounds, and array size/uniqueness constraints for the supported subset.
-- [ ] S6 — Document supported schema constructs and visibly warn for unsupported constructs, including discriminators until implemented; add regression fixtures for supported cases.
+- [x] S5 — Display patterns, exclusive numeric bounds, and array size/uniqueness constraints for the supported subset.
+- [x] S6 — Document supported schema constructs and warn in Markdown for unsupported constructs, including discriminators until implemented; add regression fixtures for supported cases. No new UI warnings, per requested scope.
 
 **Done when:** Supported schema information is preserved, unsupported semantics are disclosed, and rendering/examples agree on composition and direction.
+
+S5–S6: shared numeric-bound handling renders 3.0 boolean and 3.1 numeric exclusivity consistently in badges and inline type ranges. Patterns are shown literally; array item limits retain zero and uniqueness is shown when enabled. Both Reference Lab specifications contain browsable regression cases with authored examples. [SCHEMA_SUPPORT.md](./SCHEMA_SUPPORT.md) records the supported subset and unsupported constructs, including discriminator behavior and the remaining E2 sample-generation limitations. Unsupported-keyword warnings are documentation-only; existing reference diagnostics remain in place.
 
 S2–S4: type previews support 3.0 nullable types and 3.1 type-array/anyOf/oneOf null unions, including nullable array items. Explicit null examples are retained; generated unions prefer a non-null branch. Maps display `[key: string]` value schemas and explicit extra-property permissions; typed maps generate a sample key. Request usage omits read-only properties; response usage omits write-only properties, including nested fields, referenced properties, and structured authored/generated examples. Standalone schema pages retain both annotations. Serialized XML strings remain authored literals. `/schema-lab` in the Reference Lab covers both usage directions, maps, null unions, deprecation, and JSON/form switching. The linked `fabric-reference-3.0.yaml` fixture covers nullable compatibility. Regression checks cover documentation, JSON, form, XML, composed annotations, and authored examples without mutating source data.
 
 ### 5. Make copied examples trustworthy
 
-**Finding:** Request generation lacks effective parameters. URLs retain placeholders; query/header/cookie values are omitted. Generated values can violate constraints, non-XML text is JSON-serialized, and only the first named media example is selected. Complete Basic/Bearer authentication alternatives already work.
+**Resolved finding:** Request snippets now include effective parameters, use media-specific serialization, respect supported generated constraints and allow named media-example selection. Complete Basic/Bearer authentication alternatives remain shared by both senders. Unsupported generation is disclosed; the supported subset is documented below.
 
-- [ ] E1 — Pass effective parameters into the shared request model; substitute encoded path values and include query/header/cookie values using supported serialization rules.
-- [ ] E2 — Respect supported numeric, string, and array constraints when generating values; disclose cases where a valid sample cannot be generated.
-- [ ] E3 — Apply request/response direction: omit read-only fields from generated requests and write-only fields from responses.
-- [ ] E4 — Serialize by media type, preserving plain text without JSON quoting and explicitly handling unsupported/binary formats.
-- [ ] E5 — Add named media-example selection, preserving values/descriptions; distinguish supplied examples from generated samples.
-- [ ] E6 — Keep Bash and Laravel aligned with the shared request model; add fixtures for parameters, encoding, constraints, direction, media types, and saved Basic/Bearer credentials.
+- [x] E1 — Pass effective parameters into the shared request model; substitute encoded path values and include query/header/cookie values using supported serialization rules.
+- [x] E2 — Respect supported numeric, string, and array constraints when generating values; disclose cases where a valid sample cannot be generated.
+- [x] E3 — Apply request/response direction: omit read-only fields from generated requests and write-only fields from responses.
+- [x] E4 — Serialize by media type, preserving plain text without JSON quoting and explicitly handling unsupported/binary formats.
+- [x] E5 — Add named media-example selection, preserving values/descriptions and retaining supplied values instead of regenerating them.
+- [x] E6 — Keep Bash and Laravel aligned with the shared request model; add fixtures for parameters, encoding, constraints, direction, media types, and saved Basic/Bearer credentials.
+
+E1–E6: both senders consume one parameter-aware request model. The browsable `/example-lab/{name}` fixture covers encoded paths, queries, headers/cookies, generated constraints, direction, named text/JSON values and placeholder binary uploads. Binary request snippets use local file placeholders, including referenced multipart file properties and file arrays; binary response bytes remain unavailable. Regression tests also retain saved Basic/Bearer credential copy/masking checks. [SCHEMA_SUPPORT.md](./SCHEMA_SUPPORT.md) documents serialization and bounded generation limits; unsupported generation produces an explanation and disables copying.
 
 **Done when:** Copies include supported required inputs and saved supported authentication, and generated samples do not silently contradict the contract.
 

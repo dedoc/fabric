@@ -2,6 +2,7 @@ import type {Components, Document, HttpMethod, Operation, PathItem, Paths, Schem
 import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
 import {effectiveParameters} from './parameters'
+import {getSchemaBounds} from './schemaBounds'
 
 export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 
@@ -73,18 +74,12 @@ function getPrimitiveSchemaTypePreview(type: string, schema: SchemaType|undefine
     if (type === 'number' || type === 'integer') {
         let result = type
 
-        if (typeof schema.minimum !== 'undefined' || typeof schema.maximum !== 'undefined') {
-            let min = schema.minimum;
-            let max = schema.maximum;
-
-            // optionally handle exclusive minimum/maximum
-            // if (schema.exclusiveMinimum === true) min = (min ?? 0) + 1; // simple adjustment
-            // if (schema.exclusiveMaximum === true) max = (max ?? 0) - 1;
-
-            if (min === max) {
-                result += `[${min}]`;
+        const {minimum, maximum} = getSchemaBounds(schema)
+        if (minimum || maximum) {
+            if (minimum && maximum && minimum.value === maximum.value && !minimum.exclusive && !maximum.exclusive) {
+                result += `[${minimum.value}]`;
             } else {
-                result += `[${min ?? ''}..${max ?? ''}]`;
+                result += `${minimum?.exclusive ? '(' : '['}${minimum?.value ?? ''}..${maximum?.value ?? ''}${maximum?.exclusive ? ')' : ']'}`;
             }
         }
 

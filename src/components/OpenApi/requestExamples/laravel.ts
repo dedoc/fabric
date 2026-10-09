@@ -35,6 +35,9 @@ export const laravelSender: RequestExampleSender = {
     } else if (type === 'multipart/form-data') {
       client = 'asMultipart()'
       options = {multipart: request.formFields.map(([name, contents]) => ({name, contents}))}
+      for (const [name, filename] of request.formFiles ?? []) client += `\n    ->attach(${quote(name)}, fopen(${quote(filename)}, 'r'), ${quote(filename)})`
+    } else if (request.bodyFile) {
+      client = `withBody(file_get_contents(${quote(request.bodyFile)}), ${quote(request.contentType)})`
     } else if (request.body !== '' && request.value !== null && (type === 'application/json' || type.endsWith('+json'))) {
       client = `withHeaders(['Content-Type' => ${quote(request.contentType)}])`
       options = {json: request.value}
@@ -43,8 +46,13 @@ export const laravelSender: RequestExampleSender = {
     } else if (request.contentType) {
       client = `withHeaders(['Content-Type' => ${quote(request.contentType)}])`
     }
+    const headers = Object.fromEntries(request.headers ?? [])
     if (request.authorization) {
-      const auth = `withHeaders(['Authorization' => ${quote(request.authorization)}])`
+      for (const name of Object.keys(headers)) if (name.toLowerCase() === 'authorization') delete headers[name]
+      headers.Authorization = request.authorization
+    }
+    if (Object.keys(headers).length) {
+      const auth = `withHeaders([${Object.entries(headers).map(([name, value]) => `${quote(name)} => ${quote(value)}`).join(', ')}])`
       client = auth + (client ? '\n    ->' + client : '')
     }
     const send = `send(${quote(request.method)}, ${quote(request.url)}${options ? ', ' + php(options, client ? 1 : 0) : ''});`

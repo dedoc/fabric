@@ -34,6 +34,68 @@ const {effectiveParameters} = await server.ssrLoadModule('/src/components/OpenAp
 const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/OpenApi/ParameterDetails.vue')
 const {selectExampleSchema, compositionPathKey} = await server.ssrLoadModule('/src/components/OpenApi/compositionExamples.ts')
 const {useCompositionSelections, useCompositionExample} = await server.ssrLoadModule('/src/components/OpenApi/useCompositionSelections.ts')
+const {getSchemaBounds} = await server.ssrLoadModule('/src/components/OpenApi/schemaBounds.ts')
+
+test('numeric bounds preserve exclusivity, zero and the strongest applicable endpoint', () => {
+  const cases = [
+    [{minimum: 0, maximum: 10, exclusiveMinimum: true, exclusiveMaximum: true}, {minimum: {value: 0, exclusive: true}, maximum: {value: 10, exclusive: true}}, 'number(0..10)'],
+    [{minimum: 0, maximum: 0, exclusiveMinimum: false, exclusiveMaximum: false}, {minimum: {value: 0, exclusive: false}, maximum: {value: 0, exclusive: false}}, 'number[0]'],
+    [{exclusiveMinimum: 0, exclusiveMaximum: 1}, {minimum: {value: 0, exclusive: true}, maximum: {value: 1, exclusive: true}}, 'number(0..1)'],
+    [{minimum: 5, exclusiveMinimum: 3, maximum: 10, exclusiveMaximum: 12}, {minimum: {value: 5, exclusive: false}, maximum: {value: 10, exclusive: false}}, 'number[5..10]'],
+    [{minimum: -5, exclusiveMinimum: -5, maximum: 0, exclusiveMaximum: 0}, {minimum: {value: -5, exclusive: true}, maximum: {value: 0, exclusive: true}}, 'number(-5..0)'],
+    [{exclusiveMinimum: true}, {minimum: undefined, maximum: undefined}, 'number'],
+  ]
+  for (const [constraints, bounds, text] of cases) {
+    const schema = {type: 'number', ...constraints}
+    assert.deepEqual(getSchemaBounds(schema), bounds)
+    assert.equal(getSchemaTypeParts(schema).map(part => part.text).join(''), text)
+  }
+})
+
+test('constraint display keeps patterns literal and array zero limits visible', async () => {
+  const pattern = '^<script>[a-z]+\\d{2}</script>$'
+  const html = await renderWithDocument(Schema, {components: {}, schema: {type: 'string', pattern, minLength: 0, maxLength: 20}}, {})
+  assert.match(html, /Pattern/)
+  assert.match(html, /&lt;script&gt;\[a-z\]\+/)
+  assert.ok(html.includes('\\d{2}'))
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&gt;=<\/span> 0 characters/)
+  assert.match(html, /&lt;=<\/span> 20 characters/)
+  const emptyPattern = await renderWithDocument(Schema, {components: {}, schema: {type: 'string', pattern: ''}}, {})
+  assert.match(emptyPattern, /Pattern/)
+  for (const uniqueItems of [true, false]) {
+    const array = await renderWithDocument(Schema, {components: {}, schema: {type: 'array', minItems: 0, maxItems: 0, uniqueItems, items: {}}}, {})
+    assert.match(array, /&gt;=<\/span> 0 items/)
+    assert.match(array, /&lt;=<\/span> 0 items/)
+    if (uniqueItems) assert.match(array, /unique items/)
+    else assert.doesNotMatch(array, /unique items/)
+  }
+})
+
+test('reference lab fixtures display 3.0 and 3.1 numeric bounds and nested constraints', async () => {
+  const schema = requestFixture.components.schemas.SchemaLab
+  const html = await renderWithDocument(Schema, {schema, components: requestFixture.components}, requestFixture)
+  assert.match(html, /Pattern/)
+  assert.ok(html.includes('^[a-z][a-z0-9_-]{2,15}$'))
+  assert.match(html, /&gt;<\/span> 0/)
+  assert.match(html, /&lt;<\/span> 1/)
+  assert.match(html, /unique items/)
+  assert.match(html, /&gt;=<\/span> 2 items/)
+  assert.match(html, /&lt;=<\/span> 4 items/)
+  const legacy = parseSpecification(await readFile(new URL('../public/specs/fabric-reference-3.0.yaml', import.meta.url), 'utf8'))
+  const legacyHtml = await renderWithDocument(Schema, {schema: legacy.components.schemas.NullableRecord, components: legacy.components}, legacy)
+  assert.match(legacyHtml, /&gt;<\/span> 0/)
+  assert.match(legacyHtml, /&lt;<\/span> 10/)
+  assert.match(legacyHtml, /&gt;=<\/span> 0/)
+  assert.match(legacyHtml, /&lt;=<\/span> 10/)
+})
+
+test('unsupported discriminator metadata adds no schema-keyword UI warning', async () => {
+  const schema = {oneOf: [{type: 'string'}, {type: 'number'}], discriminator: {propertyName: 'kind', mapping: {text: '#/components/schemas/Text'}}}
+  const html = await renderWithDocument(Schema, {schema, components: {}}, {})
+  assert.match(html, /aria-label="one of"/)
+  assert.doesNotMatch(html, /role="alert"|discriminator|Unsupported/)
+})
 
 test('effective parameters resolve aliases before replacing by name/location and preserve unresolved entries', () => {
   const inherited = {name: 'view', in: 'query', required: true, example: 'old', description: 'Inherited'}
@@ -85,10 +147,10 @@ test('required referenced and optional inline request bodies retain descriptions
   assert.doesNotMatch(required, />Content<\//)
   const optional = await renderWithDocument(RequestBody, {components, requestBody: requestFixture.paths['/projects/preview'].post.requestBody}, requestFixture)
   assert.match(optional, /Omit the body to preview a default project/)
-  assert.match(optional, />optional<\/span>/)
+  assert.doesNotMatch(optional, />required<\/span>/)
   const noContent = await renderWithDocument(RequestBody, {components, requestBody: {description: 'Visible without content', required: false}}, requestFixture)
   assert.match(noContent, /Visible without content/)
-  assert.match(noContent, />optional<\/span>/)
+  assert.doesNotMatch(noContent, />required<\/span>/)
 })
 
 test('parameter display hides serialization and preserves content alternatives and named examples', async () => {
@@ -171,8 +233,7 @@ test('typed maps resolve references, generate values and display extra-property 
   assert.match(html, /&gt;=<\/span> 0/)
   for (const additionalProperties of [false, true]) {
     const html = await renderWithDocument(Schema, {schema: {type: 'object', additionalProperties}, components: {}}, {})
-    if (additionalProperties) assert.match(html, /any value/)
-    else assert.doesNotMatch(html, /not allowed/)
+    assert.doesNotMatch(html, /not allowed/)
     assert.deepEqual(createSchemaExample({type: 'object', additionalProperties}), {})
   }
 })

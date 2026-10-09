@@ -34,9 +34,16 @@ export type Schema = {
     // string specific attributes
     minLength?: number,
     maxLength?: number,
+    pattern?: string,
     // number specific attributes
     minimum?: number,
     maximum?: number,
+    exclusiveMinimum?: boolean|number,
+    exclusiveMaximum?: boolean|number,
+    // array specific attributes
+    minItems?: number,
+    maxItems?: number,
+    uniqueItems?: boolean,
     // properties that are hidden by default
     'x-hiddenProperties'?: string[]
 }

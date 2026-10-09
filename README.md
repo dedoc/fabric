@@ -45,6 +45,8 @@ For programmatic use, `resolveReference(document, entry, kind)` in `src/componen
 
 ## Checks
 
+See [Schema support](./SCHEMA_SUPPORT.md) for the supported display subset, regression fixtures, and limitations such as unimplemented discriminators and constraint-aware example generation. Unsupported schema keywords are documented there without new UI warnings.
+
 ```sh
 node --test tests/localReferences.test.mjs tests/schemaViewer.test.mjs tests/specSafety.test.mjs
 yarn vite build

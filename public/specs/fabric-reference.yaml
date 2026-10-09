@@ -18,8 +18,8 @@ info:
     read-only/write-only fields in requests and responses. Compare with the
     [OpenAPI 3.0 nullable fixture](?spec=/specs/fabric-reference-3.0.yaml#operations/nullableLab).
 
-    Generated request snippets currently illustrate the URL and body; parameter
-    substitution and query/header/cookie values are a separate upcoming fix.
+    [Example Lab](#operations/exampleLab) demonstrates copyable snippets with
+    encoded parameters, constrained generated values and named media examples.
 servers:
   - url: https://reference.example.com/v1
     description: Illustrative server only; no live requests are sent by the viewer.
@@ -29,6 +29,54 @@ tags:
   - name: Search
     description: Examples and parameter encoding instructions.
 paths:
+  /example-lab/{name}:
+    post:
+      operationId: exampleLab
+      tags: [Projects]
+      summary: Inspect copyable request examples
+      description: |
+        Both senders encode the slash in the path, repeat query tags, and send a
+        header and cookie. Switch named examples to see their descriptions.
+        JSON generation omits read-only fields; responses omit write-only fields.
+        Plain text remains unquoted. Binary requests show a placeholder filename.
+      parameters:
+        - {name: name, in: path, required: true, schema: {type: string}, example: design/review}
+        - {name: tags, in: query, schema: {type: array, items: {type: string}}, example: [design, review]}
+        - {name: X-Region, in: header, schema: {type: string}, example: eu}
+        - {name: session, in: cookie, schema: {type: string}, example: demo-session}
+      requestBody:
+        required: true
+        description: Select JSON for constrained generated values, text for literal examples, or binary for a file-upload snippet with a placeholder filename.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: {type: string, readOnly: true}
+                secret: {type: string, writeOnly: true}
+                score: {type: number, exclusiveMinimum: 0, exclusiveMaximum: 1}
+                name: {type: string, minLength: 8, maxLength: 12}
+                tags: {type: array, minItems: 2, maxItems: 3, uniqueItems: true, items: {type: string, enum: [design, review, archived]}}
+          text/plain:
+            schema: {type: string}
+            examples:
+              greeting: {summary: Greeting, description: This supplied text is copied without JSON quotes., value: Hello world}
+              empty: {summary: Empty text, description: An empty string remains a supplied example., value: ''}
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '200':
+          description: Named structured responses retain descriptions and remove the write-only secret.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: {type: string, readOnly: true}
+                  secret: {type: string, writeOnly: true}
+              examples:
+                first: {summary: Created project, description: The server-assigned ID is visible; the secret is hidden., value: {id: project-1, secret: private}}
+                second: {summary: Another project, description: Select this to update the response payload., value: {id: project-2, secret: private}}
   /projects/{projectId}:
     parameters:
       - $ref: '#/components/parameters/ProjectIdAlias'
@@ -344,6 +392,30 @@ components:
               properties:
                 email: {type: string, example: alex@example.com}
         legacyName: {type: string, deprecated: true, description: Use name instead., example: old-name}
+        slug:
+          type: string
+          description: A short identifier. Inspect the pattern and character limits; the authored example satisfies both.
+          pattern: '^[a-z][a-z0-9_-]{2,15}$'
+          minLength: 3
+          maxLength: 16
+          example: design-review
+        score:
+          $ref: '#/components/schemas/ExclusiveScore'
+        selections:
+          type: array
+          description: Between two and four distinct labels. Inspect item-count bounds and uniqueness, then compare the authored example.
+          minItems: 2
+          maxItems: 4
+          uniqueItems: true
+          items: {type: string}
+          example: [design, review]
+        emptyList:
+          type: array
+          description: An explicit zero-item maximum must stay visible.
+          minItems: 0
+          maxItems: 0
+          items: {type: string}
+          example: []
         labels:
           type: object
           description: Arbitrary keys whose values must be strings.
@@ -363,6 +435,12 @@ components:
           description: Extra keys can hold any value.
           additionalProperties: true
     MetricValue: {type: number, minimum: 0, description: A nonnegative measurement., example: 42}
+    ExclusiveScore:
+      type: number
+      description: A score strictly between zero and one. Parentheses in the type range and strict comparison badges represent excluded endpoints.
+      exclusiveMinimum: 0
+      exclusiveMaximum: 1
+      example: 0.5
     PaperSize:
       type: object
       description: Explicit dimensions in millimeters.

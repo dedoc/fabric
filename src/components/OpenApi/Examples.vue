@@ -7,10 +7,11 @@ import {useReferences} from './useReferences'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
 import type {ReferenceIssue} from './references'
 import MethodChip from './Partials/MethodChip.vue'
-import {formatMediaExample, isJsonContentType, isXmlContentType} from './mediaExamples'
+import {formatMediaExample, isJsonContentType, isXmlContentType, selectMediaExample} from './mediaExamples'
 import {createRequestExample, requestExampleSenders} from './requestExamples'
 import {useMediaType} from './useMediaType'
 import Select from '../UI/Select.vue'
+import Description from './Description.vue'
 import {useCompositionExample} from './useCompositionSelections'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
@@ -44,9 +45,28 @@ const responseResolution = computed(() => {
 const responseContent = computed(() => responseResolution.value.value?.content)
 const {type: responseType, media: originalResponseMedia} = useMediaType(() => responseContent.value, () => `response:${responseStatus.value}`)
 const responseMedia = useCompositionExample(() => originalResponseMedia.value, () => `response:${responseStatus.value}:${responseType.value}`, () => props.components)
+const namedSelections = ref<Record<string, string>>({})
+const requestKey = computed(() => `request:${requestType.value}`)
+const responseKey = computed(() => `response:${responseStatus.value}:${responseType.value}`)
+function namedOptions(media: typeof requestMedia.value) {
+  return Object.entries(media?.examples ?? {}).map(([value, entry]) => ({value, label: references.resolve<{summary?: string}>(entry).value?.summary ?? value}))
+}
+const requestSample = computed(() => {
+  try {
+    const selected = selectMediaExample(requestMedia.value, namedSelections.value[requestKey.value], references.document.value)
+    const model = createRequestExample(props.base, props.path, props.method, requestType.value, selected.media, props.components, references.document.value, props.operation.parameters ?? [])
+    return {...selected, model, error: ''}
+  } catch (error) { return {model: undefined, source: '', description: '', error: error instanceof Error ? error.message : String(error)} }
+})
+const responseSample = computed(() => {
+  try {
+    const selected = selectMediaExample(responseMedia.value, namedSelections.value[responseKey.value], references.document.value)
+    return {...selected, code: formatMediaExample(selected.media, responseType.value, props.components, true, references.document.value, undefined, 'response'), error: ''}
+  } catch (error) { return {code: '', source: '', description: '', error: error instanceof Error ? error.message : String(error)} }
+})
 function mediaIssues(media: typeof requestMedia.value, type: string): ReferenceIssue[] {
   const issues: ReferenceIssue[] = []
-  formatMediaExample(media, type, props.components, true, references.document.value, issue => issues.push(issue))
+  try { formatMediaExample(media, type, props.components, true, references.document.value, issue => issues.push(issue)) } catch { /* Sample errors are displayed separately. */ }
   return issues
 }
 const requestIssues = computed(() => [...requestBody.value.issues, ...mediaIssues(requestMedia.value, requestType.value)])
@@ -59,7 +79,8 @@ const savedAuthorization = computed(() => authorizationForOption(httpAuth.value)
 function generateRequestCode(display: boolean) {
   if (requestIssues.value.length && requestView.value !== 'schema') return ''
   if (requestView.value === 'schema') return format(originalRequestMedia.value?.schema)
-  const request = createRequestExample(props.base, props.path, props.method, requestType.value, requestMedia.value, props.components, references.document.value)
+  if (!requestSample.value.model) return ''
+  const request = {...requestSample.value.model}
   if (requestExample.value === 'payload') return request.body
   if (display && httpAuth.value) request.authorization = `${httpAuth.value.kind === 'basic' ? 'Basic' : 'Bearer'} ${authPlaceholder}`
   else if (!display) request.authorization = savedAuthorization.value
@@ -77,10 +98,9 @@ const displayCode = computed(() => {
   }
 })
 const responseCode = computed(() => {
-  const media = responseMedia.value
   if (responseView.value === 'schema') return format(originalResponseMedia.value?.schema)
   if (responseIssues.value.length) return ''
-  return formatMediaExample(media, responseType.value, props.components, true, references.document.value, undefined, 'response')
+  return responseSample.value.code
 })
 async function copy(code: string, panel: string) {
   try {
@@ -107,13 +127,17 @@ async function copy(code: string, panel: string) {
           </button>
         </div>
         <ReferenceDiagnostics :issues="requestIssues" />
+        <div v-if="requestView === 'example' && namedOptions(requestMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 [scrollbar-width:thin] [&+pre]:pt-2">
+          <Select v-model="namedSelections[requestKey]" :options="namedOptions(requestMedia)" class="max-w-full text-gray-600" aria-label="Named request example" />
+          <Description v-if="requestSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="requestSample.description" />
+        </div>
+        <p v-if="requestView === 'example' && requestSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ requestSample.error }}</p>
         <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode.before || displayCode.chip"><code class="font-jetbrains-mono">{{ displayCode.before }}<button v-if="displayCode.chip" type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button>{{ displayCode.after }}</code></pre>
-        <p v-else class="p-4 text-[13px] text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
+        <p v-else-if="requestView === 'schema' || !requestSample.error" class="p-4 leading-5 text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : requestSample.model?.value === '' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">
         <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-gray-950/10 px-4 py-2">
-          <span>Output</span>
-          <span v-if="responseType" class="min-w-0 flex-1 truncate text-gray-500" :title="responseType">{{ responseType }}</span>
+          <div class="flex min-w-0 flex-1 items-center gap-2"><span>Output</span><span v-if="responseType" class="min-w-0 truncate text-gray-500" :title="responseType">{{ responseType }}</span></div>
           <Select class="shrink-0 whitespace-nowrap" v-if="responseStatus" v-model="responseStatus" :options="Object.keys(operation.responses ?? {}).map(value => ({value, label: value}))" aria-label="Response status" />
           <Select class="shrink-0 whitespace-nowrap" v-model="responseView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Response example or schema" />
           <button type="button" class="copy-button disabled:cursor-default disabled:opacity-40" :disabled="!responseCode" :aria-label="copied === 'response' ? 'Copied response' : 'Copy response example'" @click="copy(responseCode, 'response')">
@@ -122,8 +146,13 @@ async function copy(code: string, panel: string) {
           </button>
         </div>
         <ReferenceDiagnostics :issues="responseIssues" />
+        <div v-if="responseView === 'example' && namedOptions(responseMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 [scrollbar-width:thin] [&+pre]:pt-2">
+          <Select v-model="namedSelections[responseKey]" :options="namedOptions(responseMedia)" class="max-w-full text-gray-600" aria-label="Named response example" />
+          <Description v-if="responseSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="responseSample.description" />
+        </div>
+        <p v-if="responseView === 'example' && responseSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ responseSample.error }}</p>
         <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><code class="font-jetbrains-mono">{{ responseCode }}</code></pre>
-        <p v-else class="p-4 text-[13px] text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : 'No example provided.' }}</p>
+        <p v-else-if="responseView === 'schema' || !responseSample.error" class="p-4 leading-5 text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : responseSample.source === 'Supplied example' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>
     </div>

@@ -2,6 +2,7 @@
 import type {Components, Schema} from "./types.ts";
 import {computed, getCurrentInstance, inject, provide, ref, toRaw} from "vue";
 import SchemaAttribute from "./SchemaAttribute.vue";
+import SchemaConstraints from './SchemaConstraints.vue'
 import SchemaTypePreview from "./SchemaTypePreview.vue";
 import {useReferences} from './useReferences'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
@@ -125,17 +126,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
       <SchemaTypePreview :schema="members[selectedMember]" :components="components" />
     </div>
 
-    <div v-if="
-      resolvedSchema.minLength !== undefined
-      || resolvedSchema.maxLength !== undefined
-      || resolvedSchema.minimum !== undefined
-      || resolvedSchema.maximum !== undefined
-    " class="flex flex-wrap gap-1">
-      <div v-if="resolvedSchema.minLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minLength }} characters</div>
-      <div v-if="resolvedSchema.maxLength !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maxLength }} characters</div>
-      <div v-if="resolvedSchema.minimum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '>='}}</span> {{ resolvedSchema.minimum }}</div>
-      <div v-if="resolvedSchema.maximum !== undefined" class="text-gray-600 bg-gray-100 rounded-md leading-[15px] text-xs px-[3px] py-0.5"><span class="common-ligatures">{{ '<='}}</span> {{ resolvedSchema.maximum }}</div>
-    </div>
+    <SchemaConstraints :schema="resolvedSchema" />
 
     <div v-if="(!compositionKind || !selections.has(selectionPath)) && (resolvedSchema.default != undefined || (!shouldHideExamples && normalizedExamples.length))" class="flex flex-col gap-2">
       <SchemaAttribute
@@ -168,7 +159,6 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
       />
     </div>
 
-    <p v-if="resolvedSchema.additionalProperties === true" class="text-sm text-gray-500 sm:text-xs">Additional properties may have any value.</p>
     <div v-if="canHideNestedProperties" class="relative z-10">
       <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
     </div>
@@ -227,10 +217,3 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
     </div>
   </div>
 </template>
-
-<style scoped>
-.common-ligatures {
-  --ot-liga: common-ligatures;
-  font-variant-ligatures: var(--ot-liga) var(--ot-dlig) var(--ot-calt);
-}
-</style>
