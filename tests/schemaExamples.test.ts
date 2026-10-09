@@ -55,10 +55,10 @@ test('resolves nested references and leaves the original schema intact', () => {
 
 test('terminates recursive schemas and handles missing schemas', () => {
   const recursive: Schema = {type: 'object', properties: {child: {$ref: '#/components/schemas/Node'}}}
-  assert.deepEqual(createSchemaExample(resolveExampleSchema(recursive, {schemas: {Node: recursive}})), {child: null})
+  assert.deepEqual(createSchemaExample(resolveExampleSchema(recursive, {schemas: {Node: recursive}})), {})
   const cycle: Schema = {type: 'object', properties: {}}
   cycle.properties!.child = cycle
-  assert.deepEqual(createSchemaExample(cycle), {child: null})
+  assert.deepEqual(createSchemaExample(cycle), {})
   assert.equal(createSchemaExample(undefined), undefined)
 })
 

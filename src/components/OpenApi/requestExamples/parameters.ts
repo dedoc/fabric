@@ -49,8 +49,10 @@ export function requestParameters(path: string, parameters: (Parameter | Referen
     } else {
       let pairs: string[]
       if (style === 'deepObject') {
-        if (!object) throw new Error(`deepObject requires a flat object for ${parameter.name}.`)
-        pairs = entries.map(([key, item]) => `${name}%5B${encode(key)}%5D=${token(item)}`)
+        // Stripe uses deepObject for arrays, serialized as repeated bracketed names.
+        if (!object && !array) throw new Error(`deepObject requires a flat object or array for ${parameter.name}.`)
+        pairs = array ? values.map(item => `${name}%5B%5D=${item}`)
+          : entries.map(([key, item]) => `${name}%5B${encode(key)}%5D=${token(item)}`)
       } else if (style === 'form' && explode && (array || object)) {
         pairs = object ? entries.map(([key, item]) => `${encode(key)}=${token(item)}`) : values.map(item => `${name}=${item}`)
       } else {

@@ -61,7 +61,7 @@ export function parseSpecification(source: string): Specification {
 
   // Payload examples and extensions are data, not schema keywords.
   const ancestors = new Set<object>()
-  const maps = ['paths', 'webhooks', 'schemas', 'properties', 'content', 'responses', 'headers', 'securitySchemes', 'requestBodies', 'callbacks', 'links', 'pathItems', 'variables', 'scopes']
+  const maps = ['paths', 'webhooks', 'schemas', 'properties', 'content', 'encoding', 'responses', 'headers', 'securitySchemes', 'requestBodies', 'callbacks', 'links', 'pathItems', 'variables', 'scopes']
   function inspect(node: unknown, location: string, depth = 0, dictionary = false, context?: 'links' | 'link') {
     if (node === null || typeof node !== 'object') return
     if (depth > 100 || ancestors.has(node)) throw new SpecificationError('The specification contains cyclic or excessively nested data.')
@@ -81,7 +81,7 @@ export function parseSpecification(source: string): Specification {
         }
         if (!dictionary && !components) {
           if (['description', 'summary', '$ref'].includes(key) && typeof item !== 'string') throw new SpecificationError(`${at} must be a string.`)
-          if (['properties', 'content', 'responses', 'headers', 'requestBody', 'items'].includes(key)) requireObject(item, at)
+          if (['properties', 'content', 'encoding', 'responses', 'headers', 'requestBody', 'items'].includes(key)) requireObject(item, at)
           if (['parameters', 'servers', 'security', 'tags', 'required', 'allOf', 'anyOf', 'oneOf', 'prefixItems'].includes(key) && !Array.isArray(item) && !(key === 'required' && typeof item === 'boolean')) {
             throw new SpecificationError(`${at} must be an array.`)
           }

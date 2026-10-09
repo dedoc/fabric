@@ -6,7 +6,10 @@ export const compositionPathKey = (path: SchemaPath) => JSON.stringify(path)
 
 /** Project selected alternatives without changing the source document or allOf semantics. */
 export function selectExampleSchema(schema: Schema | undefined, document: Document, selections: ReadonlyMap<string, number>) {
+  const selectedPaths = [...selections.keys()].map(key => JSON.parse(key) as SchemaPath)
   function visit(current: Schema, path: SchemaPath, ancestors: Set<Schema>): {schema: Schema, changed: boolean} {
+    // Unselected subgraphs retain their source identity, including shared references.
+    if (!selectedPaths.some(selected => path.every((part, index) => selected[index] === part))) return {schema: current, changed: false}
     const resolved = resolveReference<Schema>(document, current, 'schema').value
     if (!resolved || ancestors.has(resolved)) return {schema: current, changed: false}
     const next = new Set(ancestors).add(resolved)

@@ -13,7 +13,11 @@ export const requestExampleSenders: RequestExampleSender[] = [bashSender, larave
 
 const fileExtensions: Record<string, string> = {'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'text/plain': 'txt'}
 const fileName = (type: string) => 'example.' + (fileExtensions[type.split(';')[0].trim().toLowerCase()] ?? 'bin')
-const isBinary = (schema: Schema | undefined): boolean => !!schema && (schema.format === 'binary' || !!schema.allOf?.some(isBinary) || isBinary((schema.oneOf ?? schema.anyOf)?.find(member => member.type !== 'null')))
+function isBinary(schema: Schema | undefined, visited = new Set<Schema>()): boolean {
+  if (!schema || visited.has(schema)) return false
+  visited.add(schema)
+  return schema.format === 'binary' || !!schema.allOf?.some(member => isBinary(member, visited)) || isBinary((schema.oneOf ?? schema.anyOf)?.find(member => member.type !== 'null'), visited)
+}
 
 export function createRequestExample(base: string, path: string, method: string, contentType: string, media: MediaType | undefined, components: Components, document: Document = {components}, parameters: (Parameter | Reference)[] = []): RequestExample {
   const inputs = requestParameters(path, parameters, document)
@@ -22,7 +26,12 @@ export function createRequestExample(base: string, path: string, method: string,
   const type = contentType.split(';')[0].trim().toLowerCase()
   const bodyFile = media && type !== 'multipart/form-data' && (isBinary(schema) || type === 'application/octet-stream') ? fileName(type) : undefined
   const formFiles: [string, string][] = []
+  const fileProjections = new Map<Schema, Schema>()
   function withoutFiles(current: Schema): Schema {
+    const cached = fileProjections.get(current)
+    if (cached) return cached
+    const result = {...current}
+    fileProjections.set(current, result)
     const properties = current.properties && Object.fromEntries(Object.entries(current.properties).filter(([name, property]) => {
       if (!isSchemaVisible(property, 'request')) return true
       const array = property.type === 'array' && isBinary(property.items)
@@ -35,7 +44,9 @@ export function createRequestExample(base: string, path: string, method: string,
       }
       return false
     }))
-    return {...current, properties, allOf: current.allOf?.map(withoutFiles)}
+    result.properties = properties
+    result.allOf = current.allOf?.map(withoutFiles)
+    return result
   }
   if (type === 'multipart/form-data' && schema) media = {...media, schema: withoutFiles(schema)}
   if (bodyFile) return {

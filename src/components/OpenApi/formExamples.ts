@@ -22,7 +22,8 @@ export function createFormFields(media: MediaType | undefined, components: Compo
     const explode = encoding?.explode ?? (style === 'form')
     const parameterEncoding = encoding?.style !== undefined || encoding?.explode !== undefined || encoding?.allowReserved !== undefined
     if (Array.isArray(item)) {
-      if (!parameterEncoding || explode) item.forEach(entry => field(name, entry))
+      if (style === 'deepObject') item.forEach(entry => field(`${name}[]`, entry))
+      else if (!parameterEncoding || explode) item.forEach(entry => field(name, entry))
       else field(name, item.map(text).join(style === 'spaceDelimited' ? ' ' : style === 'pipeDelimited' ? '|' : ','))
     } else if (item !== null && typeof item === 'object' && parameterEncoding) {
       const entries = Object.entries(item)

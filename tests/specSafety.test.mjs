@@ -85,6 +85,27 @@ test('response and component links accept parameter maps and request-body expres
   assert.throws(() => parseSpecification(JSON.stringify({...valid, paths: {'/planets': {get: {parameters: {}, responses: {}}}}})), /parameters must be an array/)
 })
 
+test('form encoding keys are field names, while encoding headers retain structural checks', () => {
+  const encoding = Object.fromEntries(['description', 'summary', '$ref', 'properties', 'parameters', 'required', 'encoding'].map(name =>
+    [name, {explode: true, style: 'deepObject'}],
+  ))
+  encoding.description.headers = {description: {description: 'Encoding header', schema: {type: 'string'}}}
+  const specification = {...valid, paths: {
+    '/v1/payment_records/{id}/report_payment_attempt_informational': {post: {
+      requestBody: {content: {'application/x-www-form-urlencoded': {encoding}}},
+      responses: {200: {description: 'OK'}},
+    }},
+  }}
+  const parsed = parseSpecification(JSON.stringify(specification))
+  assert.deepEqual(parsed.paths[Object.keys(specification.paths)[0]].post.requestBody.content['application/x-www-form-urlencoded'].encoding, encoding)
+  encoding.description.headers.description.description = 42
+  assert.throws(() => parseSpecification(JSON.stringify(specification)), /encoding\.description\.headers\.description\.description must be a string/)
+  encoding.description.headers = []
+  assert.throws(() => parseSpecification(JSON.stringify(specification)), /encoding\.description\.headers must be an object/)
+  specification.paths[Object.keys(specification.paths)[0]].post.requestBody.content['application/x-www-form-urlencoded'].encoding = []
+  assert.throws(() => parseSpecification(JSON.stringify(specification)), /encoding must be an object/)
+})
+
 test('remote loading handles HTTP, network, and HTML fallback failures', async () => {
   const original = globalThis.fetch
   try {
@@ -262,6 +283,29 @@ test('the small error page retries loading and recovers to the API reference', a
     assert.equal(viewer.button().text, 'Try again')
     viewer.button().props.onClick()
     await until(() => viewer.text().includes('Recovered API'))
+    assert.doesNotMatch(viewer.text(), /Unable to display this API/)
+  } finally { viewer.close(); globalThis.fetch = original }
+})
+
+test('Stripe-style form encoding renders the operation instead of the error page', async () => {
+  const original = globalThis.fetch
+  const path = '/v1/payment_records/{id}/report_payment_attempt_informational'
+  const specification = {...valid, info: {title: 'Stripe API', version: '1'}, paths: {[path]: {post: {
+    operationId: 'reportPaymentAttempt',
+    summary: 'Report a payment attempt',
+    parameters: [{name: 'id', in: 'path', required: true, schema: {type: 'string'}}],
+    requestBody: {content: {'application/x-www-form-urlencoded': {
+      schema: {type: 'object', properties: {description: {type: 'string', description: 'Payment description'}}},
+      encoding: {description: {explode: true, style: 'deepObject'}},
+    }}},
+    responses: {200: {description: 'OK'}},
+  }}}}
+  globalThis.fetch = async () => new Response(JSON.stringify(specification))
+  const viewer = mountViewer('/stripe.json', '#operations/reportPaymentAttempt')
+  try {
+    await until(() => viewer.text().includes('Request Body'))
+    assert.match(viewer.text(), /Stripe API/)
+    assert.match(viewer.text(), /Report a payment attempt/)
     assert.doesNotMatch(viewer.text(), /Unable to display this API/)
   } finally { viewer.close(); globalThis.fetch = original }
 })

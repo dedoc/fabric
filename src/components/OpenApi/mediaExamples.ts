@@ -16,10 +16,11 @@ export function isXmlContentType(contentType: string): boolean {
   return type === 'application/xml' || type === 'text/xml' || type.endsWith('+xml')
 }
 
-function hasBinarySchema(schema: Schema | undefined, direction: SchemaDirection): boolean {
-  if (!schema || !isSchemaVisible(schema, direction)) return false
+function hasBinarySchema(schema: Schema | undefined, direction: SchemaDirection, visited = new Set<Schema>()): boolean {
+  if (!schema || visited.has(schema) || !isSchemaVisible(schema, direction)) return false
+  visited.add(schema)
   const alternative = (schema.oneOf ?? schema.anyOf)?.find(child => child.type !== 'null')
-  return schema.format === 'binary' || Object.values(schema.properties ?? {}).some(child => hasBinarySchema(child, direction)) || hasBinarySchema(schema.items, direction) || (schema.allOf ?? []).some(child => hasBinarySchema(child, direction)) || hasBinarySchema(alternative, direction)
+  return schema.format === 'binary' || Object.values(schema.properties ?? {}).some(child => hasBinarySchema(child, direction, visited)) || hasBinarySchema(schema.items, direction, visited) || (schema.allOf ?? []).some(child => hasBinarySchema(child, direction, visited)) || hasBinarySchema(alternative, direction, visited)
 }
 
 /** Media examples take precedence over schema examples and generated values. */

@@ -1,13 +1,18 @@
 import type {Components, Document, Schema} from './types'
-import {resolveReference} from './references'
+import {resolveSchemaGraph} from './schemaGraph'
 import type {ReferenceIssue} from './references'
 import {createStringExample} from './stringExamples'
+import {createPatternExample} from './patternExamples'
 import {getSchemaBounds} from './schemaBounds'
 import {directionalExample, isSchemaVisible} from './schemaUsage'
 import type {SchemaDirection} from './schemaUsage'
 
 /** Check the supported constraints after combining generated members. */
-function fitsConstraints(value: unknown, schema: Schema): boolean {
+function fitsConstraints(value: unknown, schema: Schema, visited = new Map<Schema, Set<unknown>>()): boolean {
+  const values = visited.get(schema) ?? new Set<unknown>()
+  if (values.has(value)) return true
+  values.add(value)
+  visited.set(schema, values)
   if (schema.const !== undefined && JSON.stringify(value) !== JSON.stringify(schema.const)) return false
   if (schema.enum && !schema.enum.some(item => JSON.stringify(item) === JSON.stringify(value))) return false
   const type = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value
@@ -22,41 +27,29 @@ function fitsConstraints(value: unknown, schema: Schema): boolean {
   if (Array.isArray(value)) {
     if (value.length < (schema.minItems ?? 0) || value.length > (schema.maxItems ?? Infinity)) return false
     if (schema.uniqueItems && new Set(value.map(item => JSON.stringify(item))).size !== value.length) return false
-    if (!value.every((item, index) => fitsConstraints(item, schema.prefixItems?.[index] ?? schema.items ?? {}))) return false
+    if (!value.every((item, index) => fitsConstraints(item, schema.prefixItems?.[index] ?? schema.items ?? {}, visited))) return false
   } else if (value !== null && typeof value === 'object') {
-    if (!Object.entries(value).every(([name, item]) => fitsConstraints(item, schema.properties?.[name] ?? (typeof schema.additionalProperties === 'object' ? schema.additionalProperties : {})))) return false
+    if (!Object.entries(value).every(([name, item]) => fitsConstraints(item, schema.properties?.[name] ?? (typeof schema.additionalProperties === 'object' ? schema.additionalProperties : {}), visited))) return false
   }
-  return !schema.allOf || schema.allOf.every(member => fitsConstraints(value, member))
+  return !schema.allOf || schema.allOf.every(member => fitsConstraints(value, member, visited))
 }
 
-/** Resolve local references without changing the document. Recursive branches end in null. */
+/** Resolve to a shared schema graph without changing the source or inventing null constraints. */
 export function resolveExampleSchema(schema: Schema | undefined, components: Components, document: Document = {components}, report?: (issue: ReferenceIssue) => void): Schema | undefined {
-  function resolve(current: Schema, ancestors: Set<Schema>): Schema {
-    if (ancestors.has(current)) return {type: 'null'}
-    const next = new Set(ancestors).add(current)
-    const result = resolveReference<Schema>(document, current, 'schema')
-    result.issues.forEach(issue => report?.(issue))
-    if (!result.value) return {type: 'null'}
-    if (result.value !== current && ancestors.has(result.value)) return {type: 'null'}
-    next.add(result.value)
-    let resolved = {...result.value}
-    if (resolved.properties) {
-      resolved.properties = Object.fromEntries(Object.entries(resolved.properties).map(([name, property]) => [name, resolve(property, next)]))
-    }
-    if (resolved.items) resolved.items = resolve(resolved.items, next)
-    if (typeof resolved.additionalProperties === 'object') resolved.additionalProperties = resolve(resolved.additionalProperties, next)
-    for (const key of ['allOf', 'oneOf', 'anyOf', 'prefixItems'] as const) {
-      if (resolved[key]) resolved[key] = resolved[key]!.map(child => resolve(child, next))
-    }
-    return resolved
-  }
-  return schema ? resolve(schema, new Set()) : undefined
+  const result = resolveSchemaGraph(schema, document)
+  result.issues.forEach(issue => report?.(issue))
+  return result.value
 }
+
+class ExampleLimitError extends Error {}
+class RecursiveExampleError extends Error {}
 
 /** Create a deterministic JSON example from a resolved schema, including nested examples. */
 export function createSchemaExample(schema: Schema | undefined, direction: SchemaDirection = 'neutral'): unknown {
+  let remaining = 10_000
   function generate(current: Schema | undefined, ancestors: Set<Schema>, seed = 0): unknown {
     if (!current) return undefined
+    if (--remaining < 0 || ancestors.size > 100) throw new ExampleLimitError('Sample exceeds the generation size or depth limit. Supply an example.')
     if (current.example !== undefined) return current.example
     if (current.examples?.length) {
       const example = current.examples[0]
@@ -66,7 +59,10 @@ export function createSchemaExample(schema: Schema | undefined, direction: Schem
     if (current.const !== undefined) return current.const
     if (current.default !== undefined) return current.default
     if (current.enum?.length) return current.enum[seed % current.enum.length]
-    if (ancestors.has(current)) return null
+    if (ancestors.has(current)) {
+      if (current.nullable || current.type === 'null' || Array.isArray(current.type) && current.type.includes('null')) return null
+      throw new RecursiveExampleError('Cannot generate a finite value for this recursive schema. Supply an example.')
+    }
     const next = new Set(ancestors).add(current)
 
     if (current.allOf?.length) {
@@ -83,17 +79,33 @@ export function createSchemaExample(schema: Schema | undefined, direction: Schem
       return values[candidate]
     }
     const alternatives = current.oneOf ?? current.anyOf
-    const alternative = alternatives?.find(child => child.type !== 'null') ?? alternatives?.[0]
-    if (alternative) {
-      const value = generate(alternative, next)
-      if (!fitsConstraints(value, current)) throw new Error('The selected sample conflicts with composition constraints. Supply an example.')
-      return value
+    if (alternatives?.length) {
+      const preferred = alternatives.find(child => child.type !== 'null') ?? alternatives[0]
+      let recursiveError: RecursiveExampleError | undefined
+      for (const alternative of [preferred, ...alternatives.filter(child => child !== preferred)]) {
+        try {
+          const value = generate(alternative, next)
+          if (!fitsConstraints(value, current)) throw new Error('The selected sample conflicts with composition constraints. Supply an example.')
+          return value
+        } catch (error) {
+          if (!(error instanceof RecursiveExampleError)) throw error
+          recursiveError = error
+        }
+      }
+      throw recursiveError
     }
 
     const type = Array.isArray(current.type) ? current.type.find(type => type !== 'null') ?? 'null' : current.type
     switch (type ?? (current.properties || current.additionalProperties !== undefined ? 'object' : current.items || current.prefixItems ? 'array' : undefined)) {
       case 'object':
-        const properties = Object.fromEntries(Object.entries(current.properties ?? {}).filter(([, property]) => isSchemaVisible(property, direction)).map(([name, property]) => [name, generate(property, next) ?? null]))
+        const properties = Object.fromEntries(Object.entries(current.properties ?? {}).flatMap(([name, property]) => {
+          if (!isSchemaVisible(property, direction)) return []
+          try { return [[name, generate(property, next) ?? null]] }
+          catch (error) {
+            if (error instanceof ExampleLimitError || current.required?.includes(name)) throw error
+            return []
+          }
+        }))
         if (typeof current.additionalProperties === 'object') {
           let key = 'additionalProp1'
           while (Object.hasOwn(properties, key)) key += '_'
@@ -108,8 +120,13 @@ export function createSchemaExample(schema: Schema | undefined, direction: Schem
           const item = current.prefixItems?.[i] ?? current.items
           let value: unknown
           let attempt = 0
-          do { value = generate(item, next, attempt++) ?? null }
-          while (current.uniqueItems && values.some(previous => JSON.stringify(previous) === JSON.stringify(value)) && attempt <= 100)
+          try {
+            do { value = generate(item, next, attempt++) ?? null }
+            while (current.uniqueItems && values.some(previous => JSON.stringify(previous) === JSON.stringify(value)) && attempt <= 100)
+          } catch (error) {
+            if (error instanceof RecursiveExampleError && i >= (current.minItems ?? 0)) break
+            throw error
+          }
           if (current.uniqueItems && values.some(previous => JSON.stringify(previous) === JSON.stringify(value))) throw new Error('Cannot generate enough unique array values. Supply an example.')
           values.push(value)
         }
@@ -117,7 +134,11 @@ export function createSchemaExample(schema: Schema | undefined, direction: Schem
       }
       case 'string': {
         if (current.format === 'binary' || current.format === 'byte') throw new Error('Binary samples require a supplied file; generated text is unavailable.')
-        if (current.pattern) throw new Error('Pattern-constrained strings require a supplied example.')
+        if (current.pattern) {
+          const value = createPatternExample(current.pattern, seed)
+          if (value.length < (current.minLength ?? 0) || value.length > (current.maxLength ?? Infinity)) throw new Error('Cannot satisfy pattern and length constraints. Supply an example.')
+          return value
+        }
         let value = createStringExample(current.format) + (seed ? String(seed) : '')
         const min = current.minLength ?? 0, max = current.maxLength ?? Infinity
         if (min > max || min > 4096) throw new Error('Cannot generate a string within these length limits. Supply an example.')

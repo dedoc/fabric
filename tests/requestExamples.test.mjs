@@ -66,6 +66,35 @@ test('styles preserve punctuation while encoding data and reject unsupported nes
   assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{in: 'query', name: 'filter', style: 'deepObject', example: {nested: {a: 1}}}]), /Nested/)
 })
 
+test('Stripe expand deepObject arrays produce bracketed query names for both senders', () => {
+  const parameter = {in: 'query', name: 'expand', required: false, style: 'deepObject', explode: true,
+    schema: {type: 'array', items: {type: 'string', maxLength: 5000}},
+  }
+  const generated = createRequestExample('https://api.stripe.com', '/v1/account', 'get', '', undefined, {}, {}, [parameter])
+  assert.equal(generated.url, 'https://api.stripe.com/v1/account?expand%5B%5D=string')
+  const model = createRequestExample('https://api.stripe.com', '/v1/account', 'get', '', undefined, {}, {}, [
+    {...parameter, example: ['customer', 'payment_intent.customer', 'a&b=c/#']},
+  ])
+  assert.equal(model.url, 'https://api.stripe.com/v1/account?expand%5B%5D=customer&expand%5B%5D=payment_intent.customer&expand%5B%5D=a%26b%3Dc%2F%23')
+  for (const sender of requestExampleSenders) {
+    assert.ok(sender.generate(generated).includes(generated.url))
+    assert.ok(sender.generate(model).includes(model.url))
+  }
+  assert.equal(createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: []}]).url, '/')
+  assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: [{nested: 'value'}]}]), /Nested/)
+  assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: 'customer'}]), /flat object or array/)
+})
+
+test('Stripe expand form arrays retain bracketed names and encoded values in both senders', () => {
+  const media = {example: {expand: ['customer', 'payment_intent.customer', 'a&b=c/#']},
+    encoding: {expand: {style: 'deepObject', explode: true}},
+  }
+  const model = createRequestExample('https://api.stripe.com', '/v1/customers', 'post', 'application/x-www-form-urlencoded', media, {})
+  assert.deepEqual(model.formFields, [['expand[]', 'customer'], ['expand[]', 'payment_intent.customer'], ['expand[]', 'a&b=c/#']])
+  assert.match(requestExampleSenders[0].generate(model), /--data-urlencode 'expand%5B%5D=customer'/)
+  assert.match(requestExampleSenders[1].generate(model), /expand%5B%5D=customer&expand%5B%5D=payment_intent.customer&expand%5B%5D=a%26b%3Dc%2F%23/)
+})
+
 test('generated constraints retain zero, strict bounds, lengths, counts and uniqueness', () => {
   assert.equal(createSchemaExample({type: 'integer', minimum: 0, exclusiveMinimum: true, maximum: 2}), 1)
   assert.equal(createSchemaExample({type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1}), .5)
@@ -74,7 +103,29 @@ test('generated constraints retain zero, strict bounds, lengths, counts and uniq
   assert.equal(createSchemaExample({type: 'string', minLength: 8, maxLength: 8}).length, 8)
   assert.deepEqual(createSchemaExample({type: 'array', maxItems: 0, items: {type: 'string'}}), [])
   assert.deepEqual(createSchemaExample({type: 'array', minItems: 2, uniqueItems: true, items: {enum: ['a', 'b']}}), ['a', 'b'])
-  for (const schema of [{type: 'integer', exclusiveMinimum: 0, exclusiveMaximum: 1}, {type: 'string', pattern: '^a$'}, {type: 'array', minItems: 2, uniqueItems: true, items: {const: 'a'}}]) assert.throws(() => createSchemaExample(schema), /Supply|supplied/)
+  for (const schema of [{type: 'integer', exclusiveMinimum: 0, exclusiveMaximum: 1}, {type: 'string', pattern: '^(?=a)a$'}, {type: 'array', minItems: 2, uniqueItems: true, items: {const: 'a'}}]) assert.throws(() => createSchemaExample(schema), /Supply|supplied/)
+})
+
+test('Converterer bitrate and hex color patterns produce matching request values', () => {
+  const properties = {
+    bitrate_video: {type: 'string', pattern: '^[\\d.]+[kM]?$'},
+    bitrate_audio: {type: 'string', pattern: '^[\\d.]+[kM]?$'},
+    background_color: {type: 'string', pattern: '^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'},
+  }
+  const media = {schema: {type: 'object', properties: {options: {type: 'object', properties}}}}
+  const model = createRequestExample('', '/convert', 'post', 'application/json', media, {})
+  for (const [name, schema] of Object.entries(properties)) assert.match(model.value.options[name], new RegExp(schema.pattern))
+  for (const sender of requestExampleSenders) assert.ok(sender.generate(model).includes('background_color'))
+})
+
+test('unsupported optional fields are omitted while required fields still disclose failure', () => {
+  const schema = {type: 'object', properties: {name: {type: 'string'}, advanced: {type: 'string', pattern: '^(?=a)a$'}}}
+  assert.deepEqual(createSchemaExample(schema), {name: 'string'})
+  assert.throws(() => createSchemaExample({...schema, required: ['advanced']}), /Cannot generate this pattern/)
+  assert.equal(createSchemaExample({type: 'string', pattern: '^[a-z]{3}$'}), 'aaa')
+  assert.equal(createSchemaExample({type: 'string', pattern: '^a\\.b$'}), 'a.b')
+  assert.equal(createSchemaExample({type: 'string', pattern: '^a{0}$'}), '')
+  assert.throws(() => createSchemaExample({type: 'string', pattern: '^a{999999}$'}), /Cannot generate/)
 })
 
 test('media selection preserves falsy values, descriptions, direction and raw text', () => {
