@@ -62,6 +62,29 @@ test('allOf displays inherited and local properties once at the root without cha
   assert.deepEqual(createSchemaExample(schema, document.components, document), exampleBefore)
 })
 
+test('allOf property descriptions override referenced descriptions and fall back when absent', async () => {
+  const document = {openapi: '3.0.3', components: {schemas: {EventAttendee: {
+    type: 'object', description: 'An attendee of the event', properties: {
+      name: {type: 'string', description: 'The attendee name'},
+    },
+  }}}}
+  for (const description of ['The organizer of the event', undefined, '']) {
+    const organizer = {
+      allOf: [{$ref: '#/components/schemas/EventAttendee'}],
+      type: 'object', nullable: true,
+      ...(description === undefined ? {} : {description}),
+    }
+    const schema = {type: 'object', properties: {organizer}}
+    const before = JSON.stringify({document, schema})
+    const html = await renderWithDocument(Schema, {schema, components: document.components, level: 0}, document)
+    if (description) assert.equal((html.match(/The organizer of the event/g) ?? []).length, 1)
+    if (description === undefined) assert.equal((html.match(/An attendee of the event/g) ?? []).length, 1)
+    else assert.doesNotMatch(html, /An attendee of the event/)
+    assert.match(html, /The attendee name/)
+    assert.equal(JSON.stringify({document, schema}), before)
+  }
+})
+
 test('allOf preserves original selection paths for duplicate fields, maps and array items', () => {
   const alternative = {oneOf: [{type: 'string'}, {type: 'number'}]}
   const schema = {allOf: [
@@ -176,6 +199,92 @@ test('Reference Lab fixture verifies normal and webhook inheritance with one ove
   const item = requestFixture.webhooks['project.updated']
   assert.deepEqual(webhook.parameters, getInlineOperations({'/delivery': item}, requestFixture)[0].operation.parameters)
   assert.equal(JSON.stringify(requestFixture), before)
+})
+
+test('request bodies prefer their description and keep examples in the request example panel', async () => {
+  const components = {schemas: {CancelEventRequest: {
+    type: 'object', description: 'Request body for canceling an event.',
+    example: {cancel_reason: 'Schedule conflict'},
+    properties: {cancel_reason: {type: 'string', description: 'Why the event was canceled', example: 'Schedule conflict'}},
+  }}}
+  const document = {openapi: '3.0.3', components}
+  const content = {'application/json': {schema: {$ref: '#/components/schemas/CancelEventRequest'}}}
+  for (const description of ['Cancellation details', undefined, '']) {
+    const requestBody = {content, ...(description === undefined ? {} : {description})}
+    const html = await renderWithDocument(RequestBody, {components, requestBody}, document)
+    if (description) assert.equal((html.match(/Cancellation details/g) ?? []).length, 1)
+    if (description === undefined) assert.match(html, /Request body for canceling an event\./)
+    else assert.doesNotMatch(html, /Request body for canceling an event\./)
+    assert.match(html, /Why the event was canceled/)
+    assert.doesNotMatch(html, />Examples?<\/div>|Schedule conflict/)
+    const exampleHtml = await renderWithDocument(Examples, {
+      components, base: 'https://example.com', path: '/events/cancel', method: 'post', operation: {requestBody},
+    }, document)
+    assert.match(exampleHtml, /Schedule conflict/)
+  }
+})
+
+test('response bodies retain their schema description and keep examples in the response example panel', async () => {
+  const {default: SecondaryResponse} = await server.ssrLoadModule('/src/components/OpenApi/SecondaryResponse.vue')
+  const components = {schemas: {SingleEventResponse: {allOf: [{$ref: '#/components/schemas/Event'}]}, Event: {
+    type: 'object', description: 'The event schema description', example: {id: 'event-example'},
+    properties: {id: {type: 'string', description: 'The event ID', example: 'event-example'}},
+  }}}
+  const document = {openapi: '3.0.3', components}
+  const content = {'application/json': {schema: {$ref: '#/components/schemas/SingleEventResponse'}}}
+  for (const description of ['The response description', undefined, '']) {
+    const response = {content, ...(description === undefined ? {} : {description})}
+    for (const [component, props] of [
+      [ResponseContent, {unreferencedResponse: response, statusCode: '200'}],
+      [SecondaryResponse, {response, statusCode: 200}],
+    ]) {
+      const html = await renderWithDocument(component, {components, ...props}, document)
+      if (description) assert.equal((html.match(/The response description/g) ?? []).length, 1)
+      assert.equal((html.match(/The event schema description/g) ?? []).length, 1)
+      assert.match(html, /The event ID/)
+      assert.doesNotMatch(html, />Examples?<\/div>|event-example/)
+    }
+    const exampleHtml = await renderWithDocument(Examples, {
+      components, base: 'https://example.com', path: '/events', method: 'get', operation: {responses: {200: response}},
+    }, document)
+    assert.match(exampleHtml, /event-example/)
+  }
+})
+
+test('response descriptions do not repeat the status label', async () => {
+  const {default: Response} = await server.ssrLoadModule('/src/components/OpenApi/Response.vue')
+  for (const description of ['Created', undefined, 'The webhook was registered']) {
+    const html = await renderWithDocument(Response, {components: {}, statusCode: 201, response: {description}}, {})
+    assert.equal((html.match(/Created/g) ?? []).length, 1)
+    assert.doesNotMatch(html, /<p>Created<\/p>/)
+    if (description === 'The webhook was registered') assert.match(html, /The webhook was registered/)
+  }
+})
+
+test('array response descriptions belong to Body before the item type and description', async () => {
+  const components = {schemas: {
+    TimeZoneListResponse: {type: 'array', description: 'List of time zones with localized information', items: {$ref: '#/components/schemas/TimeZone'}},
+    TimeZone: {type: 'object', description: 'Information about a single time zone', properties: {id: {type: 'string'}}},
+  }}
+  const response = {description: 'Success', content: {'application/json': {schema: {$ref: '#/components/schemas/TimeZoneListResponse'}}}}
+  const html = (await renderWithDocument(ResponseContent, {components, unreferencedResponse: response}, {components})).replace(/<!--.*?-->/gs, '')
+  assert.equal((html.match(/List of time zones with localized information/g) ?? []).length, 1)
+  assert.ok(html.indexOf('List of time zones with localized information') < html.indexOf('TimeZone[]'))
+  assert.ok(html.indexOf('TimeZone[]') < html.indexOf('Information about a single time zone'))
+  assert.match(html, /class="mt-6"/)
+})
+
+test('response body descriptions prefer the allOf wrapper over its referenced child', async () => {
+  const components = {schemas: {
+    SingleEventResponse: {description: 'Single event response', allOf: [{$ref: '#/components/schemas/Event'}]},
+    Event: {type: 'object', description: 'A scheduled event/booking', properties: {id: {type: 'string'}}},
+  }}
+  const document = {openapi: '3.0.3', components}
+  const response = {description: 'Success', content: {'application/json': {schema: {$ref: '#/components/schemas/SingleEventResponse'}}}}
+  const html = await renderWithDocument(ResponseContent, {components, unreferencedResponse: response, statusCode: '200'}, document)
+  assert.match(html, /Success/)
+  assert.equal((html.match(/Single event response/g) ?? []).length, 1)
+  assert.doesNotMatch(html, /A scheduled event\/booking/)
 })
 
 test('required referenced and optional inline request bodies retain descriptions even without content', async () => {
@@ -914,14 +1023,30 @@ test('overview includes server overrides, resolves templates and renders declare
 
 test('opens schema hashes and renders the title, description and tabbed example', async () => {
   const html = await renderPages({schemas: {'Person/Details': {
-    title: 'Person details', description: 'A person in the workspace.', type: 'object', properties: {id: {type: 'integer', example: 42}},
+    title: 'Person details', description: 'A person in the workspace.', type: 'object', example: {id: 42}, properties: {id: {type: 'integer', example: 42}},
   }}}, '#schemas/Person%2FDetails')
   assert.match(html, /<h1[^>]*>Person details<\/h1>/)
   assert.equal((html.match(/A person in the workspace\./g) ?? []).length, 1)
   assert.match(html, /JSON schema/)
   assert.match(html, /TypeScript/)
   assert.match(html, /&quot;id&quot;: 42/)
+  assert.doesNotMatch(html, />Examples?<\/div>/)
   assert.match(html, /aria-current="page"/)
+})
+
+test('array schema pages and response bodies show the referenced item type with array notation', async () => {
+  const components = {schemas: {
+    LinkSlotListResponse: {type: 'array', items: {$ref: '#/components/schemas/LinkSlot'}},
+    LinkSlot: {type: 'object', properties: {rank: {type: 'integer'}}},
+  }}
+  const paths = {'/slots': {get: {operationId: 'get-slots', responses: {
+    200: {description: 'Success', content: {'application/json': {schema: {$ref: '#/components/schemas/LinkSlotListResponse'}}}},
+  }}}}
+  for (const hash of ['#schemas/LinkSlotListResponse', '#operations/get-slots']) {
+    const html = await renderPages(components, hash, {paths})
+    assert.match(html.replace(/<!--.*?-->/gs, ''), /href="#schemas\/LinkSlot"[^>]*>LinkSlot<\/a>\[\]/)
+    assert.match(html, />rank<\/div>/)
+  }
 })
 
 test('showSchemas controls schema navigation and request, response and property links', async () => {

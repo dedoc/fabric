@@ -6,6 +6,7 @@ import ReferenceDiagnostics from '../ReferenceDiagnostics.vue'
 import MediaType from "../MediaType.vue";
 import Description from "../Description.vue";
 import Schema from "../Schema.vue";
+import {responseStatusDescription} from '../responseStatus'
 
 const props = defineProps<{
   unreferencedResponse: Response,
@@ -28,7 +29,7 @@ const headerSchema = computed<SchemaType>(() => ({
 <template>
 <div class="space-y-5">
   <ReferenceDiagnostics :issues="issues" />
-  <Description v-if="unreferencedResponse.description" class="-mt-2 leading-normal text-gray-700" :content="unreferencedResponse.description"/>
+  <Description v-if="unreferencedResponse.description && unreferencedResponse.description.trim() !== responseStatusDescription(statusCode)" class="-mt-2 leading-normal text-gray-700" :content="unreferencedResponse.description"/>
   <div v-if="unreferencedResponse.headers">
     <div class="flex">
       <div class="flex gap-2 items-baseline">
@@ -45,6 +46,6 @@ const headerSchema = computed<SchemaType>(() => ({
       />
     </div>
   </div>
-  <MediaType :components="components" :content="unreferencedResponse.content" direction="response" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" />
+  <MediaType :components="components" :content="unreferencedResponse.content" direction="response" :selection-key="`response:${statusCode ?? 'default'}`" label="Response body content type" should-hide-examples />
 </div>
 </template>

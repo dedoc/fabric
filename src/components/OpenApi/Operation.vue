@@ -40,13 +40,13 @@ const operationSummary = computed(() => {
         </div>
         <OperationDatums ref="auth" :operation="operation"/>
       </div>
-      <Description v-if="operation.description" class="leading-normal text-gray-800 sm:text-base min-[1200px]:hidden" :content="operation.description"/>
+      <Description v-if="operation.description" class="leading-normal text-gray-800 [&_pre]:text-xs [&_pre]:leading-4 sm:text-base min-[1200px]:hidden" :content="operation.description"/>
     </div>
 
     <div class="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
-      <Description v-if="operation.description" class="hidden leading-normal text-gray-800 sm:text-base min-[1200px]:block" :content="operation.description"/>
+      <Description v-if="operation.description" class="hidden leading-normal text-gray-800 [&_pre]:text-xs [&_pre]:leading-4 sm:text-base min-[1200px]:block" :content="operation.description"/>
       <Request
-          v-if="operation.parameters || operation.requestBody"
+          v-if="operation.parameters?.length || operation.requestBody"
           :components="components"
           :parameters="operation.parameters"
           :requestBody="operation.requestBody"

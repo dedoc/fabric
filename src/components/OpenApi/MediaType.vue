@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type {Components, MediaType} from "./types.ts";
-import {computed} from "vue";
+import {computed, useSlots} from "vue";
 import Schema from "./Schema.vue";
 import SchemaTypePreview from "./SchemaTypePreview.vue";
 import {getSchemaTypePreview} from "./utils.ts";
@@ -9,6 +9,9 @@ import {useMediaType} from "./useMediaType";
 import ValueExamples from './ValueExamples.vue'
 import type {SchemaDirection} from './schemaUsage'
 import {provideCompositionScope} from './useCompositionSelections'
+import Description from './Description.vue'
+import {useReferences} from './useReferences'
+import {schemaDisplay} from './schemaDisplay'
 
 const props = defineProps<{
   components: Components,
@@ -16,10 +19,20 @@ const props = defineProps<{
   label?: string,
   selectionKey?: string,
   showExamples?: boolean,
+  shouldHideExamples?: boolean,
   direction?: SchemaDirection,
 }>()
 
 const {types, type, media} = useMediaType(() => props.content, () => props.selectionKey ?? '')
+const slots = useSlots()
+const references = useReferences(() => props.components)
+const bodyDescriptions = computed(() => {
+  if (!media.value?.schema) return []
+  const {layers} = schemaDisplay(media.value.schema, references.document.value)
+  const ownDescription = layers[0]?.schema.description
+  return ownDescription !== undefined ? [ownDescription] : layers.flatMap(layer => layer.schema.description ? [layer.schema.description] : [])
+})
+const hasBodyDescription = computed(() => !!slots.description || bodyDescriptions.value.some(Boolean))
 provideCompositionScope(computed(() => `${props.selectionKey ?? ''}:${type.value}`))
 const schemaNamePreview = computed(() => {
   const schema = media.value?.schema
@@ -41,13 +54,18 @@ const schemaNamePreview = computed(() => {
       </div>
       <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="col-start-2 row-start-1 max-w-full justify-self-end text-base font-normal text-gray-500 sm:col-start-3 sm:text-sm" :aria-label="label ?? 'Body content type'" :title="type" />
     </div>
-    <div v-if="$slots.description" class="mt-1"><slot name="description" /></div>
-    <div v-if="media.schema" :key="type" :class="[$slots.description ? 'mt-6' : 'mt-2']">
+    <div v-if="hasBodyDescription" class="mt-1">
+      <slot name="description">
+        <Description v-for="(description, index) in bodyDescriptions" :key="index" class="leading-normal text-gray-700" :content="description" />
+      </slot>
+    </div>
+    <div v-if="media.schema" :key="type" :class="[hasBodyDescription ? 'mt-6' : 'mt-4']">
       <Schema
           :components="components"
           :schema="media.schema"
           :direction="direction"
-          :should-hide-examples="showExamples && (media.example !== undefined || Object.keys(media.examples ?? {}).length > 0)"
+          :should-hide-description="hasBodyDescription"
+          :should-hide-examples="shouldHideExamples || (showExamples && (media.example !== undefined || Object.keys(media.examples ?? {}).length > 0))"
           :shouldHideMainType="true"
           :shouldDisablePropertiesPadding="true"
       />

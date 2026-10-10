@@ -49,6 +49,7 @@ provide(schemaDirectionKey, direction)
 const resolution = computed(() => references.resolve<Schema>(props.schema, 'schema'))
 const resolvedSchema = computed(() => resolution.value.value ?? {})
 const display = computed(() => schemaDisplay(props.schema, references.document.value, props.schemaPath, props.allOfPaths))
+const arrayTypeSchema = computed(() => display.value.layers.find(layer => layer.schema.type === 'array')?.schema)
 const visibleProperties = computed(() => Object.fromEntries([...display.value.properties].filter(([, field]) => {
   const resolved = resolveExampleSchema(field.schema, props.components, references.document.value)
   return !resolved || isSchemaVisible(resolved, direction.value)
@@ -112,13 +113,13 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
   <ReferenceDiagnostics :issues="display.issues" />
   <p v-if="recursive" class="text-sm text-gray-500">Recursive schema<template v-if="schema.$ref">: <code class="break-all">{{ schema.$ref }}</code></template>.</p>
   <div v-else-if="resolution.value" class="flex flex-col gap-1 empty:hidden">
-    <div v-if="!shouldHideMainType || compositionKind || displayFlag('readOnly') || displayFlag('writeOnly') || displayFlag('deprecated')" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
-      <div v-if="!shouldHideMainType || compositionKind" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+    <div v-if="!shouldHideMainType || arrayTypeSchema || compositionKind || displayFlag('readOnly') || displayFlag('writeOnly') || displayFlag('deprecated')" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
+      <div v-if="!shouldHideMainType || arrayTypeSchema || compositionKind" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
         <div v-if="propertyTitle" class="font-medium text-gray-900">{{ propertyTitle }}</div>
 
         <CompositionTabs v-if="compositionKind" :kind="compositionKind" :members="members" :selected="selectedMember" :panel-id="panelId" @select="select(selectionPath, $event)" />
         <div v-else class="min-w-0 text-gray-500">
-          <SchemaTypePreview :schema="resolvedSchema" :original="schema" :components="components" />
+          <SchemaTypePreview :schema="shouldHideMainType && arrayTypeSchema ? arrayTypeSchema : resolvedSchema" :original="shouldHideMainType && arrayTypeSchema ? undefined : schema" :components="components" />
         </div>
         <slot name="type-suffix" />
       </div>
@@ -136,7 +137,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
 
     <SchemaConstraints :schema="resolvedSchema" />
     <template v-for="(layer, index) in display.layers.slice(1)" :key="index">
-      <Description v-if="layer.schema.description && !shouldHideDescription && layer.schema.description !== resolvedSchema.description" class="leading-normal" :content="layer.schema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
+      <Description v-if="resolvedSchema.description === undefined && layer.schema.description && !shouldHideDescription" class="leading-normal" :content="layer.schema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
       <SchemaConstraints :schema="layer.schema" />
       <SchemaAttribute v-if="layer.schema.enum?.length" title="Enum" :value="layer.schema.enum" />
       <SchemaAttribute v-if="layer.schema.const !== undefined" title="Const" :value="layer.schema.const" />
@@ -185,7 +186,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
     <template v-if="arePropertiesVisible">
       <div v-if="display.properties.size" :class="[
         shouldDisablePropertiesPadding ? '' : 'relative border-l pl-4',
-        shouldHideMainType && !canHideNestedProperties && resolvedSchema.description && !shouldHideDescription ? 'mt-4' : '',
+        shouldHideMainType && !canHideNestedProperties && display.layers.some(layer => layer.schema.description) && !shouldHideDescription ? 'mt-5' : '',
         'border-[color:var(--schema-border-color)]',
       ]">
         <template v-for="(field, name, i) of visibleProperties">
@@ -196,6 +197,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
               :schema="field.schema"
               :schema-path="field.path"
               :all-of-paths="field.allOfPaths"
+              :should-hide-examples="shouldHideExamples"
               :level="level + 1"
               :arePropertiesInitiallyVisible="level <= 0 && (! (resolvedSchema['x-hiddenProperties'] ?? []).includes(name as string))"
           />
@@ -205,7 +207,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
     </template>
     <template v-if="display.additionalProperties">
       <div v-if="arePropertiesVisible" class="border-l border-[color:var(--schema-border-color)] pl-4">
-        <Schema property-title="[key: string]" :schema="display.additionalProperties.schema" :schema-path="display.additionalProperties.path" :all-of-paths="display.additionalProperties.allOfPaths" :components="components" :level="level + 1" :are-properties-initially-visible="false" />
+        <Schema property-title="[key: string]" :schema="display.additionalProperties.schema" :schema-path="display.additionalProperties.path" :all-of-paths="display.additionalProperties.allOfPaths" :components="components" :level="level + 1" :are-properties-initially-visible="false" :should-hide-examples="shouldHideExamples" />
       </div>
     </template>
     <div v-if="compositionKind" :id="panelId" role="tabpanel" :aria-labelledby="`${panelId}-tab-${selectedMember}`">
@@ -228,6 +230,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
           :schema-path="display.items.path"
           :all-of-paths="display.items.allOfPaths"
           :shouldHideMainType="true"
+          :should-hide-examples="shouldHideExamples"
           :level="level + 1"
       />
     </div>
