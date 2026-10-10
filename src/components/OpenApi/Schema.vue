@@ -111,7 +111,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
 <template>
   <ReferenceDiagnostics :issues="display.issues" />
   <p v-if="recursive" class="text-sm text-gray-500">Recursive schema<template v-if="schema.$ref">: <code class="break-all">{{ schema.$ref }}</code></template>.</p>
-  <div v-else-if="resolution.value" class="flex flex-col gap-1.5 empty:hidden">
+  <div v-else-if="resolution.value" class="flex flex-col gap-1 empty:hidden">
     <div v-if="!shouldHideMainType || compositionKind || displayFlag('readOnly') || displayFlag('writeOnly') || displayFlag('deprecated')" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
       <div v-if="!shouldHideMainType || compositionKind" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
         <div v-if="propertyTitle" class="font-medium text-gray-900">{{ propertyTitle }}</div>
@@ -179,8 +179,8 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
       />
     </div>
 
-    <div v-if="canHideNestedProperties" class="relative z-10">
-      <ToggleButton v-model:expanded="arePropertiesVisible" label="properties"/>
+    <div v-if="canHideNestedProperties">
+      <ToggleButton v-model:expanded="arePropertiesVisible" label="properties" :class="{'mb-1': arePropertiesVisible}"/>
     </div>
     <template v-if="arePropertiesVisible">
       <div v-if="display.properties.size" :class="[

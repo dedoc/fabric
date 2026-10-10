@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    pre, code {
+        @apply font-jetbrains-mono;
+    }
+}
+
 :root {
     --primary-color: theme('colors.gray.800');
 
@@ -40,10 +46,10 @@
     .prose ol { list-style: decimal; }
     .prose li + li { margin-top: 0.25em; }
     .prose li > * + * { margin-top: 0.5em; }
-    .prose code { @apply rounded px-1 py-0.5; font-size: 0.9em; }
-    .prose :is(pre, code) { @apply text-gray-600; }
-    .prose pre { @apply overflow-auto rounded-lg p-4; }
-    .prose pre code { @apply bg-transparent p-0; }
+    /*.prose code { @apply rounded px-1 py-0.5; font-size: 0.9em; }*/
+    /*.prose :is(pre, code) { @apply text-gray-600; }*/
+    /*.prose pre { @apply overflow-auto rounded-lg p-4; }*/
+    /*.prose pre code { @apply bg-transparent p-0; }*/
     .prose img { @apply h-auto max-w-full rounded-lg; }
     .prose strong { @apply font-semibold; }
     .prose :is(strong, b, em, i) { color: inherit; }

@@ -27,12 +27,8 @@ const isExpanded = ref(! props.secondary)
   <ReferenceDiagnostics :issues="resolution.issues" />
   <div v-if="unreferencedResponse" class="">
     <ResponseHeader class="min-w-0" :statusCode="String(statusCode)">
-<!--      <template v-if="! isExpanded && props.secondary && unreferencedResponse.description">-->
-<!--        <div class="text-gray-300 shrink-0">·</div>-->
-<!--        <div class="text-gray-500 truncate min-w-0"><span>{{ unreferencedResponse.description }}</span></div>-->
-<!--      </template>-->
       <ToggleButton v-if="props.secondary" class="ml-auto shrink-0" v-model:expanded="isExpanded" label="body"/>
     </ResponseHeader>
-    <ResponseContent v-if="isExpanded" class="mt-3" :unreferencedResponse="unreferencedResponse" :status-code="String(statusCode)" :components="components"/>
+    <ResponseContent v-if="isExpanded" class="mt-4" :unreferencedResponse="unreferencedResponse" :status-code="String(statusCode)" :components="components"/>
   </div>
 </template>

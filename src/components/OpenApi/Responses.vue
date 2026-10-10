@@ -30,7 +30,7 @@ const [primaryResponses, secondaryResponses] = Object.entries(props.responses ||
           :statusCode="statusCode"
           :response="response"
       />
-      <div v-if="Object.keys(secondaryResponses).length" class="h-px bg-gray-100 my-5"></div>
+      <div v-if="Object.keys(secondaryResponses).length" class="h-px bg-[color:var(--schema-border-color)] my-5"></div>
       <div v-if="Object.keys(secondaryResponses).length">
         <template v-for="(response, statusCode, i) of secondaryResponses">
           <Response
@@ -39,9 +39,8 @@ const [primaryResponses, secondaryResponses] = Object.entries(props.responses ||
               :response="response"
               :secondary="true"
           />
-          <div v-if="i !== Object.keys(secondaryResponses).length - 1" class="h-px bg-gray-100 my-5"></div>
+          <div v-if="i !== Object.keys(secondaryResponses).length - 1" class="h-px bg-[color:var(--schema-border-color)] my-5"></div>
         </template>
-
       </div>
     </div>
   </div>

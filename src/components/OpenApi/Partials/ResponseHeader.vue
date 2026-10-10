@@ -51,7 +51,7 @@ const responseDescription = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-2 text-base sm:text-sm">
+  <div class="flex flex-wrap items-center gap-x-2 gap-y-2 text-base sm:text-sm">
     <div class="font-jetbrains-mono rounded-lg leading-[18px] font-medium uppercase shrink-0" :class="statusCodeClasses">
       {{ statusCode }}
     </div>

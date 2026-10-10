@@ -28,7 +28,7 @@ const headerSchema = computed<SchemaType>(() => ({
 <template>
 <div class="space-y-5">
   <ReferenceDiagnostics :issues="issues" />
-  <Description v-if="unreferencedResponse.description" class="leading-normal text-gray-700" :content="unreferencedResponse.description"/>
+  <Description v-if="unreferencedResponse.description" class="-mt-2 leading-normal text-gray-700" :content="unreferencedResponse.description"/>
   <div v-if="unreferencedResponse.headers">
     <div class="flex">
       <div class="flex gap-2 items-baseline">
