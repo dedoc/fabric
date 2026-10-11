@@ -89,7 +89,7 @@ function handlePageSelect (pageId: string) {
 
 // get the navigation tree using the first tag of the operation as a folder name
 function buildNavigationTree (operations: InlineOperation[]): NavigationType[] {
-  return operations.reduce<NavigationType[]>((acc, operation) => {
+  const tree = operations.reduce<NavigationType[]>((acc, operation) => {
     const folder = operation.operation.tags?.[0]
     if (! folder) {
       // add to the end
@@ -125,6 +125,9 @@ function buildNavigationTree (operations: InlineOperation[]): NavigationType[] {
 
     return acc
   }, [])
+  const tagOrder = new Map<string, number>((props.document.tags ?? []).map((tag: {name: string}, index: number) => [tag.name, index]))
+  const rank = (item: NavigationType) => item.type === 'folder' ? tagOrder.get(item.name) ?? tagOrder.size : tagOrder.size
+  return tree.sort((a, b) => rank(a) - rank(b))
 }
 
 const mobileNavigationOpen = ref(false)

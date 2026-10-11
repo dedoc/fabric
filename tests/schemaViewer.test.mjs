@@ -987,6 +987,34 @@ test('overview is the landing page and renders spec descriptions, metadata and r
   assert.doesNotMatch(direct, /aria-label="API details"|id="overview-auth"|id="overview-reference"/)
 })
 
+test('sidebar and overview follow declared tag order with encounter order for undeclared tags', async () => {
+  const paths = {
+    '/authorize': {get: {operationId: 'authorize', tags: ['Authorization']}},
+    '/zebra': {get: {operationId: 'zebra', tags: ['Zebra']}},
+    '/files': {get: {operationId: 'files', tags: ['Files']}},
+    '/ai/ask': {post: {operationId: 'ask', tags: ['AI']}},
+    '/alpha': {get: {operationId: 'alpha', tags: ['Alpha']}},
+    '/ai/extract': {post: {operationId: 'extract', tags: ['AI']}},
+    '/status': {get: {operationId: 'status', summary: 'Status'}},
+  }
+  for (const tags of [undefined, [], [{name: 'AI'}, {name: 'Files'}, {name: 'Unused'}, {name: 'Authorization'}]]) {
+    const document = {info: {title: 'API'}, tags}
+    const before = JSON.stringify({document, paths})
+    const html = await renderPages({}, '#overview', {document, paths})
+    const sidebar = html.match(/<nav aria-label="API reference"[^>]*>(.*?)<\/nav>/s)[1]
+    const overview = html.match(/<section[^>]*aria-labelledby="overview-reference"[^>]*>(.*?)<\/section>/s)[1]
+    const expected = tags?.length ? ['AI', 'Files', 'Authorization', 'Zebra', 'Alpha'] : ['Authorization', 'Zebra', 'Files', 'AI', 'Alpha']
+    assert.deepEqual([...sidebar.matchAll(/<span class="min-w-0 flex-1 truncate">([^<]+)<\/span>/g)].map(match => match[1]), [...expected, 'Status'])
+    assert.deepEqual([...overview.matchAll(/<div class="min-w-0 font-medium">([^<]+)<\/div>/g)].map(match => match[1]), [...expected, 'Endpoints'])
+    assert.match(overview, /href="#operations\/ask"/)
+    assert.match(overview, /2 endpoints/)
+    assert.equal(JSON.stringify({document, paths}), before)
+  }
+  const direct = await renderPages({}, '#operations/extract', {document: {tags: [{name: 'AI'}]}, paths})
+  const sidebar = direct.match(/<nav aria-label="API reference"[^>]*>(.*?)<\/nav>/s)[1]
+  assert.deepEqual([...sidebar.matchAll(/<span class="min-w-0 flex-1 truncate">([^<]+)<\/span>/g)].map(match => match[1]).slice(0, 3), ['AI', 'ask', 'extract'])
+})
+
 test('editorial is the only overview and old variant links still open it', async () => {
   for (const hash of ['#overview', '#overview/editorial', '#overview/xai']) {
     const html = await renderPages({}, hash, {

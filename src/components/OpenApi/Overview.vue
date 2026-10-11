@@ -43,7 +43,8 @@ const groups = computed(() => {
     if (group) group.count++
     else groups.set(name, {name, id: operation.id, count: 1})
   }
-  return [...groups.values()]
+  const tagOrder = new Map((props.document.tags ?? []).map((tag, index) => [tag.name, index]))
+  return [...groups.values()].sort((a, b) => (tagOrder.get(a.name) ?? tagOrder.size) - (tagOrder.get(b.name) ?? tagOrder.size))
 })
 
 // Resolve spec-relative links while keeping metadata links navigable and safe.

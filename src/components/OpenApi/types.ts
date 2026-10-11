@@ -201,6 +201,7 @@ export type Components = {
 
 export type Document = {
     paths?: Paths,
+    tags?: {name: string, description?: string, externalDocs?: {description?: string, url: string}}[],
     openapi?: string,
     webhooks?: Paths,
     info?: {
