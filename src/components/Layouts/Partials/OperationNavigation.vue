@@ -23,8 +23,8 @@ const emit = defineEmits<{
       @click="emit('navigate', navigation.id)"
   >
     <template #trailing>
-      <MethodChip class="flex shrink-0 items-center gap-1.5 text-xs !text-gray-400" :method="navigation.method">
-        <WebhookIcon v-if="navigation.webhook" class="size-3.5 shrink-0" />
+      <MethodChip class="flex shrink-0 items-baseline gap-1.5 text-xs !text-gray-400" :method="navigation.method">
+        <WebhookIcon v-if="navigation.webhook" class="size-3.5 shrink-0 self-center" />
       </MethodChip>
     </template>
   </NavigationItem>
