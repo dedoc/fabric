@@ -17,11 +17,14 @@ import NavigationItem from "./Partials/NavigationItem.vue";
 import ThemeSwitch from '../UI/ThemeSwitch.vue'
 import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
 import {resolveOperationBase} from "../OpenApi/servers.ts";
+import {parseGuides} from '../../guides'
+import Description from '../OpenApi/Description.vue'
 
 const props = withDefaults(defineProps<{
   base?: string,
   documentUrl?: string,
   document: Document,
+  guides?: Record<string, string>,
   showSchemas?: boolean,
 }>(), {showSchemas: true})
 
@@ -47,6 +50,8 @@ function getPageIdFromUrl (): string|undefined {
 }
 
 const selectedPageId = ref<string|undefined>(getPageIdFromUrl() || 'overview')
+const guides = computed(() => parseGuides(props.guides))
+const selectedGuide = computed(() => guides.value.find(guide => guide.id === selectedPageId.value))
 
 const schemas = computed(() => Object.entries(components.value.schemas ?? {}).map(([name, schema]) => ({
   id: `schemas/${encodeURIComponent(name)}`,
@@ -133,6 +138,9 @@ function buildNavigationTree (operations: InlineOperation[], webhook = false): N
 
 const mobileNavigationOpen = ref(false)
 const search = ref('')
+const filteredGuides = computed(() => guides.value.filter(guide =>
+  guide.title.toLowerCase().includes(search.value.toLowerCase())
+))
 const filteredNavigation = computed(() => buildNavigationTree(operations.value.filter(operation =>
   `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
     .toLowerCase().includes(search.value.toLowerCase())
@@ -181,6 +189,7 @@ onUnmounted(() => {
         </label>
         <nav aria-label="Introduction" class="-mx-2 mb-6">
           <NavigationItem label="Overview" href="#overview" :active="selectedPageId === 'overview'" :aria-current="selectedPageId === 'overview' ? 'page' : undefined" @click.prevent="handlePageSelect('overview')" />
+          <NavigationItem v-for="guide of filteredGuides" :key="guide.id" :label="guide.title" :href="`#${guide.id}`" :active="selectedPageId === guide.id" :aria-current="selectedPageId === guide.id ? 'page' : undefined" @click.prevent="handlePageSelect(guide.id)" />
         </nav>
         <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">
@@ -213,6 +222,10 @@ onUnmounted(() => {
       <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
         <ReferenceDiagnostics :issues="navigation.issues" />
         <Overview v-if="selectedPageId === 'overview'" :document="sourceDocument" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
+        <article v-if="selectedGuide" :key="selectedGuide.id" class="guide mx-auto grid min-w-0 max-w-[72ch] grid-cols-1 gap-4 pt-6 [overflow-wrap:anywhere]">
+          <h1 class="text-balance text-[clamp(2rem,4vw,3rem)] font-medium tracking-tight">{{ selectedGuide.title }}</h1>
+          <Description :content="selectedGuide.content" class="max-w-[70ch]" />
+        </article>
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <article v-if="selectedWebhook" :key="selectedWebhook.id" class="min-w-0 [overflow-wrap:anywhere]">
           <Operation webhook :webhook-name="selectedWebhook.path" base="https://your-app.example" :path="`/webhooks/${encodeURIComponent(selectedWebhook.path)}`" :method="selectedWebhook.method" :operation="selectedWebhook.operation" :components="components" />

@@ -2,6 +2,9 @@
 import {onMounted, onUnmounted, ref} from 'vue'
 import Fabric from '../index'
 import {fetchSpecification} from './OpenApi/specification'
+import auth from '../playground/guides/auth.md?raw'
+import pagination from '../playground/guides/pagination.md?raw'
+import errors from '../playground/guides/errors.md?raw'
 
 const props = defineProps<{specUrl?: string}>()
 
@@ -40,10 +43,13 @@ function mount() {
   if (!container.value) return
   const url = props.specUrl ?? specUrl
   const originalUrl = proxySources[url]
-  viewer = Fabric.init(container.value, originalUrl ? {
-    openApiDocument: async () => JSON.stringify((await fetchSpecification(url, controller.signal)).document),
-    openApiDocumentUrl: originalUrl,
-  } : {openApiDocumentUrl: url})
+  viewer = Fabric.init(container.value, {
+    ...(originalUrl ? {
+      openApiDocument: async () => JSON.stringify((await fetchSpecification(url, controller.signal)).document),
+      openApiDocumentUrl: originalUrl,
+    } : {openApiDocumentUrl: url}),
+    guides: {auth, pagination, errors},
+  })
 }
 
 onMounted(mount)

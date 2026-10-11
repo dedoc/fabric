@@ -84,12 +84,12 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
             <div class="text-sm text-gray-900 dark:text-gray-100"><code class="font-jetbrains-mono">{{ server.url }}</code></div>
           </li>
         </ul>
-        <p v-if="servers.length > 1" class="text-pretty text-base text-gray-500 dark:text-gray-400 sm:text-sm">Each endpoint shows the server it uses.</p>
+        <p v-if="servers.length > 1" class="text-pretty text-sm text-gray-500 dark:text-gray-400">Each endpoint shows the server it uses.</p>
       </section>
 
       <section v-if="schemes.length" aria-labelledby="overview-auth" class="space-y-4 border-t border-gray-950/10 dark:border-gray-700 pt-7">
         <SectionTitle id="overview-auth">Authentication</SectionTitle>
-        <p class="text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-sm">Check each endpoint for its authentication requirements.</p>
+        <p class="text-pretty text-sm text-gray-600 dark:text-gray-400">Check each endpoint for its authentication requirements.</p>
         <div class="divide-y divide-gray-950/5 dark:divide-gray-700">
           <div v-for="{name, scheme, issues} in schemes" :key="name" class="space-y-3 py-4 first:pt-0 last:pb-0">
             <ReferenceDiagnostics :issues="issues" />
@@ -113,7 +113,7 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
 
     <aside v-if="hasDetails" aria-label="API details" class="min-w-0 border-t border-gray-950/10 dark:border-gray-700 pt-6">
       <h2 class="text-base font-medium text-gray-900 dark:text-gray-100 sm:text-sm">API details</h2>
-      <dl class="mt-5 flex flex-wrap gap-x-12 gap-y-6 text-base sm:text-sm">
+      <dl class="mt-5 flex flex-wrap gap-x-12 gap-y-6 text-sm">
         <div v-if="info?.version" class="space-y-1">
           <dt class="font-medium text-gray-900 dark:text-gray-100">Version</dt>
           <dd class="tabular-nums text-gray-500 dark:text-gray-400">{{ info.version }}</dd>
@@ -127,7 +127,7 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
           <dd class="text-gray-500 dark:text-gray-400"><a v-if="link(info.license.url)" :href="link(info.license.url)" target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 hover:text-gray-900 hover:dark:text-gray-100">{{ info.license.name }}</a><template v-else>{{ info.license.name }}</template></dd>
         </div>
       </dl>
-      <ul v-if="resources.length || info?.contact?.email" role="list" class="mt-6 space-y-3 border-t border-gray-950/10 dark:border-gray-700 pt-5 text-base text-gray-600 dark:text-gray-400 sm:text-sm">
+      <ul v-if="resources.length || info?.contact?.email" role="list" class="mt-6 space-y-3 border-t border-gray-950/10 dark:border-gray-700 pt-5 text-sm text-gray-600 dark:text-gray-400">
         <li v-for="resource in resources" :key="resource.url"><a :href="resource.url" target="_blank" rel="noopener noreferrer" class="underline underline-offset-4 hover:text-gray-900 hover:dark:text-gray-100">{{ resource.label }}</a></li>
         <li v-if="info?.contact?.email"><a :href="`mailto:${encodeURIComponent(info.contact.email)}`" class="underline underline-offset-4 hover:text-gray-900 hover:dark:text-gray-100">{{ info.contact.email }}</a></li>
       </ul>

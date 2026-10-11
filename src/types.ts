@@ -8,4 +8,6 @@ type FabricOpenApiDocumentLink =
     openApiDocumentUrl: string,
 }
 
-export type FabricOptions = FabricOpenApiDocumentLink
+export type FabricOptions = FabricOpenApiDocumentLink & {
+    guides?: Record<string, string>,
+}

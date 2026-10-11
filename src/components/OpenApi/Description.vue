@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {computed} from "vue";
 import {renderDescription} from './descriptionHtml'
+import {theme} from '../../utils/theme'
 
 const props = defineProps<{
   content: string,
 }>()
 
-const renderedContent = computed(() => renderDescription(props.content))
+const renderedContent = computed(() => renderDescription(props.content, theme.value))
 </script>
 
 <template>

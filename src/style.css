@@ -44,13 +44,20 @@
         @apply relative grid size-8 shrink-0 place-items-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:dark:bg-gray-800 hover:text-gray-900 hover:dark:text-gray-100;
     }
     .prose {
-        @apply text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-sm;
+        @apply text-pretty text-base text-gray-700 dark:text-gray-400 sm:text-sm;
         line-height: 1.75;
         overflow-wrap: anywhere;
     }
     .prose > * + * { margin-top: 0.75em; }
+    .prose > * + :is(h2, h3, h4, h5, h6) { margin-top: 1.5em; }
     .prose p { margin-bottom: 0.25em; }
     .prose > p + p { margin-top: 0.5em; }
+    :is(.guide, .overview) .prose > p + p { margin-top: 1.25em; }
+    :is(.guide, .overview) .prose { @apply text-base leading-relaxed text-gray-800 dark:text-gray-200; }
+    .overview section .prose { @apply text-sm text-gray-600 dark:text-gray-400; }
+    @media (min-width: 640px) {
+        :is(.guide, .overview) .prose.max-w-\[70ch\] { max-width: 65ch; }
+    }
     .prose > :first-child { margin-top: 0; }
     .prose > :last-child { margin-bottom: 0; }
     .prose :is(h1, h2, h3, h4, h5, h6) { @apply font-semibold text-gray-900 dark:text-gray-100; }
@@ -64,14 +71,15 @@
     .prose li > * + * { margin-top: 0.5em; }
     /*.prose code { @apply rounded px-1 py-0.5; font-size: 0.9em; }*/
     /*.prose :is(pre, code) { @apply text-gray-600; }*/
-    /*.prose pre { @apply overflow-auto rounded-lg p-4; }*/
+    .prose pre { @apply max-w-full overflow-auto overscroll-contain rounded-xl border border-[color:var(--schema-border-color)] bg-transparent p-4 text-sm leading-6 dark:bg-[#111111] sm:text-xs sm:leading-5; tab-size: 2; }
+    .prose pre:focus-visible { @apply outline outline-2 outline-offset-2 outline-gray-500; }
     /*.prose pre code { @apply bg-transparent p-0; }*/
     .prose img { @apply h-auto max-w-full rounded-lg; }
     .prose strong { @apply font-semibold; }
     .prose :is(strong, b, em, i) { color: inherit; }
     .prose blockquote { @apply border-l-2 border-gray-950/10 dark:border-gray-700 pl-4; }
     .prose hr { @apply border-gray-950/10 dark:border-gray-700; }
-    .prose table { @apply block max-w-full overflow-auto text-left; }
+    .prose table { @apply block max-w-full overflow-auto text-left text-sm; }
     .prose :is(th, td) { @apply border-b border-gray-950/10 dark:border-gray-700 px-3 py-2; }
     .prose th { @apply font-medium text-gray-900 dark:text-gray-100; }
 }

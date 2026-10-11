@@ -25,11 +25,30 @@ const server = await createServer({configFile: false, plugins: [{
 after(() => server.close())
 const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/descriptionHtml.ts')
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
+const {parseGuides} = await server.ssrLoadModule('/src/guides.ts')
 const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.vue')
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
 const valid = {openapi: '3.0.3', info: {title: 'Recovered API', version: '1.0'}, paths: {}}
+
+test('guides use frontmatter titles and order, retain Markdown, and ignore grouping', () => {
+  const guides = parseGuides({
+    errors: '---\ntitle: Errors\norder: 3\n---\nError body',
+    auth: '---\ntitle: Authentication\norder: 1\ngroup: security\n---\n**Token**',
+    pagination: '---\r\ntitle: Pagination\r\norder: 2\r\n---\r\nPage body',
+    plain: 'Plain Markdown',
+    last: '---\ntitle: Last\n---\nLast body',
+  })
+  assert.deepEqual(guides.map(guide => guide.title), ['Authentication', 'Pagination', 'Errors', 'plain', 'Last'])
+  assert.equal(guides[0].id, 'guides/auth')
+  assert.equal(guides[0].content, '**Token**')
+  assert.equal(guides[1].content, 'Page body')
+  assert.equal(guides[3].content, 'Plain Markdown')
+  assert.equal(guides[0].group, undefined)
+  assert.deepEqual(parseGuides(), [])
+  assert.equal(parseGuides({'a/b': 'Content'})[0].id, 'guides/a%2Fb')
+})
 
 test('OpenAPI 3.1 supports webhook-only documents and validates webhook operations', () => {
   const specification = {openapi: '3.1.0', info: valid.info, webhooks: {
@@ -60,6 +79,23 @@ test('description sanitizer preserves formatting and safe links while removing a
   assert.match(html, /<details><summary>More<\/summary>/)
   assert.match(html, /src="https:\/\/example.com\/image.png" alt="Diagram"/)
   assert.doesNotMatch(html, /onerror|onclick|onfocus|style=|javascript:|data:|<script|<iframe|<svg|<form|<input|src="\/\//i)
+})
+
+test('Markdown code blocks highlight safely, preserve literal code, and follow the theme', () => {
+  const source = '```json\n{"message":"<script>alert(1)</script>","price":"$&"}\n```'
+  const light = renderDescription(source, 'light')
+  const dark = renderDescription(source, 'dark')
+  assert.match(light, /<pre tabindex="0"><code><span style="color:/)
+  assert.match(light, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.match(light, /\$&amp;/)
+  assert.doesNotMatch(light, /<script|FABRIC_CODE_/)
+  assert.notEqual(light, dark)
+  const plain = renderDescription('```unknown-language\n<script>alert(1)</script>\n```')
+  assert.match(plain, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.doesNotMatch(plain, /<script/)
+  assert.match(renderDescription('    const value = 1\n'), /<pre tabindex="0"><code>/)
+  assert.doesNotMatch(renderDescription('<span style="color:#ff0000" onclick="alert(1)">Text</span>'), /style=|onclick/)
+  assert.doesNotMatch(renderDescription('Inline `code`'), /<pre|style=/)
 })
 
 test('JSON and YAML documents pass structural checks', () => {
@@ -325,6 +361,38 @@ test('retry invokes an async document loader again without fetching its self URL
     await until(() => viewer.text().includes('Recovered API'))
     assert.equal(calls, 2)
   } finally { viewer.close() }
+})
+
+test('guides appear after Overview, open from navigation or hashes, and sanitize Markdown', async () => {
+  const options = {openApiDocument: JSON.stringify(valid), guides: {
+    errors: '---\ntitle: Errors\norder: 3\n---\nError guide',
+    auth: '---\ntitle: Authentication\norder: 1\n---\n## Tokens\n\n**Keep secrets safe.**<script>alert(1)</script>',
+    pagination: '---\ntitle: Pagination\norder: 2\n---\nPage guide',
+  }}
+  const viewer = mountViewer(options)
+  try {
+    await until(() => viewer.text().includes('Recovered API'))
+    const text = viewer.text()
+    assert.ok(text.indexOf('Overview') < text.indexOf('Authentication'))
+    assert.ok(text.indexOf('Authentication') < text.indexOf('Pagination'))
+    assert.ok(text.indexOf('Pagination') < text.indexOf('Errors'))
+    assert.ok(text.indexOf('Errors') < text.indexOf('Reference'))
+    const auth = viewer.find(el => el.props.href === '#guides/auth')
+    auth.props.onClick({preventDefault() {}})
+    await until(() => viewer.find(el => el.type === 'h1')?.text === 'Authentication')
+    assert.equal(viewer.find(el => el.props.href === '#guides/auth').props['aria-current'], 'page')
+    const body = viewer.find(el => typeof el.props.innerHTML === 'string')
+    assert.match(body.props.innerHTML, /<h2>Tokens<\/h2>/)
+    assert.match(body.props.innerHTML, /<strong>Keep secrets safe\.<\/strong>/)
+    assert.doesNotMatch(body.props.innerHTML, /<script|alert\(1\)|order:|title:/)
+    viewer.find(el => el.props.href === '#overview').props.onClick({preventDefault() {}})
+    await until(() => viewer.find(el => el.type === 'h1')?.text === 'Overview')
+  } finally { viewer.close() }
+  const linked = mountViewer(options, '#guides/pagination')
+  try {
+    await until(() => linked.find(el => el.type === 'h1')?.text === 'Pagination')
+    assert.match(linked.find(el => typeof el.props.innerHTML === 'string').props.innerHTML, /Page guide/)
+  } finally { linked.close() }
 })
 
 test('Stripe-style form encoding renders the operation instead of the error page', async () => {
