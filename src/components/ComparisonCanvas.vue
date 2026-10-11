@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {setTheme} from '../utils/theme'
+import {fabricOptions, galaxySpecUrl} from '../playground/specs'
 
 function syncTheme(event: StorageEvent) {
   if (event.key === 'fabric-theme' && (event.newValue === 'light' || event.newValue === 'dark')) {
@@ -10,28 +11,7 @@ function syncTheme(event: StorageEvent) {
 onMounted(() => window.addEventListener('storage', syncTheme))
 onUnmounted(() => window.removeEventListener('storage', syncTheme))
 
-const galaxySpecUrl = 'https://registry.scalar.com/@scalar/apis/galaxy?format=json'
-const specs = [
-  {value: '/specs/fabric-reference.yaml', label: 'Fabric Reference Lab · OpenAPI 3.1'},
-  {value: '/specs/fabric-reference-3.0.yaml', label: 'Nullable Lab · OpenAPI 3.0'},
-  {value: '/specs/redocly-petstore.yaml', label: 'Redocly Petstore'},
-  {value: '/spotify/open-api-schema.yaml', label: 'Spotify · development proxy'},
-  {value: '/converterer/openapi.json', label: 'Converterer · development proxy'},
-  {value: 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml', label: 'Redocly Petstore · v2 demo upstream'},
-  {value: 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/openapi.yaml', label: 'Redocly Petstore · main upstream'},
-  {value: 'https://api.savvycal.com/v1/spec', label: 'SavvyCal'},
-  {value: galaxySpecUrl, label: 'Scalar Galaxy'},
-  {value: 'https://raw.githubusercontent.com/SpaceTradersAPI/api-docs/main/reference/SpaceTraders.json', label: 'SpaceTraders'},
-  {value: 'https://petstore3.swagger.io/api/v3/openapi.json', label: 'Swagger Petstore'},
-  {value: 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json', label: 'GitHub REST API'},
-  {value: 'https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json', label: 'Stripe'},
-  {value: 'https://raw.githubusercontent.com/box/box-openapi/main/openapi.json', label: 'Box'},
-  {value: 'http://demo-scramble-pro.test/docs/api.json', label: 'Scramble Pro · local'},
-  {value: '/docs/api.json', label: 'Local API · development proxy'},
-  {value: 'http://l12app.test/docs/api.json', label: 'l12app · local'},
-  {value: 'http://reproduction.test/docs/api.json', label: 'Reproduction · local'},
-  {value: 'http://l12.test/docs/api.json', label: 'l12 · local'},
-]
+const specs = [...fabricOptions]
 const renderers = [
   {value: 'fabric', label: 'Fabric'},
   {value: 'elements', label: 'Stoplight Elements'},
@@ -48,7 +28,7 @@ const initialSpec = requestedSpec === 'https://galaxy.scalar.com/openapi.json' ?
 if (initialSpec && !specs.some(spec => spec.value === initialSpec)) {
   try {
     const url = new URL(initialSpec, window.location.href)
-    if (['http:', 'https:'].includes(url.protocol)) specs.push({value: initialSpec, label: initialSpec})
+    if (['http:', 'https:'].includes(url.protocol)) specs.push({value: initialSpec, label: initialSpec, openApiDocumentUrl: initialSpec})
   } catch { /* Use the default fixture for malformed URLs. */ }
 }
 const spec = ref(specs.find(spec => spec.value === initialSpec)?.value ?? specs[0].value)

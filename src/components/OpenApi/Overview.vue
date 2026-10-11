@@ -69,10 +69,10 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
       <header class="space-y-4 pb-6">
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ info?.title || 'API documentation' }}</p>
         <h1 class="text-balance text-[clamp(2rem,4vw,3rem)] font-medium tracking-tight">Overview</h1>
-        <p v-if="info?.summary" class="max-w-[70ch] text-pretty text-base text-gray-600 dark:text-gray-400">{{ info.summary }}</p>
+        <p v-if="info?.summary" class="prose max-w-[70ch]">{{ info.summary }}</p>
         <Description v-if="info?.description" class="max-w-[70ch]" :content="info.description" />
-        <p v-if="!info?.description && !info?.summary" class="max-w-[70ch] text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-sm">
-          Explore {{ info?.title ? `the ${info.title} API` : 'the API' }}. Find server URLs, authentication details, and endpoint documentation below.
+        <p v-if="!info?.description && !info?.summary" class="prose max-w-[70ch]">
+          Explore {{ info?.title ? `the ${info.title}` : 'the API' }}. Find server URLs, authentication details, and endpoint documentation below.
         </p>
       </header>
 
