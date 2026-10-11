@@ -16,7 +16,7 @@ const schema = computed(() => props.parameter.schema ?? contentMedia.value?.sche
 </script>
 
 <template>
-  <div class="min-w-0 space-y-1.5" :aria-label="`${parameter.in} parameter ${parameter.name}`">
+  <div class="min-w-0 space-y-1" :aria-label="`${parameter.in} parameter ${parameter.name}`">
     <template v-if="schema">
       <Schema :schema="schema" :components="components" direction="request" :property-title="parameter.name" :property-required="parameter.required" :are-properties-initially-visible="false" :should-hide-examples="hasExamples || contentHasExamples">
         <template v-if="contentEntry" #type-suffix><span class="text-gray-500 dark:text-gray-400">{{ contentEntry[0] }}</span></template>

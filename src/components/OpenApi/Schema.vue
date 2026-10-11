@@ -147,7 +147,7 @@ const canHideNestedProperties = computed(() => !recursive.value && (!props.shoul
     </template>
     <p v-if="display.recursive.length" class="text-sm text-gray-500 dark:text-gray-400">Recursive schema.</p>
 
-    <div v-if="(!compositionKind || !selections.has(selectionPath)) && (resolvedSchema.default != undefined || (!shouldHideExamples && normalizedExamples.length))" class="flex flex-col gap-2">
+    <div v-if="(!compositionKind || !selections.has(selectionPath)) && (resolvedSchema.default != undefined || (!shouldHideExamples && normalizedExamples.length))" class="flex flex-col gap-1">
       <SchemaAttribute
           v-if="resolvedSchema.default != undefined"
           title="Default"
