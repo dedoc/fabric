@@ -32,7 +32,7 @@ const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
 const valid = {openapi: '3.0.3', info: {title: 'Recovered API', version: '1.0'}, paths: {}}
 
-test('guides use frontmatter titles and order, retain Markdown, and ignore grouping', () => {
+test('guides use frontmatter titles, order, and groups while retaining Markdown', () => {
   const guides = parseGuides({
     errors: '---\ntitle: Errors\norder: 3\n---\nError body',
     auth: '---\ntitle: Authentication\norder: 1\ngroup: security\n---\n**Token**',
@@ -45,7 +45,9 @@ test('guides use frontmatter titles and order, retain Markdown, and ignore group
   assert.equal(guides[0].content, '**Token**')
   assert.equal(guides[1].content, 'Page body')
   assert.equal(guides[3].content, 'Plain Markdown')
-  assert.equal(guides[0].group, undefined)
+  assert.equal(guides[0].group, 'security')
+  assert.equal(guides[3].group, undefined)
+  assert.equal(parseGuides({blank: '---\ngroup: "  "\n---\nContent'})[0].group, undefined)
   assert.deepEqual(parseGuides(), [])
   assert.equal(parseGuides({'a/b': 'Content'})[0].id, 'guides/a%2Fb')
 })
@@ -393,6 +395,49 @@ test('guides appear after Overview, open from navigation or hashes, and sanitize
     await until(() => linked.find(el => el.type === 'h1')?.text === 'Pagination')
     assert.match(linked.find(el => typeof el.props.innerHTML === 'string').props.innerHTML, /Page guide/)
   } finally { linked.close() }
+})
+
+test('grouped guides share tag folders, retain order, and support guide-only groups and search', async () => {
+  const options = {openApiDocument: JSON.stringify({...valid, paths: {
+    '/projects': {get: {summary: 'List projects', tags: ['Projects'], responses: {}}},
+  }}), guides: {
+    auth: '---\ntitle: Authentication\n---\nAuth guide',
+    second: '---\ntitle: Updating projects\ngroup: Projects\norder: 2\n---\nUpdate guide',
+    first: '---\ntitle: Project basics\ngroup: Projects\norder: 1\n---\nBasics guide',
+    events: '---\ntitle: Event guide\ngroup: Events\n---\nEvents body',
+  }}
+  const text = el => el.text + el.children.map(text).join(' ')
+  const viewer = mountViewer(options, '#guides/first')
+  try {
+    await until(() => viewer.find(el => el.type === 'h1')?.text === 'Project basics')
+    const introduction = viewer.find(el => el.props['aria-label'] === 'Introduction')
+    assert.match(text(introduction), /Authentication/)
+    assert.doesNotMatch(text(introduction), /Project basics|Updating projects|Event guide/)
+    assert.equal(viewer.find(el => el.props.href === '#guides/first').props['aria-current'], 'page')
+    const navigation = viewer.text()
+    assert.ok(navigation.indexOf('Project basics') < navigation.indexOf('Updating projects'))
+    assert.ok(navigation.indexOf('Updating projects') < navigation.indexOf('List projects'))
+    viewer.find(el => el.props.href === '#guides/second').props.onClick({preventDefault() {}})
+    await until(() => viewer.find(el => el.type === 'h1')?.text === 'Updating projects')
+    const events = viewer.find(el => el.type === 'button' && text(el).trim() === 'Events')
+    assert.ok(events)
+    events.props.onClick()
+    await nextTick()
+    viewer.find(el => el.props.href === '#guides/events').props.onClick({preventDefault() {}})
+    await until(() => viewer.find(el => el.type === 'h1')?.text === 'Event guide')
+    const search = viewer.find(el => el.type === 'input')
+    const originalDocument = globalThis.document
+    globalThis.document = {activeElement: null}
+    try {
+      search.props['onUpdate:modelValue']('Project basics')
+      await nextTick()
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document
+      else globalThis.document = originalDocument
+    }
+    assert.ok(viewer.find(el => el.props.href === '#guides/first'))
+    assert.doesNotMatch(viewer.text(), /List projects|Updating projects|No matching operations/)
+  } finally { viewer.close() }
 })
 
 test('Stripe-style form encoding renders the operation instead of the error page', async () => {

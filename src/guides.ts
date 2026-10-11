@@ -9,6 +9,7 @@ export function parseGuides(sources: Record<string, string> = {}) {
       id: `guides/${encodeURIComponent(slug)}`,
       title: typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : slug,
       order: typeof fields.order === 'number' && Number.isFinite(fields.order) ? fields.order : Infinity,
+      group: typeof fields.group === 'string' && fields.group.trim() ? fields.group.trim() : undefined,
       content: frontmatter ? source.slice(frontmatter[0].length) : source,
     }
   }).sort((a, b) => a.order - b.order)

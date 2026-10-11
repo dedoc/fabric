@@ -92,7 +92,17 @@ function handlePageSelect (pageId: string) {
 }
 
 // get the navigation tree using the first tag of the operation as a folder name
-function buildNavigationTree (operations: InlineOperation[], webhook = false): NavigationType[] {
+function buildNavigationTree (operations: InlineOperation[], webhook = false, groupedGuides: ReturnType<typeof parseGuides> = []): NavigationType[] {
+  const guideFolders: NavigationType[] = []
+  for (const guide of groupedGuides) {
+    if (!guide.group) continue
+    let folder = guideFolders.find(item => item.type === 'folder' && item.name === guide.group)
+    if (!folder) {
+      folder = {id: guide.group, type: 'folder', name: guide.group, children: []}
+      guideFolders.push(folder)
+    }
+    if (folder.type === 'folder') folder.children.push({id: guide.id, type: 'guide', name: guide.title})
+  }
   const tree = operations.reduce<NavigationType[]>((acc, operation) => {
     const folder = operation.operation.tags?.[0]
     if (! folder) {
@@ -130,7 +140,7 @@ function buildNavigationTree (operations: InlineOperation[], webhook = false): N
     })
 
     return acc
-  }, [])
+  }, guideFolders)
   const tagOrder = new Map<string, number>((props.document.tags ?? []).map((tag: {name: string}, index: number) => [tag.name, index]))
   const rank = (item: NavigationType) => item.type === 'folder' ? tagOrder.get(item.name) ?? tagOrder.size : tagOrder.size
   return tree.sort((a, b) => rank(a) - rank(b))
@@ -139,12 +149,13 @@ function buildNavigationTree (operations: InlineOperation[], webhook = false): N
 const mobileNavigationOpen = ref(false)
 const search = ref('')
 const filteredGuides = computed(() => guides.value.filter(guide =>
-  guide.title.toLowerCase().includes(search.value.toLowerCase())
+  `${guide.title} ${guide.group ?? ''}`.toLowerCase().includes(search.value.toLowerCase())
 ))
+const introductionGuides = computed(() => filteredGuides.value.filter(guide => !guide.group))
 const filteredNavigation = computed(() => buildNavigationTree(operations.value.filter(operation =>
   `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
     .toLowerCase().includes(search.value.toLowerCase())
-)))
+), false, filteredGuides.value.filter(guide => guide.group)))
 const filteredWebhooks = computed(() => buildNavigationTree(webhooks.value.filter(operation =>
   `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
     .toLowerCase().includes(search.value.toLowerCase())
@@ -189,7 +200,7 @@ onUnmounted(() => {
         </label>
         <nav aria-label="Introduction" class="-mx-2 mb-6">
           <NavigationItem label="Overview" href="#overview" :active="selectedPageId === 'overview'" :aria-current="selectedPageId === 'overview' ? 'page' : undefined" @click.prevent="handlePageSelect('overview')" />
-          <NavigationItem v-for="guide of filteredGuides" :key="guide.id" :label="guide.title" :href="`#${guide.id}`" :active="selectedPageId === guide.id" :aria-current="selectedPageId === guide.id ? 'page' : undefined" @click.prevent="handlePageSelect(guide.id)" />
+          <NavigationItem v-for="guide of introductionGuides" :key="guide.id" :label="guide.title" :href="`#${guide.id}`" :active="selectedPageId === guide.id" :aria-current="selectedPageId === guide.id ? 'page' : undefined" @click.prevent="handlePageSelect(guide.id)" />
         </nav>
         <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">

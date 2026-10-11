@@ -5,6 +5,7 @@ import {fetchSpecification} from './OpenApi/specification'
 import auth from '../playground/guides/auth.md?raw'
 import pagination from '../playground/guides/pagination.md?raw'
 import errors from '../playground/guides/errors.md?raw'
+import projects from '../playground/guides/projects.md?raw'
 
 const props = defineProps<{specUrl?: string}>()
 
@@ -48,7 +49,7 @@ function mount() {
       openApiDocument: async () => JSON.stringify((await fetchSpecification(url, controller.signal)).document),
       openApiDocumentUrl: originalUrl,
     } : {openApiDocumentUrl: url}),
-    guides: {auth, pagination, errors},
+    guides: {auth, pagination, errors, projects},
   })
 }
 
