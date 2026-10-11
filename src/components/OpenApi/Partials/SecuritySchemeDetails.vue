@@ -33,10 +33,10 @@ const discoveryUrl = computed(() => {
 </script>
 
 <template>
-  <div class="min-w-0 space-y-1 text-sm leading-5 text-gray-700 [overflow-wrap:anywhere]">
+  <div class="min-w-0 space-y-1 text-sm leading-5 text-gray-700 dark:text-gray-300 [overflow-wrap:anywhere]">
     <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-      <h3 class="font-medium text-gray-900">{{ securitySchemeLabel(scheme) }}</h3>
-      <div class="text-gray-500">{{ name }}</div>
+      <h3 class="font-medium text-gray-900 dark:text-gray-100">{{ securitySchemeLabel(scheme) }}</h3>
+      <div class="text-gray-500 dark:text-gray-400">{{ name }}</div>
     </div>
     <Description v-if="scheme?.description?.trim()" class="leading-5" :content="scheme.description" />
     <template v-if="httpScheme === 'basic'">
@@ -45,13 +45,13 @@ const discoveryUrl = computed(() => {
     <template v-else-if="scheme?.type === 'oauth2'">
       <dl v-for="flow in oauthFlows" :key="flow.name" class="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 pt-2 text-xs leading-4">
         <template v-for="row in flow.rows" :key="row.label">
-          <dt class="text-gray-500">{{ row.label }}</dt>
+          <dt class="text-gray-500 dark:text-gray-400">{{ row.label }}</dt>
           <dd class="min-w-0 whitespace-pre-line" :class="row.label === 'Flow' ? '' : 'font-jetbrains-mono'">{{ row.value }}</dd>
         </template>
       </dl>
     </template>
     <dl v-else-if="httpScheme === 'bearer' && bearerFormat" class="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 pt-2 text-xs leading-4">
-      <dt class="text-gray-500">Format</dt>
+      <dt class="text-gray-500 dark:text-gray-400">Format</dt>
       <dd class="min-w-0 font-jetbrains-mono">{{ bearerFormat }}</dd>
     </dl>
     <p v-else-if="scheme?.type === 'openIdConnect'" class="text-pretty">Send the access token in the <code class="font-jetbrains-mono">Authorization: Bearer &lt;token&gt;</code> header.</p>
@@ -59,11 +59,11 @@ const discoveryUrl = computed(() => {
     <p v-else-if="scheme?.type === 'http' && httpScheme !== 'bearer'" class="text-pretty">Use the {{ scheme.scheme }} HTTP authentication scheme.</p>
     <p v-else-if="!scheme" class="text-pretty">This specification references an authentication scheme that could not be resolved. Check with the API provider for instructions.</p>
     <dl v-if="requiredScopes.length" class="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 pt-2 text-xs leading-4">
-      <dt class="text-gray-500">Required scopes</dt>
-      <dd class="min-w-0"><ul role="list" class="flex flex-wrap gap-x-3 gap-y-1 text-gray-600">
+      <dt class="text-gray-500 dark:text-gray-400">Required scopes</dt>
+      <dd class="min-w-0"><ul role="list" class="flex flex-wrap gap-x-3 gap-y-1 text-gray-600 dark:text-gray-400">
         <li v-for="scope in requiredScopes" :key="scope"><code class="font-jetbrains-mono">{{ scope }}</code></li>
       </ul></dd>
     </dl>
-    <p v-if="discoveryUrl"><a :href="discoveryUrl" class="text-gray-600 underline underline-offset-4 hover:text-gray-900" target="_blank" rel="noopener noreferrer">OpenID Connect configuration</a></p>
+    <p v-if="discoveryUrl"><a :href="discoveryUrl" class="text-gray-600 dark:text-gray-400 underline underline-offset-4 hover:text-gray-900 hover:dark:text-gray-100" target="_blank" rel="noopener noreferrer">OpenID Connect configuration</a></p>
   </div>
 </template>

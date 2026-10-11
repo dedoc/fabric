@@ -3,10 +3,12 @@ import {computed} from 'vue'
 import {codeToTokens} from '@pierre/highlights'
 import type {Lang, ThemedToken} from '@pierre/highlights'
 import githubLight from '@pierre/highlights/themes/github-light'
+import githubDark from '@pierre/highlights/themes/github-dark'
+import {theme} from '../../utils/theme'
 
 const props = defineProps<{code: string, language: Lang}>()
 const highlighted = computed(() => {
-  const lines = codeToTokens(props.code, {lang: props.language, theme: githubLight}).tokens
+  const lines = codeToTokens(props.code, {lang: props.language, theme: theme.value === 'dark' ? githubDark : githubLight}).tokens
   const tokens: ThemedToken[] = []
   let offset = 0
   for (const [index, line] of lines.entries()) {

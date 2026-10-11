@@ -81,7 +81,7 @@ onUnmounted(() => { revision++; controller?.abort() })
 <template>
   <SpecError v-if="state === 'error'" :message="message" @retry="load" />
   <main v-else-if="state === 'loading'" class="grid min-h-dvh place-items-center px-6" role="status">
-    <p class="text-sm text-gray-500">Loading API reference…</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Loading API reference…</p>
   </main>
   <Pages v-else-if="specification" :key="revision" :document="specification" :document-url="documentUrl" :components="specification.components ?? {}" :paths="specification.paths" :show-schemas="showSchemas" />
 </template>

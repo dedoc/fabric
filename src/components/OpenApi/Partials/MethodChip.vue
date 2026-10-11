@@ -7,15 +7,15 @@ const props = defineProps<{
 
 const twClasses = computed(() => {
   return {
-    get: 'text-green-700',
-    post: 'text-blue-700',
-    put: 'text-violet-700',
-    delete: 'text-red-700',
-    options: 'text-purple-700',
-    head: 'text-gray-700',
-    patch: 'text-yellow-700',
-    trace: 'text-gray-700',
-  }[props.method] ?? 'text-gray-600'
+    get: 'text-green-700 dark:text-green-400',
+    post: 'text-blue-700 dark:text-blue-400',
+    put: 'text-violet-700 dark:text-violet-400',
+    delete: 'text-red-700 dark:text-red-400',
+    options: 'text-purple-700 dark:text-purple-400',
+    head: 'text-gray-700 dark:text-gray-300',
+    patch: 'text-yellow-700 dark:text-yellow-400',
+    trace: 'text-gray-700 dark:text-gray-300',
+  }[props.method] ?? 'text-gray-600 dark:text-gray-400'
 })
 </script>
 

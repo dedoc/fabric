@@ -20,8 +20,8 @@ const bounds = computed(() => {
 
 <template>
   <div v-if="bounds.length || schema.uniqueItems === true" class="flex flex-wrap gap-1">
-    <div v-for="(bound, index) in bounds" :key="index" class="rounded-md bg-gray-100 px-[3px] py-0.5 text-xs leading-[15px] text-gray-600"><span class="[font-variant-ligatures:common-ligatures]">{{ bound.operator }}</span> {{ bound.value }} {{ bound.unit }}</div>
-    <div v-if="schema.uniqueItems === true" class="rounded-md bg-gray-100 px-[3px] py-0.5 text-xs leading-[15px] text-gray-600">unique items</div>
+    <div v-for="(bound, index) in bounds" :key="index" class="rounded-md bg-gray-100 dark:bg-gray-800 px-[3px] py-0.5 text-xs leading-[15px] text-gray-600 dark:text-gray-400"><span class="[font-variant-ligatures:common-ligatures]">{{ bound.operator }}</span> {{ bound.value }} {{ bound.unit }}</div>
+    <div v-if="schema.uniqueItems === true" class="rounded-md bg-gray-100 dark:bg-gray-800 px-[3px] py-0.5 text-xs leading-[15px] text-gray-600 dark:text-gray-400">unique items</div>
   </div>
   <SchemaAttribute v-if="schema.pattern !== undefined" title="Pattern" :value="schema.pattern" />
 </template>

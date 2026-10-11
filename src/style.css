@@ -3,12 +3,21 @@
 @tailwind utilities;
 
 @layer base {
+    html {
+        min-height: 100%;
+    }
+    body {
+        @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+        min-height: 100dvh;
+    }
     pre, code {
         @apply font-jetbrains-mono;
     }
 }
 
 :root {
+    background-color: theme('colors.white');
+    color-scheme: light;
     --primary-color: theme('colors.gray.800');
 
     --sections-gap: theme('spacing.8');
@@ -19,16 +28,23 @@
     --navigation-item-radius: theme('borderRadius.lg');
 }
 
+:root.dark {
+    background-color: theme('colors.gray.950');
+    color-scheme: dark;
+    --schema-border-color: theme('colors.gray.800');
+    --navigation-item-highlight: theme('colors.gray.800');
+}
+
 @media (min-width: 640px) {
     :root { --sections-gap: theme('spacing.10'); }
 }
 
 @layer components {
     .copy-button {
-        @apply relative grid size-8 shrink-0 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900;
+        @apply relative grid size-8 shrink-0 place-items-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:dark:bg-gray-800 hover:text-gray-900 hover:dark:text-gray-100;
     }
     .prose {
-        @apply text-pretty text-base text-gray-600 sm:text-sm;
+        @apply text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-sm;
         line-height: 1.75;
         overflow-wrap: anywhere;
     }
@@ -37,10 +53,10 @@
     .prose > p + p { margin-top: 0.5em; }
     .prose > :first-child { margin-top: 0; }
     .prose > :last-child { margin-bottom: 0; }
-    .prose :is(h1, h2, h3, h4, h5, h6) { @apply font-semibold text-gray-900; }
+    .prose :is(h1, h2, h3, h4, h5, h6) { @apply font-semibold text-gray-900 dark:text-gray-100; }
     .prose :is(h1, h2) { @apply text-xl; }
     .prose :is(h3, h4, h5, h6) { @apply text-lg; }
-    .prose a { @apply text-gray-600 underline underline-offset-2 hover:text-gray-700; }
+    .prose a { @apply text-gray-600 dark:text-gray-400 underline underline-offset-2 hover:text-gray-700 hover:dark:text-gray-300; }
     .prose :is(ul, ol) { padding-left: 1.5em; }
     .prose ul { list-style: disc; }
     .prose ol { list-style: decimal; }
@@ -53,11 +69,11 @@
     .prose img { @apply h-auto max-w-full rounded-lg; }
     .prose strong { @apply font-semibold; }
     .prose :is(strong, b, em, i) { color: inherit; }
-    .prose blockquote { @apply border-l-2 border-gray-950/10 pl-4; }
-    .prose hr { @apply border-gray-950/10; }
+    .prose blockquote { @apply border-l-2 border-gray-950/10 dark:border-gray-700 pl-4; }
+    .prose hr { @apply border-gray-950/10 dark:border-gray-700; }
     .prose table { @apply block max-w-full overflow-auto text-left; }
-    .prose :is(th, td) { @apply border-b border-gray-950/10 px-3 py-2; }
-    .prose th { @apply font-medium text-gray-900; }
+    .prose :is(th, td) { @apply border-b border-gray-950/10 dark:border-gray-700 px-3 py-2; }
+    .prose th { @apply font-medium text-gray-900 dark:text-gray-100; }
 }
 
 @media (pointer: coarse) {

@@ -24,18 +24,18 @@ const hasContent = computed(() => Object.keys(resolution.value.value?.content ??
         <SectionTitle>Request Body</SectionTitle>
       </template>
       <template #type-suffix>
-        <span v-if="resolution.value.required" class="text-sm text-amber-700">required</span>
+        <span v-if="resolution.value.required" class="text-sm text-amber-700 dark:text-amber-400">required</span>
       </template>
       <template v-if="resolution.value.description !== undefined" #description>
-        <Description class="text-base leading-normal text-gray-700 sm:text-sm" :content="resolution.value.description" />
+        <Description class="text-base leading-normal text-gray-700 dark:text-gray-300 sm:text-sm" :content="resolution.value.description" />
       </template>
     </MediaType>
     <template v-else>
       <div class="flex flex-wrap items-baseline gap-2">
         <SectionTitle>Request Body</SectionTitle>
-        <span v-if="resolution.value.required" class="text-sm text-amber-700">required</span>
+        <span v-if="resolution.value.required" class="text-sm text-amber-700 dark:text-amber-400">required</span>
       </div>
-      <Description v-if="resolution.value.description" class="text-base leading-normal text-gray-700 sm:text-sm" :content="resolution.value.description" />
+      <Description v-if="resolution.value.description" class="text-base leading-normal text-gray-700 dark:text-gray-300 sm:text-sm" :content="resolution.value.description" />
     </template>
   </section>
 </template>

@@ -681,7 +681,7 @@ test('OAuth details use label/value rows and omit empty fields and scopes', asyn
   }}}
   const html = await renderAuthentication({security: [{OAuth: []}, {Token: []}]}, document)
   for (const [label, value] of [['Flow', 'Authorization code'], ['Authorization URL', '/oauth/authorize'], ['Token URL', '/oauth/token'], ['Format', 'pt_secret_XXXXXXXXX']]) {
-    assert.ok(html.includes(`<dt class="text-gray-500">${label}</dt>`))
+    assert.match(html, new RegExp(`<dt[^>]*>${label}</dt>`))
     assert.match(html, new RegExp(`<dd[^>]*>${value}</dd>`))
   }
   assert.doesNotMatch(html, /Refresh URL|Scopes|Required scopes|Send the access token|Use the bearer/)

@@ -113,29 +113,29 @@ const canHideNestedProperties = computed(() => !recursive.value && (!props.shoul
   <div v-if="resolution.value" class="flex flex-col gap-1 empty:hidden">
     <div v-if="!shouldHideMainType || arrayTypeSchema || compositionKind || displayFlag('readOnly') || displayFlag('writeOnly') || displayFlag('deprecated')" class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base sm:text-sm">
       <div v-if="!shouldHideMainType || arrayTypeSchema || compositionKind" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-        <div v-if="propertyTitle" class="font-medium text-gray-900">{{ propertyTitle }}</div>
+        <div v-if="propertyTitle" class="font-medium text-gray-900 dark:text-gray-100">{{ propertyTitle }}</div>
 
         <CompositionTabs v-if="compositionKind" :kind="compositionKind" :members="members" :selected="selectedMember" :panel-id="panelId" @select="select(selectionPath, $event)" />
-        <div v-else class="min-w-0 text-gray-500">
+        <div v-else class="min-w-0 text-gray-500 dark:text-gray-400">
           <SchemaTypePreview :schema="shouldHideMainType && arrayTypeSchema ? arrayTypeSchema : resolvedSchema" :original="shouldHideMainType && arrayTypeSchema ? undefined : schema" :components="components" />
         </div>
         <slot name="type-suffix" />
       </div>
-      <div v-if="propertyRequired && !shouldHideMainType" class="text-amber-700">required</div>
-      <span v-if="displayFlag('readOnly')" class="text-gray-500">read-only</span>
-      <span v-if="displayFlag('writeOnly')" class="text-gray-500">write-only</span>
-      <span v-if="displayFlag('deprecated')" class="text-amber-700">deprecated</span>
+      <div v-if="propertyRequired && !shouldHideMainType" class="text-amber-700 dark:text-amber-400">required</div>
+      <span v-if="displayFlag('readOnly')" class="text-gray-500 dark:text-gray-400">read-only</span>
+      <span v-if="displayFlag('writeOnly')" class="text-gray-500 dark:text-gray-400">write-only</span>
+      <span v-if="displayFlag('deprecated')" class="text-amber-700 dark:text-amber-400">deprecated</span>
     </div>
     <slot name="description">
-      <Description v-if="resolvedSchema.description && !shouldHideDescription" class="leading-normal" :content="resolvedSchema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
+      <Description v-if="resolvedSchema.description && !shouldHideDescription" class="leading-normal" :content="resolvedSchema.description" :class="propertyTitle ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'" />
     </slot>
-    <div v-if="compositionKind && members[selectedMember]?.$ref" class="text-base text-gray-500 sm:text-sm">
+    <div v-if="compositionKind && members[selectedMember]?.$ref" class="text-base text-gray-500 dark:text-gray-400 sm:text-sm">
       <SchemaTypePreview :schema="members[selectedMember]" :components="components" />
     </div>
 
     <SchemaConstraints :schema="resolvedSchema" />
     <template v-for="(layer, index) in display.layers.slice(1)" :key="index">
-      <Description v-if="resolvedSchema.description === undefined && layer.schema.description && !shouldHideDescription" class="leading-normal" :content="layer.schema.description" :class="propertyTitle ? 'text-gray-500' : 'text-gray-700'" />
+      <Description v-if="resolvedSchema.description === undefined && layer.schema.description && !shouldHideDescription" class="leading-normal" :content="layer.schema.description" :class="propertyTitle ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'" />
       <SchemaConstraints :schema="layer.schema" />
       <SchemaAttribute v-if="layer.schema.enum?.length" title="Enum" :value="layer.schema.enum" />
       <SchemaAttribute v-if="layer.schema.const !== undefined" title="Const" :value="layer.schema.const" />
@@ -145,7 +145,7 @@ const canHideNestedProperties = computed(() => !recursive.value && (!props.shoul
       </template>
       <Schema v-if="!recursive && (layer.schema.oneOf?.length || layer.schema.anyOf?.length)" :schema="{oneOf: layer.schema.oneOf, anyOf: layer.schema.anyOf}" :schema-path="layer.path" :components="components" :level="level" :should-hide-main-type="true" :should-hide-examples="shouldHideExamples" />
     </template>
-    <p v-if="display.recursive.length" class="text-sm text-gray-500">Recursive schema.</p>
+    <p v-if="display.recursive.length" class="text-sm text-gray-500 dark:text-gray-400">Recursive schema.</p>
 
     <div v-if="(!compositionKind || !selections.has(selectionPath)) && (resolvedSchema.default != undefined || (!shouldHideExamples && normalizedExamples.length))" class="flex flex-col gap-2">
       <SchemaAttribute

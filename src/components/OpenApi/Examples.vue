@@ -108,10 +108,10 @@ async function copy(code: string, panel: string) {
 <template>
   <aside class="col-start-1 row-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2" aria-label="Examples">
     <div class="flex flex-col gap-5 min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[calc(100dvh-64px)]">
-      <section class="flex max-h-[28rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-[40dvh]" aria-label="Request example">
-        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-gray-950/10 px-4 py-2">
-          <div class="flex min-w-0 flex-1 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-gray-500" :title="path">{{ path }}</span></div>
-          <span v-if="requestView === 'schema'" class="shrink-0 text-gray-600">JSON</span>
+      <section class="flex max-h-[28rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-[color:var(--schema-border-color)] dark:bg-[#111111] text-sm sm:text-xs min-[1200px]:max-h-[40dvh]" aria-label="Request example">
+        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[color:var(--schema-border-color)] px-4 py-2">
+          <div class="flex min-w-0 flex-1 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-gray-500 dark:text-gray-400" :title="path">{{ path }}</span></div>
+          <span v-if="requestView === 'schema'" class="shrink-0 text-gray-600 dark:text-gray-400">JSON</span>
           <Select v-else v-model="requestExample" :options="requestExampleOptions" class="shrink-0 whitespace-nowrap" aria-label="Request example sender" />
           <Select class="shrink-0 whitespace-nowrap" v-model="requestView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Request example or schema" />
           <button type="button" class="copy-button disabled:cursor-default disabled:opacity-40" :disabled="!requestCode" :aria-label="copied === 'request' ? 'Copied request' : 'Copy request example'" @click="copy(requestCode, 'request')">
@@ -120,17 +120,17 @@ async function copy(code: string, panel: string) {
           </button>
         </div>
         <ReferenceDiagnostics :issues="requestIssues" />
-        <div v-if="requestView === 'example' && namedOptions(requestMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 [scrollbar-width:thin] [&+pre]:pt-2">
-          <Select v-model="namedSelections[requestKey]" :options="namedOptions(requestMedia)" class="max-w-full text-gray-600" aria-label="Named request example" />
-          <Description v-if="requestSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="requestSample.description" />
+        <div v-if="requestView === 'example' && namedOptions(requestMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 dark:text-gray-400 [scrollbar-width:thin] [&+pre]:pt-2">
+          <Select v-model="namedSelections[requestKey]" :options="namedOptions(requestMedia)" class="max-w-full text-gray-600 dark:text-gray-400" aria-label="Named request example" />
+          <Description v-if="requestSample.description" class="text-sm leading-5 text-gray-500 dark:text-gray-400 sm:text-xs" :content="requestSample.description" />
         </div>
-        <p v-if="requestView === 'example' && requestSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ requestSample.error }}</p>
-        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="requestCode"><HighlightedCode :code="requestCode" :language="requestLanguage" /></pre>
-        <p v-else-if="requestView === 'schema' || !requestSample.error" class="p-4 leading-5 text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : requestSample.model?.value === '' ? 'Empty example.' : 'No example provided.' }}</p>
+        <p v-if="requestView === 'example' && requestSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700 dark:text-amber-400">{{ requestSample.error }}</p>
+        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] dark:text-gray-300 sm:text-xs sm:leading-5 [tab-size:2]" v-if="requestCode"><HighlightedCode :code="requestCode" :language="requestLanguage" /></pre>
+        <p v-else-if="requestView === 'schema' || !requestSample.error" class="p-4 leading-5 text-gray-500 dark:text-gray-400">{{ requestView === 'schema' ? 'No schema provided.' : requestSample.model?.value === '' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
-      <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">
-        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-gray-950/10 px-4 py-2">
-          <div class="flex min-w-0 flex-1 items-center gap-2"><span>Output</span><span v-if="responseType" class="min-w-0 truncate text-gray-500" :title="responseType">{{ responseType }}</span></div>
+      <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-[color:var(--schema-border-color)] dark:bg-[#111111] text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">
+        <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[color:var(--schema-border-color)] px-4 py-2">
+          <div class="flex min-w-0 flex-1 items-center gap-2"><span>Output</span><span v-if="responseType" class="min-w-0 truncate text-gray-500 dark:text-gray-400" :title="responseType">{{ responseType }}</span></div>
           <Select class="shrink-0 whitespace-nowrap" v-if="responseStatus" v-model="responseStatus" :options="Object.keys(operation.responses ?? {}).map(value => ({value, label: value}))" aria-label="Response status" />
           <Select class="shrink-0 whitespace-nowrap" v-model="responseView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Response example or schema" />
           <button type="button" class="copy-button disabled:cursor-default disabled:opacity-40" :disabled="!responseCode" :aria-label="copied === 'response' ? 'Copied response' : 'Copy response example'" @click="copy(responseCode, 'response')">
@@ -139,13 +139,13 @@ async function copy(code: string, panel: string) {
           </button>
         </div>
         <ReferenceDiagnostics :issues="responseIssues" />
-        <div v-if="responseView === 'example' && namedOptions(responseMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 [scrollbar-width:thin] [&+pre]:pt-2">
-          <Select v-model="namedSelections[responseKey]" :options="namedOptions(responseMedia)" class="max-w-full text-gray-600" aria-label="Named response example" />
-          <Description v-if="responseSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="responseSample.description" />
+        <div v-if="responseView === 'example' && namedOptions(responseMedia).length" class="flex max-h-32 shrink-0 flex-col items-start gap-1 overflow-auto px-4 pt-2 text-gray-500 dark:text-gray-400 [scrollbar-width:thin] [&+pre]:pt-2">
+          <Select v-model="namedSelections[responseKey]" :options="namedOptions(responseMedia)" class="max-w-full text-gray-600 dark:text-gray-400" aria-label="Named response example" />
+          <Description v-if="responseSample.description" class="text-sm leading-5 text-gray-500 dark:text-gray-400 sm:text-xs" :content="responseSample.description" />
         </div>
-        <p v-if="responseView === 'example' && responseSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ responseSample.error }}</p>
-        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><HighlightedCode :code="responseCode" :language="responseLanguage" /></pre>
-        <p v-else-if="responseView === 'schema' || !responseSample.error" class="p-4 leading-5 text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : responseSample.source === 'Supplied example' ? 'Empty example.' : 'No example provided.' }}</p>
+        <p v-if="responseView === 'example' && responseSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700 dark:text-amber-400">{{ responseSample.error }}</p>
+        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] dark:text-gray-300 sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><HighlightedCode :code="responseCode" :language="responseLanguage" /></pre>
+        <p v-else-if="responseView === 'schema' || !responseSample.error" class="p-4 leading-5 text-gray-500 dark:text-gray-400">{{ responseView === 'schema' ? 'No schema provided.' : responseSample.source === 'Supplied example' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>
     </div>

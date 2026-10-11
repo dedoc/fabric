@@ -29,11 +29,11 @@ const headerSchema = computed<SchemaType>(() => ({
 <template>
 <div class="space-y-5">
   <ReferenceDiagnostics :issues="issues" />
-  <Description v-if="unreferencedResponse.description && unreferencedResponse.description.trim() !== responseStatusDescription(statusCode)" class="-mt-2 leading-normal text-gray-700" :content="unreferencedResponse.description"/>
+  <Description v-if="unreferencedResponse.description && unreferencedResponse.description.trim() !== responseStatusDescription(statusCode)" class="-mt-2 leading-normal text-gray-700 dark:text-gray-300" :content="unreferencedResponse.description"/>
   <div v-if="unreferencedResponse.headers">
     <div class="flex">
       <div class="flex gap-2 items-baseline">
-        <div class="font-medium text-gray-900 text-base">Headers</div>
+        <div class="font-medium text-gray-900 dark:text-gray-100 text-base">Headers</div>
       </div>
     </div>
     <div class="mt-3">

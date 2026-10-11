@@ -59,18 +59,18 @@ async function copy() {
 <template>
   <aside class="col-start-1 min-w-0 self-stretch min-[1200px]:col-start-2 min-[1200px]:row-start-2 min-[1200px]:h-0 min-[1200px]:min-h-full" aria-label="Schema examples">
     <ReferenceDiagnostics :issues="selectedTab === 'typescript' ? sample.issues : schemaResolution.issues" />
-    <section class="flex max-h-[32rem] min-h-0 flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[min(100%,calc(100dvh-64px))]">
-      <div class="flex min-h-12 shrink-0 items-center gap-2 border-b border-gray-950/10 px-4 py-2">
+    <section class="flex max-h-[32rem] min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--schema-border-color)] dark:bg-[#111111] text-sm sm:text-xs min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[min(100%,calc(100dvh-64px))]">
+      <div class="flex min-h-12 shrink-0 items-center gap-2 border-b border-[color:var(--schema-border-color)] px-4 py-2">
         <div class="flex min-w-0 flex-auto items-center gap-1 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Schema example format">
-          <button v-for="(tab, index) of tabs" :id="`${panelId}-${tab.id}`" :key="tab.id" type="button" role="tab" :aria-selected="selectedTab === tab.id" :aria-controls="`${panelId}-panel`" :tabindex="selectedTab === tab.id ? 0 : -1" class="min-h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5" :class="selectedTab === tab.id ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900'" @click="selectedTab = tab.id" @keydown="selectTab(index, $event)">{{ tab.label }}</button>
+          <button v-for="(tab, index) of tabs" :id="`${panelId}-${tab.id}`" :key="tab.id" type="button" role="tab" :aria-selected="selectedTab === tab.id" :aria-controls="`${panelId}-panel`" :tabindex="selectedTab === tab.id ? 0 : -1" class="min-h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5" :class="selectedTab === tab.id ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 hover:dark:text-gray-100'" @click="selectedTab = tab.id" @keydown="selectTab(index, $event)">{{ tab.label }}</button>
         </div>
         <button type="button" class="copy-button" :disabled="!code" :aria-label="copied ? 'Copied schema example' : 'Copy schema example'" @click="copy">
           <span v-if="copied">✓</span>
           <svg v-else class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="3" width="9" height="11" rx="2" stroke="currentColor"/><path d="M12 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3" stroke="currentColor"/></svg>
         </button>
       </div>
-      <pre :id="`${panelId}-panel`" role="tabpanel" :aria-labelledby="`${panelId}-${selectedTab}`" tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [scrollbar-width:thin] [tab-size:2] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500"><HighlightedCode :code="code" :language="selectedTab === 'typescript' ? 'typescript' : 'json'" /></pre>
-      <p v-if="sample.error" role="note" class="px-4 pb-4 text-amber-700">{{ sample.error }}</p>
+      <pre :id="`${panelId}-panel`" role="tabpanel" :aria-labelledby="`${panelId}-${selectedTab}`" tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] dark:text-gray-300 sm:text-xs sm:leading-5 [scrollbar-width:thin] [tab-size:2] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500"><HighlightedCode :code="code" :language="selectedTab === 'typescript' ? 'typescript' : 'json'" /></pre>
+      <p v-if="sample.error" role="note" class="px-4 pb-4 text-amber-700 dark:text-amber-400">{{ sample.error }}</p>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>
     </section>
   </aside>

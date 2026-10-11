@@ -23,7 +23,7 @@ const unreferencedResponse = computed(() => resolution.value.value)
   <ReferenceDiagnostics :issues="resolution.issues" />
   <div v-if="unreferencedResponse">
     <ResponseHeader :status-code="String(statusCode)" />
-    <Description v-if="unreferencedResponse.description && unreferencedResponse.description.trim() !== responseStatusDescription(String(statusCode))" class="text-gray-700 mt-4 leading-normal text-sm" :content="unreferencedResponse.description"/>
+    <Description v-if="unreferencedResponse.description && unreferencedResponse.description.trim() !== responseStatusDescription(String(statusCode))" class="text-gray-700 dark:text-gray-300 mt-4 leading-normal text-sm" :content="unreferencedResponse.description"/>
     <MediaType class="mt-5" :components="components" :content="unreferencedResponse.content" direction="response" :selection-key="`response:${statusCode}`" label="Response body content type" should-hide-examples />
   </div>
 </template>

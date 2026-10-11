@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {setTheme} from '../utils/theme'
+
+function syncTheme(event: StorageEvent) {
+  if (event.key === 'fabric-theme' && (event.newValue === 'light' || event.newValue === 'dark')) {
+    setTheme(event.newValue)
+  }
+}
+onMounted(() => window.addEventListener('storage', syncTheme))
+onUnmounted(() => window.removeEventListener('storage', syncTheme))
 
 const galaxySpecUrl = 'https://registry.scalar.com/@scalar/apis/galaxy?format=json'
 const specs = [
@@ -62,25 +71,25 @@ watch([spec, renderer], () => {
 </script>
 
 <template>
-  <div class="flex h-dvh flex-col overflow-hidden bg-white text-gray-900">
-    <header class="z-10 flex shrink-0 flex-wrap items-center gap-x-6 gap-y-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+  <div class="flex h-dvh flex-col overflow-hidden bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <header class="z-10 flex shrink-0 flex-wrap items-center gap-x-6 gap-y-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-3 sm:px-6">
       <span class="text-sm font-semibold">API comparison</span>
       <label class="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
-        <span class="text-gray-500">Spec</span>
-        <select v-model="spec" class="min-h-9 min-w-0 flex-1 rounded-md border border-gray-200 bg-white py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500 sm:max-w-96" aria-label="Specification">
+        <span class="text-gray-500 dark:text-gray-400">Spec</span>
+        <select v-model="spec" class="min-h-9 min-w-0 flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500 sm:max-w-96" aria-label="Specification">
           <option v-for="option in specs" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </label>
       <label class="flex items-center gap-2 text-sm">
-        <span class="text-gray-500">Renderer</span>
-        <select v-model="renderer" class="min-h-9 rounded-md border border-gray-200 bg-white py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500" aria-label="OpenAPI renderer">
+        <span class="text-gray-500 dark:text-gray-400">Renderer</span>
+        <select v-model="renderer" class="min-h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500" aria-label="OpenAPI renderer">
           <option v-for="option in renderers" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </label>
     </header>
     <main class="relative min-h-0 flex-1" :aria-label="`${rendererName} preview`">
-      <p v-if="loading" class="absolute inset-0 grid place-content-center bg-white text-sm text-gray-500" role="status">Loading {{ rendererName }}…</p>
-      <iframe :key="source" :src="source" :title="`${rendererName} API reference`" class="h-full w-full border-0" @load="loading = false" />
+      <p v-if="loading" class="absolute inset-0 grid place-content-center bg-white dark:bg-gray-950 text-sm text-gray-500 dark:text-gray-400" role="status">Loading {{ rendererName }}…</p>
+      <iframe :key="source" :src="source" :title="`${rendererName} API reference`" class="h-full w-full border-0 bg-white dark:bg-gray-950" @load="loading = false" />
     </main>
   </div>
 </template>

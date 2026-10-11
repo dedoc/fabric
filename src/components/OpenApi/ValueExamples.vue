@@ -28,16 +28,16 @@ const issues = computed(() => named.value.flatMap(result => result.issues))
     <template v-for="(entry, index) in named" :key="entry.name">
       <template v-if="entry.value">
         <SchemaAttribute v-if="entry.value.value !== undefined || entry.value.externalValue" :title="index === 0 ? (named.length > 1 ? 'Examples' : 'Example') : ''" :value="entry.value.value !== undefined ? entry.value.value : entry.value.externalValue">
-          <div class="inline text-sm leading-normal text-gray-500 sm:text-xs">
+          <div class="inline text-sm leading-normal text-gray-500 dark:text-gray-400 sm:text-xs">
             <strong class="ml-1 font-medium">{{ entry.value.summary ?? entry.name }}</strong>
             <template v-if="entry.value.description">
-              <span aria-hidden="true"> · </span><Description class="inline text-sm leading-normal text-gray-500 sm:text-xs [&>p]:inline" :content="entry.value.description" />
+              <span aria-hidden="true"> · </span><Description class="inline text-sm leading-normal text-gray-500 dark:text-gray-400 sm:text-xs [&>p]:inline" :content="entry.value.description" />
             </template>
           </div>
         </SchemaAttribute>
         <template v-else>
-          <p class="text-sm font-medium text-gray-500 sm:text-xs">{{ entry.value.summary ?? entry.name }}</p>
-          <Description v-if="entry.value.description" class="text-sm leading-normal text-gray-500 sm:text-xs" :content="entry.value.description" />
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400 sm:text-xs">{{ entry.value.summary ?? entry.name }}</p>
+          <Description v-if="entry.value.description" class="text-sm leading-normal text-gray-500 dark:text-gray-400 sm:text-xs" :content="entry.value.description" />
         </template>
       </template>
     </template>

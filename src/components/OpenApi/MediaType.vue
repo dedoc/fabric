@@ -45,18 +45,18 @@ const schemaNamePreview = computed(() => {
     <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <div class="col-start-1 row-start-1">
         <slot name="title">
-          <div class="font-medium text-gray-900 text-base">Body</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100 text-base">Body</div>
         </slot>
       </div>
-      <div v-if="schemaNamePreview || $slots['type-suffix']" class="col-span-2 col-start-1 row-start-2 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 break-words text-base font-normal text-gray-500 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:text-sm">
+      <div v-if="schemaNamePreview || $slots['type-suffix']" class="col-span-2 col-start-1 row-start-2 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 break-words text-base font-normal text-gray-500 dark:text-gray-400 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:text-sm">
         <SchemaTypePreview v-if="schemaNamePreview" :schema="media.schema" :components="components" />
         <slot name="type-suffix" />
       </div>
-      <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="col-start-2 row-start-1 max-w-full justify-self-end text-base font-normal text-gray-500 sm:col-start-3 sm:text-sm" :aria-label="label ?? 'Body content type'" :title="type" />
+      <Select v-model="type" :options="types.map(value => ({value, label: value}))" class="col-start-2 row-start-1 max-w-full justify-self-end text-base font-normal text-gray-500 dark:text-gray-400 sm:col-start-3 sm:text-sm" :aria-label="label ?? 'Body content type'" :title="type" />
     </div>
     <div v-if="hasBodyDescription" class="mt-1">
       <slot name="description">
-        <Description v-for="(description, index) in bodyDescriptions" :key="index" class="leading-normal text-gray-700" :content="description" />
+        <Description v-for="(description, index) in bodyDescriptions" :key="index" class="leading-normal text-gray-700 dark:text-gray-300" :content="description" />
       </slot>
     </div>
     <div v-if="media.schema" :key="type" :class="[hasBodyDescription ? 'mt-6' : 'mt-4']">

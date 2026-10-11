@@ -14,6 +14,7 @@ import Operation from "../OpenApi/Operation.vue";
 import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
 import NavigationItem from "./Partials/NavigationItem.vue";
+import ThemeSwitch from '../UI/ThemeSwitch.vue'
 import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
 import {resolveOperationBase} from "../OpenApi/servers.ts";
 
@@ -161,16 +162,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="isolate bg-white text-gray-900 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
-    <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] bg-white px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
+  <div class="isolate bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
+    <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
       <ApiBrand :info="document.info" :document-url="documentUrl" />
-      <button type="button" class="min-h-9 rounded-md border border-gray-950/10 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
+      <button type="button" class="min-h-9 rounded-md border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
       </button>
     </header>
     <div class="flex items-start md:min-h-dvh">
-      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-y-auto [scrollbar-gutter:stable] overscroll-contain px-5 pb-6 pt-4 md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] md:px-6 md:pt-2 min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
-        <label class="mb-6 flex items-center gap-2 rounded-xl border border-gray-200 px-2.5 py-2 text-gray-500 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
+      <aside id="docs-navigation" class="sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-hidden md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] min-[1200px]:w-[296px]" :class="mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white max-md:dark:bg-gray-950' : 'max-md:hidden'" @keydown.esc="mobileNavigationOpen = false">
+        <div class="flex h-full flex-col overflow-y-auto [scrollbar-gutter:stable] overscroll-contain px-5 pt-4 md:px-6 md:pt-2">
+        <div class="flex-1 shrink-0 pb-6">
+        <label class="mb-6 flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-800 px-2.5 py-2 text-gray-500 dark:text-gray-400 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-500">
           <svg class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
           <input class="min-w-0 w-full bg-transparent text-base outline-none sm:text-sm" v-model="search" name="reference-search" type="search" placeholder="Search reference…" aria-label="Search reference">
         </label>
@@ -180,22 +183,30 @@ onUnmounted(() => {
         <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">
           <Navigation v-for="item of filteredNavigation" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
-          <p v-if="!filteredNavigation.length" class="p-4 text-[13px] text-gray-500">No matching operations.</p>
+          <p v-if="!filteredNavigation.length" class="p-4 text-[13px] text-gray-500 dark:text-gray-400">No matching operations.</p>
         </nav>
         <template v-if="webhooks.length">
           <div class="-mx-2 mb-3 mt-6 px-2 text-[13px] font-medium">Webhooks</div>
           <nav aria-label="Webhooks" class="-mx-2">
             <Navigation v-for="item of filteredWebhooks" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
-            <p v-if="!filteredWebhooks.length" class="p-4 text-[13px] text-gray-500">No matching webhooks.</p>
+            <p v-if="!filteredWebhooks.length" class="p-4 text-[13px] text-gray-500 dark:text-gray-400">No matching webhooks.</p>
           </nav>
         </template>
         <template v-if="showSchemas && schemas.length">
           <div class="-mx-2 mb-3 mt-6 px-2 text-[13px] font-medium">Schemas</div>
           <nav aria-label="Schemas" class="-mx-2">
             <NavigationItem v-for="item of filteredSchemas" :key="item.id" :label="item.name" :active="item.id === selectedPageId" :aria-current="item.id === selectedPageId ? 'page' : undefined" :title="item.name" @click="handlePageSelect(item.id)" />
-            <p v-if="!filteredSchemas.length" class="p-4 text-[13px] text-gray-500">No matching schemas.</p>
+            <p v-if="!filteredSchemas.length" class="p-4 text-[13px] text-gray-500 dark:text-gray-400">No matching schemas.</p>
           </nav>
         </template>
+        </div>
+        <div class="sticky bottom-0 z-10 -mx-5 flex shrink-0 items-center gap-1 bg-white dark:bg-gray-950 px-5 pb-4 pt-2 text-xs text-gray-500 dark:text-gray-400 md:-mx-6 md:px-6">
+          <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6 bg-gradient-to-t from-white dark:from-gray-950 to-transparent"></div>
+          <span>Powered by</span>
+          <a href="https://dedoc.co/?utm_source=fabric" target="_blank" rel="noopener noreferrer" class="inline-flex items-center font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-600 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500">fabric</a>
+          <ThemeSwitch />
+        </div>
+        </div>
       </aside>
       <main :inert="mobileNavigationOpen" class="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
         <ReferenceDiagnostics :issues="navigation.issues" />
