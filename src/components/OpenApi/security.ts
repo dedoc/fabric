@@ -2,12 +2,6 @@ import type {Components, Document, Operation, SecurityScheme} from './types'
 import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
 
-export function httpAuthKind(scheme?: SecurityScheme): 'basic' | 'bearer' | undefined {
-  if (scheme?.type !== 'http') return undefined
-  const kind = scheme.scheme.toLowerCase()
-  return kind === 'basic' || kind === 'bearer' ? kind : undefined
-}
-
 export function resolveSecurityScheme(name: string, components: Components, document: Document = {components}, report?: (issue: ReferenceIssue) => void): SecurityScheme | undefined {
   const token = encodeURIComponent(name.replace(/~/g, '~0').replace(/\//g, '~1'))
   const result = resolveReference<SecurityScheme>(document, {$ref: `#/components/securitySchemes/${token}`})
@@ -32,4 +26,14 @@ export function operationSecurity(operation: Operation, document: Document) {
     scopes,
     scheme: resolveSecurityScheme(name, document.components ?? {}, document),
   })))
+}
+
+export function authorizationHeaderExample(operation: Operation, document: Document): string | undefined {
+  for (const group of operationSecurity(operation, document)) {
+    if (group.length !== 1) continue
+    const scheme = group[0].scheme
+    const httpScheme = scheme?.type === 'http' ? scheme.scheme.toLowerCase() : undefined
+    if (httpScheme === 'basic') return 'Basic <base64-credentials>'
+    if (httpScheme === 'bearer' || scheme?.type === 'oauth2' || scheme?.type === 'openIdConnect') return 'Bearer <token>'
+  }
 }

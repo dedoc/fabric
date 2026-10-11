@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 
+const galaxySpecUrl = 'https://registry.scalar.com/@scalar/apis/galaxy?format=json'
 const specs = [
   {value: '/specs/fabric-reference.yaml', label: 'Fabric Reference Lab · OpenAPI 3.1'},
   {value: '/specs/fabric-reference-3.0.yaml', label: 'Nullable Lab · OpenAPI 3.0'},
@@ -10,7 +11,7 @@ const specs = [
   {value: 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml', label: 'Redocly Petstore · v2 demo upstream'},
   {value: 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/openapi.yaml', label: 'Redocly Petstore · main upstream'},
   {value: 'https://api.savvycal.com/v1/spec', label: 'SavvyCal'},
-  {value: 'https://galaxy.scalar.com/openapi.json', label: 'Scalar Galaxy'},
+  {value: galaxySpecUrl, label: 'Scalar Galaxy'},
   {value: 'https://raw.githubusercontent.com/SpaceTradersAPI/api-docs/main/reference/SpaceTraders.json', label: 'SpaceTraders'},
   {value: 'https://petstore3.swagger.io/api/v3/openapi.json', label: 'Swagger Petstore'},
   {value: 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json', label: 'GitHub REST API'},
@@ -33,7 +34,8 @@ const renderers = [
   {value: 'explorer', label: 'OpenAPI Explorer'},
 ]
 const query = new URLSearchParams(window.location.search)
-const initialSpec = query.get('spec')
+const requestedSpec = query.get('spec')
+const initialSpec = requestedSpec === 'https://galaxy.scalar.com/openapi.json' ? galaxySpecUrl : requestedSpec
 if (initialSpec && !specs.some(spec => spec.value === initialSpec)) {
   try {
     const url = new URL(initialSpec, window.location.href)

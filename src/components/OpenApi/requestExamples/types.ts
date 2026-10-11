@@ -5,7 +5,6 @@ export interface RequestExample {
   body: string
   value: unknown
   formFields: [string, string][]
-  authorization?: string
   headers?: [string, string][]
   bodyFile?: string
   formFiles?: [string, string][]

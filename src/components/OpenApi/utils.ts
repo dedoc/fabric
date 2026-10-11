@@ -1,4 +1,4 @@
-import type {Components, Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
+import type {Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
 import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
 import {effectiveParameters} from './parameters'
@@ -87,10 +87,6 @@ function getPrimitiveSchemaTypePreview(type: string, schema: SchemaType|undefine
     }
 
     return type
-}
-
-export function unreference<T>(reference: string, components: Components): T|undefined {
-    return resolveReference<T>({components}, {$ref: reference}).value
 }
 
 export function getOperationId (method: string, path: string, operation: Operation) {

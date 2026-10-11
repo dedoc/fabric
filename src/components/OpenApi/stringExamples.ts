@@ -28,11 +28,8 @@ const formatExamples: Readonly<Record<string, string>> = {
   'json-pointer': '/items/0/name',
   'relative-json-pointer': '1/name',
   'regex': '^[a-zA-Z0-9]+$',
-  'byte': 'SGVsbG8sIHdvcmxkIQ==',
   'base64': 'SGVsbG8sIHdvcmxkIQ==',
   'base64url': 'SGVsbG8sIHdvcmxkIQ',
-  // Binary content is shown as a JSON-safe string in the example panel.
-  'binary': 'Hello, world!',
   'password': 'Example-password-123!',
   'char': 'A',
   'commonmark': '**Hello**, world!',

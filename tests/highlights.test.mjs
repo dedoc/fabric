@@ -10,7 +10,7 @@ const server = await createServer({server: {middlewareMode: true, hmr: {server: 
 after(() => server.close())
 const {default: HighlightedCode} = await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.vue')
 const text = html => sanitizeHtml(html, {allowedTags: [], allowedAttributes: {}})
-const render = (props, slots) => renderToString(createSSRApp({render: () => h(HighlightedCode, props, slots)}))
+const render = props => renderToString(createSSRApp({render: () => h(HighlightedCode, props)}))
 
 test('example languages receive colors while preserving code and whitespace', async () => {
   for (const [language, code] of [
@@ -34,19 +34,4 @@ test('untrusted example markup renders as escaped code', async () => {
   const html = await render({code, language: 'xml'})
   assert.doesNotMatch(html, /<script|<img/)
   assert.equal(text(html), text(await renderToString(h('code', code))))
-})
-
-test('credential slots replace only the placeholder and preserve surrounding tokens', async () => {
-  const placeholder = '__FABRIC_AUTH_CREDENTIALS__'
-  for (const [language, code] of [
-    ['bash', `curl 'https://example.com' \\\n  -H 'Authorization: Bearer ${placeholder}'\n`],
-    ['php', `Http::withToken('${placeholder}')\n    ->get('https://example.com');`],
-  ]) {
-    const html = await render({code, language, placeholder}, {default: () => h('button', 'Set credentials')})
-    assert.equal((html.match(/<button/g) ?? []).length, 1)
-    assert.doesNotMatch(html, /__FABRIC_AUTH_CREDENTIALS__/)
-    assert.equal(text(html), text(await renderToString(h('code', code.replace(placeholder, 'Set credentials')))))
-  }
-  const html = await render({code: 'echo hello', language: 'bash', placeholder}, {default: () => h('button', 'Set credentials')})
-  assert.doesNotMatch(html, /<button/)
 })

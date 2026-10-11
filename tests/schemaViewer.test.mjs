@@ -24,10 +24,8 @@ const {default: Select} = await server.ssrLoadModule('/src/components/UI/Select.
 const {resolveOperationBase} = await server.ssrLoadModule('/src/components/OpenApi/servers.ts')
 const {getInlineOperations, getWebhookOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
 const {default: OperationDatums} = await server.ssrLoadModule('/src/components/OpenApi/Partials/OperationDatums.vue')
-const {operationSecurity, resolveSecurityScheme} = await server.ssrLoadModule('/src/components/OpenApi/security.ts')
-const {provideAuthCredentials, httpAuthForOperation, authorizationForOption} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
-const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
-const {basicAuthorization} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/auth.ts')
+const {operationSecurity, resolveSecurityScheme, authorizationHeaderExample} = await server.ssrLoadModule('/src/components/OpenApi/security.ts')
+const {createRequestExample} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
 const {resolveReference} = await server.ssrLoadModule('/src/components/OpenApi/references.ts')
 const {resolveExampleSchema, createSchemaExample} = await server.ssrLoadModule('/src/components/OpenApi/schemaExamples.ts')
 const referenceFixture = JSON.parse(await readFile(new URL('./fixtures/local-references.json', import.meta.url), 'utf8'))
@@ -460,7 +458,7 @@ test('reference fixture resolves aliases, escaped names and non-component locati
   }
   const {default: Operation} = await server.ssrLoadModule('/src/components/OpenApi/Operation.vue')
   const html = await renderWithDocument(Operation, {base: 'https://api.example.com', path: '/alias', method: 'post', operation, components}, document)
-  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Authorization: Basic/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(withoutHighlighting(html), pattern)
+  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Basic authentication/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(withoutHighlighting(html), pattern)
   assert.doesNotMatch(html, /Reference warning/)
   const schema = resolveExampleSchema(components.schemas.FromPath, components, document)
   assert.deepEqual(createSchemaExample(schema), {id: 7})
@@ -571,126 +569,17 @@ test('API branding honors explicit links and rejects unsafe URLs and invalid col
   }
 })
 
-test('saved Basic credentials respect endpoint overrides and complete authentication alternatives', () => {
-  const document = {security: [{Basic: []}], components: {securitySchemes: {
-    Basic: {type: 'http', scheme: 'basic'}, Key: {type: 'apiKey', in: 'header', name: 'X-Key'},
-  }}}
-  const credentials = {Basic: {username: 'test-key', password: ''}}
-  assert.deepEqual(httpAuthForOperation({}, document, credentials).credentials, credentials.Basic)
-  assert.equal(httpAuthForOperation({security: []}, document, credentials), undefined)
-  assert.equal(httpAuthForOperation({security: [{Key: []}]}, document, credentials), undefined)
-  assert.equal(httpAuthForOperation({security: [{Basic: [], Key: []}]}, document, credentials), undefined)
-  assert.equal(authorizationForOption(httpAuthForOperation({}, document, {})), undefined)
-})
-
-test('Bearer auth selects a configured complete alternative and sends the token unchanged', () => {
-  const document = {security: [{Basic: []}, {Token: []}], components: {securitySchemes: {
-    Basic: {type: 'http', scheme: 'basic'}, Token: {type: 'http', scheme: 'Bearer'},
+test('authorization placeholders respect inheritance, references and public or combined requirements', () => {
+  const document = {security: [{Alias: []}], components: {securitySchemes: {
     Alias: {$ref: '#/components/securitySchemes/Token'},
-  }}}
-  const credentials = {Token: {token: '  test.jwt-token.value  '}}
-  const option = httpAuthForOperation({}, document, credentials)
-  assert.equal(option.kind, 'bearer')
-  assert.equal(authorizationForOption(option), 'Bearer test.jwt-token.value')
-  assert.equal(httpAuthForOperation({security: []}, document, credentials), undefined)
-  assert.equal(httpAuthForOperation({security: [{Basic: [], Token: []}]}, document, credentials), undefined)
-  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Token: []}]}, document, {Token: {username: 'wrong-kind', password: ''}})), undefined)
-  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Alias: []}]}, document, {Alias: {token: 'alias-token'}})), 'Bearer alias-token')
-  assert.equal(authorizationForOption(httpAuthForOperation({security: [{Token: []}]}, document, {Token: {token: '  '}})), undefined)
-})
-
-test('Bearer tokens are masked in endpoint and example chips with green locks when set', async () => {
-  const document = {security: [{Token: []}], components: {securitySchemes: {Token: {type: 'http', scheme: 'bearer'}}}}
-  async function render(token) {
-    return renderToString(createSSRApp({setup() {
-      provide(documentKey, ref(document))
-      provideMediaTypeSelections()
-      const credentials = provideAuthCredentials()
-      if (token) credentials.value.Token = {token}
-      return () => h('div', [h(OperationDatums, {operation: {}}), h(Examples, {
-        base: 'https://api.example.com', path: '/files', method: 'get', operation: {}, components: document.components,
-      })])
-    }}))
-  }
-  const empty = await render()
-  assert.match(empty, /Auth: Bearer/)
-  assert.match(empty, /Set authentication credentials/)
-  assert.match(empty, /Authorization: Bearer/)
-  const configured = await render('private-demo-token')
-  assert.doesNotMatch(configured, /private-demo-token/)
-  assert.match(configured, /Edit authentication credentials/)
-  assert.equal((configured.match(/text-green-600/g) ?? []).length, 2)
-})
-
-test('Basic credentials are Base64 encoded in Bash and Laravel examples, including Unicode and empty passwords', () => {
-  const request = createRequestExample('https://api.example.com', '/files', 'post', 'application/json', {example: {id: 1}}, {})
-  const username = "test'keyé"
-  const password = "pass'\\word"
-  const encoded = Buffer.from(`${username}:${password}`, 'utf8').toString('base64')
-  request.authorization = basicAuthorization(username, password)
-  assert.equal(request.authorization, `Basic ${encoded}`)
-  const bash = requestExampleSenders.find(sender => sender.id === 'bash').generate(request)
-  const laravel = requestExampleSenders.find(sender => sender.id === 'laravel').generate(request)
-  assert.ok(bash.includes(`-H 'Authorization: Basic ${encoded}'`))
-  assert.ok(laravel.includes(`withHeaders(['Authorization' => 'Basic ${encoded}'])`))
-  assert.doesNotMatch(bash + laravel, /test'key|pass/)
-  request.authorization = basicAuthorization('test-key', '')
-  assert.equal(request.authorization, `Basic ${Buffer.from('test-key:').toString('base64')}`)
-  delete request.authorization
-  assert.doesNotMatch(requestExampleSenders[0].generate(request), /Authorization:/)
-})
-
-test('endpoint and example chips hide credentials, including their Base64 value, in rendered HTML', async () => {
-  const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
-  const html = await renderToString(createSSRApp({setup() {
-    provide(documentKey, ref(document))
-    provideMediaTypeSelections()
-    const credentials = provideAuthCredentials()
-    credentials.value.Basic = {username: 'demo-username', password: 'demo-password'}
-    return () => h('div', [h(OperationDatums, {operation: {}}), h(Examples, {
-      base: 'https://api.example.com', path: '/files', method: 'get', operation: {}, components: document.components,
-    })])
-  }}))
-  const trigger = html.match(/<button[^>]*aria-haspopup="dialog"[^>]*>[\s\S]*?<\/button>/)?.[0]
-  assert.ok(trigger)
-  assert.match(trigger.replace(/<[^>]*>/g, ''), /Auth: Basic/)
-  assert.doesNotMatch(trigger, /demo-username|demo-password/)
-  assert.match(html, /<dialog[^>]*aria-label="Authentication"/)
-  assert.match(html, /Edit authentication credentials/)
-  assert.match(html, /Authorization: Basic/)
-  assert.doesNotMatch(html, /demo-username|demo-password/)
-  assert.ok(!html.includes(Buffer.from('demo-username:demo-password').toString('base64')))
-})
-
-test('authenticated request examples have a credential chip before credentials are entered', async () => {
-  const html = await renderToString(createSSRApp({setup() {
-    provideMediaTypeSelections()
-    return () => h(Examples, {base: 'https://api.example.com', path: '/files', method: 'get',
-      operation: {security: [{Basic: []}]}, components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}},
-    })
-  }}))
-  assert.match(html, /Set authentication credentials/)
-  assert.match(html, /Authorization: Basic/)
-  assert.doesNotMatch(html, /__FABRIC_AUTH_CREDENTIALS__/)
-})
-
-test('request examples omit the credential chip when authentication entry is unsupported', async () => {
-  const components = {securitySchemes: {
-    Key: {type: 'apiKey', in: 'header', name: 'X-API-Key'},
-    OAuth: {type: 'oauth2', flows: {}},
-    OpenID: {type: 'openIdConnect', openIdConnectUrl: 'https://api.example.com/.well-known/openid-configuration'},
-    Digest: {type: 'http', scheme: 'digest'},
+    Token: {type: 'http', scheme: 'bearer'},
     Basic: {type: 'http', scheme: 'basic'},
-  }}
-  for (const security of [[], [{Key: []}], [{OAuth: []}], [{OpenID: []}], [{Digest: []}], [{Missing: []}], [{Basic: [], Key: []}]]) {
-    const html = await renderToString(createSSRApp({setup() {
-      provideMediaTypeSelections()
-      return () => h(Examples, {base: 'https://api.example.com', path: '/files', method: 'get',
-        operation: {security}, components,
-      })
-    }}))
-    assert.doesNotMatch(html, /Set credentials|Set authentication credentials|__FABRIC_AUTH_CREDENTIALS__/)
-    assert.match(html, /curl/)
+    Key: {type: 'apiKey', in: 'header', name: 'X-API-Key'},
+  }}}
+  assert.equal(authorizationHeaderExample({}, document), 'Bearer <token>')
+  assert.equal(authorizationHeaderExample({security: [{Basic: []}]}, document), 'Basic <base64-credentials>')
+  for (const security of [[], [{}], [{Key: []}], [{Missing: []}], [{Token: [], Key: []}]]) {
+    assert.equal(authorizationHeaderExample({security}, document), undefined)
   }
 })
 
@@ -719,11 +608,12 @@ test('Basic authentication inherits Converterer instructions without redundant c
 
 test('operation authentication overrides inheritance and distinguishes public and optional access', async () => {
   const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
-  assert.doesNotMatch(await renderAuthentication({security: []}, document), /No authentication required|Auth:|<dialog/)
+  assert.doesNotMatch(await renderAuthentication({security: []}, document), /No authentication required|Auth required|Auth optional|<dialog/)
   assert.doesNotMatch(await renderAuthentication({security: []}, document), /Basic authentication/)
-  assert.doesNotMatch(await renderAuthentication({}, {}), /No authentication required|Auth:|<dialog/)
+  assert.doesNotMatch(await renderAuthentication({}, {}), /No authentication required|Auth required|Auth optional|<dialog/)
   const optional = await renderAuthentication({security: [{}, {Basic: []}]}, document)
   assert.match(optional, /Authentication is optional/)
+  assert.match(optional, /<span>Auth optional<\/span>/)
   assert.match(optional, /Basic authentication/)
 })
 
@@ -734,19 +624,49 @@ test('authentication alternatives, combined requirements, scopes and API key loc
     Token: {type: 'http', scheme: 'Bearer', bearerFormat: 'JWT'},
   }}}
   const html = await renderAuthentication({security: [{OAuth: ['files:read'], Key: []}, {Token: []}]}, document)
+  assert.match(html, /<span>Auth required<\/span>/)
+  assert.doesNotMatch(html, /Auth:/)
   assert.match(html, /Use one of the following/)
   assert.match(html, /All of these methods are required together/)
   assert.match(html, /Or — Option 2/)
   assert.match(html, /files:read/)
   assert.match(html, /X-API-Key<\/code> header/)
-  assert.match(html, /Authorization: Bearer &lt;token&gt;/)
-  assert.match(html, /Token format: JWT/)
+  assert.match(html, /<dt[^>]*>Format<\/dt>/)
+  assert.match(html, /<dd[^>]*>JWT<\/dd>/)
+  assert.match(html, /OAuth 2.0/)
+  assert.match(html, /<dialog[^>]*aria-label="Authentication"/)
+  assert.doesNotMatch(html, /<form|<input|Apply credentials|Clear credentials/)
   for (const location of ['query', 'cookie']) {
     const result = await renderAuthentication({security: [{Key: []}]}, {components: {securitySchemes: {
       Key: {type: 'apiKey', name: 'key', in: location},
     }}})
     assert.match(result, new RegExp(location === 'query' ? 'query parameter' : 'cookie'))
   }
+})
+
+test('OAuth details use label/value rows and omit empty fields and scopes', async () => {
+  const document = {components: {securitySchemes: {
+    OAuth: {type: 'oauth2', flows: {
+      authorizationCode: {authorizationUrl: '/oauth/authorize', tokenUrl: '/oauth/token', refreshUrl: ' ', scopes: {}},
+    }},
+    Token: {type: 'http', scheme: 'bearer', bearerFormat: 'pt_secret_XXXXXXXXX'},
+  }}}
+  const html = await renderAuthentication({security: [{OAuth: []}, {Token: []}]}, document)
+  for (const [label, value] of [['Flow', 'Authorization code'], ['Authorization URL', '/oauth/authorize'], ['Token URL', '/oauth/token'], ['Format', 'pt_secret_XXXXXXXXX']]) {
+    assert.ok(html.includes(`<dt class="text-gray-500">${label}</dt>`))
+    assert.match(html, new RegExp(`<dd[^>]*>${value}</dd>`))
+  }
+  assert.doesNotMatch(html, /Refresh URL|Scopes|Required scopes|Send the access token|Use the bearer/)
+  document.components.securitySchemes.OAuth.flows.clientCredentials = {
+    tokenUrl: 'https://example.com/oauth/token', refreshUrl: 'https://example.com/oauth/refresh',
+    scopes: {'files:read': 'Read files', 'files:write': ''},
+  }
+  const populated = await renderAuthentication({security: [{OAuth: ['files:read']}]}, document)
+  for (const value of ['Client credentials', 'Refresh URL', 'https://example.com/oauth/refresh', 'Scopes', 'files:read — Read files', 'files:write', 'Required scopes']) assert.ok(populated.includes(value))
+  assert.doesNotMatch(populated, /<form|<input/)
+  document.components.securitySchemes.Token.bearerFormat = ' '
+  const empty = await renderAuthentication({security: [{Token: []}]}, document)
+  assert.doesNotMatch(empty, /<dl|Format|Send the access token|Use the bearer/)
 })
 
 test('security scheme references decode JSON pointers, follow chains and report unresolved schemes', async () => {

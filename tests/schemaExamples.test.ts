@@ -74,9 +74,9 @@ test('generates valid temporal string samples', () => {
   assert.match(sample('duration'), /^P\d+DT\d+H\d+M$/)
 })
 
-test('generates all registered string formats and common aliases', () => {
+test('generates supported string formats and common aliases without inventing binary data', () => {
   const formats = [
-    'base64url', 'binary', 'byte', 'char', 'commonmark', 'date-time-local', 'date-time', 'date',
+    'base64url', 'char', 'commonmark', 'date-time-local', 'date-time', 'date',
     'decimal', 'decimal128', 'duration', 'email', 'hostname', 'html', 'http-date', 'idn-email',
     'idn-hostname', 'int64', 'ipv4-cidr', 'ipv4', 'ipv6-cidr', 'ipv6', 'iri-reference', 'iri',
     'json-pointer', 'language', 'media-range', 'password', 'regex', 'relative-json-pointer',
@@ -89,11 +89,14 @@ test('generates all registered string formats and common aliases', () => {
     assert.notEqual(value, 'string', format)
     assert.equal(createSchemaExample({type: ['null', 'string'], format}), value, format)
   }
+  for (const format of ['binary', 'byte']) {
+    assert.throws(() => createSchemaExample({type: 'string', format}), /Binary samples require a supplied file/)
+  }
 })
 
 test('generates usable encoded, identifier, network, and structured string samples', () => {
   const sample = (format: string) => createSchemaExample({type: 'string', format}) as string
-  for (const format of ['byte', 'base64', 'base64url']) {
+  for (const format of ['base64', 'base64url']) {
     assert.equal(Buffer.from(sample(format), format === 'base64url' ? 'base64url' : 'base64').toString(), 'Hello, world!')
   }
   assert.equal(Buffer.from(sample('sf-binary').slice(1, -1), 'base64').toString(), 'Hello, world!')

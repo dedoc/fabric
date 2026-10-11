@@ -8,8 +8,7 @@ export const bashSender: RequestExampleSender = {
   label: 'Bash',
   generate(request) {
     const lines = [`curl -X ${request.method} ${quote(request.url)}`]
-    for (const [name, value] of request.headers ?? []) if (!request.authorization || name.toLowerCase() !== 'authorization') lines.push(`  -H ${quote(`${name}: ${value}`)}`)
-    if (request.authorization) lines.push(`  -H ${quote(`Authorization: ${request.authorization}`)}`)
+    for (const [name, value] of request.headers ?? []) lines.push(`  -H ${quote(`${name}: ${value}`)}`)
     const multipart = request.contentType.split(';')[0].trim().toLowerCase() === 'multipart/form-data'
     if (request.contentType && !multipart) lines.push(`  -H ${quote('Content-Type: ' + request.contentType)}`)
     if (isFormContentType(request.contentType) && typeof request.value !== 'string') {

@@ -186,7 +186,7 @@ const canHideNestedProperties = computed(() => (!props.shouldHideMainType || pro
     <template v-if="arePropertiesVisible">
       <div v-if="display.properties.size" :class="[
         shouldDisablePropertiesPadding ? '' : 'relative border-l pl-4',
-        shouldHideMainType && !canHideNestedProperties && display.layers.some(layer => layer.schema.description) && !shouldHideDescription ? 'mt-5' : '',
+        shouldHideMainType && !canHideNestedProperties && display.layers.some(layer => layer.schema.description) && !shouldHideDescription ? 'mt-1' : '',
         'border-[color:var(--schema-border-color)]',
       ]">
         <template v-for="(field, name, i) of visibleProperties">

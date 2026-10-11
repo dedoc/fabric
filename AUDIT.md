@@ -16,7 +16,7 @@ This assessment combines code review, targeted rendering probes, and automated c
 - Request/response schemas, media selection, and JSON/XML/form examples.
 - Bash and Laravel request snippets with copy actions.
 - Effective authentication documentation, including inheritance, optional/public access, referenced schemes, OAuth scopes, and AND/OR requirements.
-- Basic/Bearer credential entry, editing, and clearing in memory. Displayed examples mask credentials; copies include saved credentials for a supported complete authentication alternative. Unsupported methods do not show a “Set credentials” chip.
+- Read-only authentication information. Credential entry and storage are not part of the reference viewer.
 - Sanitized Markdown/HTML descriptions and API branding with logo fallbacks.
 - Stable scrollbar space in the left navigation.
 
@@ -114,11 +114,11 @@ S2–S4: type previews support 3.0 nullable types and 3.1 type-array/anyOf/oneOf
 - [x] E3 — Apply request/response direction: omit read-only fields from generated requests and write-only fields from responses.
 - [x] E4 — Serialize by media type, preserving plain text without JSON quoting and explicitly handling unsupported/binary formats.
 - [x] E5 — Add named media-example selection, preserving values/descriptions and retaining supplied values instead of regenerating them.
-- [x] E6 — Keep Bash and Laravel aligned with the shared request model; add fixtures for parameters, encoding, constraints, direction, media types, and saved Basic/Bearer credentials.
+- [x] E6 — Keep Bash and Laravel aligned with the shared request model; add fixtures for parameters, encoding, constraints, direction, and media types.
 
-E1–E6: both senders consume one parameter-aware request model. The browsable `/example-lab/{name}` fixture covers encoded paths, queries, headers/cookies, generated constraints, direction, named text/JSON values and placeholder binary uploads. Binary request snippets use local file placeholders, including referenced multipart file properties and file arrays; binary response bytes remain unavailable. Regression tests also retain saved Basic/Bearer credential copy/masking checks. [SCHEMA_SUPPORT.md](./SCHEMA_SUPPORT.md) documents serialization and bounded generation limits; unsupported generation produces an explanation and disables copying.
+E1–E6: both senders consume one parameter-aware request model. The browsable `/example-lab/{name}` fixture covers encoded paths, queries, headers/cookies, generated constraints, direction, named text/JSON values and placeholder binary uploads. Binary request snippets use local file placeholders, including referenced multipart file properties and file arrays; binary response bytes remain unavailable. Regression tests verify read-only authentication information and matching displayed/copied request examples. [SCHEMA_SUPPORT.md](./SCHEMA_SUPPORT.md) documents serialization and bounded generation limits; unsupported generation produces an explanation and disables copying.
 
-**Done when:** Copies include supported required inputs and saved supported authentication, and generated samples do not silently contradict the contract.
+**Done when:** Copies include supported required inputs and match the displayed examples, and generated samples do not silently contradict the contract.
 
 **Dependency:** Effective parameters from set 3 and schema semantics from set 4.
 
@@ -164,7 +164,7 @@ U1: schema output preserves required/optional fields, primitives, arrays, litera
 These features are not required for a scoped reference-viewer beta if limitations are explicit:
 
 - External-document references: relative/absolute file fetching, per-file source URLs, caching, cycles, CORS, and fetch failures. Required before claiming support for specifications such as SpaceTraders.
-- Credential entry for API keys, OAuth authorization flows, OpenID Connect, and combined authentication requirements. Scheme documentation exists; entry and generated requests are limited to supported Basic/Bearer alternatives.
+- Credential entry for API keys, OAuth authorization flows, OpenID Connect, and combined authentication requirements. Scheme documentation exists; credential entry and storage are outside the reference viewer’s scope.
 - Interactive “Try it” requests.
 - Additional request-example languages beyond Bash and Laravel.
 - Full OpenAPI/JSON Schema coverage beyond the documented subset, including discriminator behavior and advanced schema constructs.

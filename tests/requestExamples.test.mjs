@@ -45,9 +45,8 @@ test('encoded effective parameters feed both senders, including cookies and JSON
   assert.equal(request.url, 'https://example.com/projects/design%2Freview%20%3F%23?tags=a%2Fb&tags=c%26d&filter=%7B%22status%22%3A%22active%22%7D&fields=name,status&page=0')
   assert.deepEqual(request.headers, [['X-Region', 'eu'], ['Cookie', 'session=a%3Bb']])
   for (const sender of requestExampleSenders) {
-    request.authorization = 'Bearer saved-token'
     const code = sender.generate(request)
-    for (const value of [request.url, 'X-Region', 'eu', 'session=a%3Bb', 'Bearer saved-token']) assert.ok(code.includes(value), code)
+    for (const value of [request.url, 'X-Region', 'eu', 'session=a%3Bb']) assert.ok(code.includes(value), code)
   }
 })
 

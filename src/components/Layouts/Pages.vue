@@ -16,7 +16,6 @@ import Navigation from "./Partials/Navigation.vue";
 import NavigationItem from "./Partials/NavigationItem.vue";
 import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
 import {resolveOperationBase} from "../OpenApi/servers.ts";
-import {provideAuthCredentials} from '../OpenApi/useAuthCredentials'
 
 const props = withDefaults(defineProps<{
   base?: string,
@@ -28,7 +27,6 @@ const props = withDefaults(defineProps<{
 }>(), {showSchemas: true})
 
 provide(showSchemasKey, computed(() => props.showSchemas))
-provideAuthCredentials()
 const sourceDocument = computed(() => ({...props.document, paths: props.paths, components: props.components}))
 provide(documentKey, sourceDocument)
 

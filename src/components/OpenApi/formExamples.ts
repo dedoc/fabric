@@ -37,10 +37,3 @@ export function createFormFields(media: MediaType | undefined, components: Compo
   }
   return arguments_
 }
-
-/** curl encodes field values; field names must already be URL-encoded. */
-export function createFormArguments(media: MediaType | undefined, components: Components): [string, string][] {
-  const value = getMediaExample(media, components, true, {components}, undefined, 'request')
-  if (typeof value === 'string') return [['--data-raw', value]]
-  return createFormFields(media, components).map(([name, value]) => ['--data-urlencode', `${encodeURIComponent(name)}=${value}`])
-}

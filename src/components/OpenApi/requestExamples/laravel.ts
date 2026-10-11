@@ -47,10 +47,6 @@ export const laravelSender: RequestExampleSender = {
       client = `withHeaders(['Content-Type' => ${quote(request.contentType)}])`
     }
     const headers = Object.fromEntries(request.headers ?? [])
-    if (request.authorization) {
-      for (const name of Object.keys(headers)) if (name.toLowerCase() === 'authorization') delete headers[name]
-      headers.Authorization = request.authorization
-    }
     if (Object.keys(headers).length) {
       const auth = `withHeaders([${Object.entries(headers).map(([name, value]) => `${quote(name)} => ${quote(value)}`).join(', ')}])`
       client = auth + (client ? '\n    ->' + client : '')

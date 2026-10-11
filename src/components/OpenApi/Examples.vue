@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import {computed, ref} from 'vue'
-import {authorizationForOption, httpAuthForOperation, useAuthCredentials} from './useAuthCredentials'
-import {authPlaceholder} from './requestExamples/auth'
 import type {Components, Operation, RequestBody, Response} from './types'
 import {useReferences} from './useReferences'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
@@ -15,11 +13,10 @@ import Description from './Description.vue'
 import {useCompositionExample} from './useCompositionSelections'
 import {useStoredChoice} from './useStoredChoice'
 import HighlightedCode from './HighlightedCode.vue'
+import {authorizationHeaderExample} from './security'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
-const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
 const references = useReferences(() => props.components)
-const credentials = useAuthCredentials()
 const requestView = ref('example')
 const preferredRequestExample = useStoredChoice('fabric:request-sender', requestExampleSenders.map(sender => sender.id), requestExampleSenders[0].id)
 const responseView = ref('example')
@@ -76,23 +73,18 @@ const responseIssues = computed(() => [...responseResolution.value.issues, ...me
 function format(value: unknown): string {
   return value === undefined ? '' : JSON.stringify(value, null, 2)
 }
-const httpAuth = computed(() => httpAuthForOperation(props.operation, references.document.value, credentials?.value ?? {}))
-const savedAuthorization = computed(() => authorizationForOption(httpAuth.value))
-function generateRequestCode(display: boolean) {
+const requestCode = computed(() => {
   if (requestIssues.value.length && requestView.value !== 'schema') return ''
   if (requestView.value === 'schema') return format(originalRequestMedia.value?.schema)
   if (!requestSample.value.model) return ''
-  const request = {...requestSample.value.model}
+  const request = requestSample.value.model
   if (requestExample.value === 'payload') return request.body
-  if (display && httpAuth.value) request.authorization = `${httpAuth.value.kind === 'basic' ? 'Basic' : 'Bearer'} ${authPlaceholder}`
-  else if (!display) request.authorization = savedAuthorization.value
+  const authorization = authorizationHeaderExample(props.operation, references.document.value)
+  const headers = request.headers ?? []
   const sender = requestExampleSenders.find(sender => sender.id === requestExample.value) ?? requestExampleSenders[0]
-  const code = sender.generate(request)
-  return code
-}
-const requestCode = computed(() => generateRequestCode(false))
-const displayCode = computed(() => generateRequestCode(true))
-const displayPlaceholder = computed(() => requestView.value === 'example' && requestExample.value !== 'payload' && httpAuth.value ? authPlaceholder : undefined)
+  return sender.generate({...request, headers: authorization && !headers.some(([name]) => name.toLowerCase() === 'authorization')
+    ? [...headers, ['Authorization', authorization]] : headers})
+})
 function mediaLanguage(type: string) {
   return isJsonContentType(type) ? 'json' : isXmlContentType(type) ? 'xml' : 'text'
 }
@@ -133,7 +125,7 @@ async function copy(code: string, panel: string) {
           <Description v-if="requestSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="requestSample.description" />
         </div>
         <p v-if="requestView === 'example' && requestSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ requestSample.error }}</p>
-        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode"><HighlightedCode :code="displayCode" :language="requestLanguage" :placeholder="displayPlaceholder"><button type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button></HighlightedCode></pre>
+        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="requestCode"><HighlightedCode :code="requestCode" :language="requestLanguage" /></pre>
         <p v-else-if="requestView === 'schema' || !requestSample.error" class="p-4 leading-5 text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : requestSample.model?.value === '' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">

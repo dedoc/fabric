@@ -23,7 +23,6 @@ const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
 const {default: Viewer} = await server.ssrLoadModule('/src/components/HelloWorld.vue')
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
-const {provideAuthCredentials} = await server.ssrLoadModule('/src/components/OpenApi/useAuthCredentials.ts')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
 const valid = {openapi: '3.0.3', info: {title: 'Recovered API', version: '1.0'}, paths: {}}
@@ -205,87 +204,34 @@ async function until(check) {
   assert.ok(check(), 'Viewer did not reach expected state')
 }
 
-test('Copy uses encoded credentials while the visible example stays masked and its chip opens authentication', async () => {
+test('copied request examples match the displayed authorization placeholders', async () => {
   const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
   let copied = ''
-  let opened = 0
-  let saved
   Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {clipboard: {writeText: async value => { copied = value }}}})
-  const document = {security: [{Basic: []}], components: {securitySchemes: {Basic: {type: 'http', scheme: 'basic'}}}}
-  const viewer = mountViewer('/spec.json', '#overview', {setup() {
-    provide(documentKey, ref(document))
-    provideMediaTypeSelections()
-    saved = provideAuthCredentials()
-    saved.value.Basic = {username: 'demo-key', password: ''}
-    return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {},
-      components: document.components, onAuthenticate: () => { opened++ },
-    })
-  }})
-  globalThis.window.setTimeout = () => 0
   try {
-    const encoded = Buffer.from('demo-key:').toString('base64')
-    assert.doesNotMatch(viewer.text(), /demo-key/)
-    assert.ok(!viewer.text().includes(encoded))
-    const chip = viewer.find(el => el.props['aria-label'] === 'Edit authentication credentials')
-    chip.props.onClick({currentTarget: chip})
-    assert.equal(opened, 1)
-    await viewer.find(el => el.props['aria-label'] === 'Copy request example').props.onClick()
-    assert.ok(copied.includes(`Authorization: Basic ${encoded}`))
-    assert.doesNotMatch(copied, /demo-key|__FABRIC|••••/)
-    saved.value.Basic = {username: 'demo-key', password: 'new-password'}
-    await nextTick()
-    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
-    assert.ok(copied.includes(Buffer.from('demo-key:new-password').toString('base64')))
-    viewer.find(el => el.props['aria-label'] === 'Request example sender').props['onUpdate:modelValue']('laravel')
-    await nextTick()
-    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
-    assert.ok(copied.includes(`withHeaders(['Authorization' => 'Basic ${Buffer.from('demo-key:new-password').toString('base64')}'])`))
-    assert.doesNotMatch(viewer.text(), /demo-key|new-password/)
-    delete saved.value.Basic
-    await nextTick()
-    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
+    for (const scheme of [{type: 'http', scheme: 'basic'}, {type: 'http', scheme: 'bearer'}, {type: 'oauth2', flows: {}}, {type: 'openIdConnect', openIdConnectUrl: 'https://example.com/.well-known/openid-configuration'}]) {
+      const document = {security: [{Auth: []}], components: {securitySchemes: {Auth: scheme}}}
+      const viewer = mountViewer('/spec.json', '#overview', {setup() {
+        provide(documentKey, ref(document))
+        provideMediaTypeSelections()
+        return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {}, components: document.components})
+      }})
+      globalThis.window.setTimeout = () => 0
+      try {
+        assert.equal(viewer.find(el => el.props['aria-haspopup'] === 'dialog'), undefined)
+        for (const sender of ['bash', 'laravel']) {
+          viewer.find(el => el.props['aria-label'] === 'Request example sender').props['onUpdate:modelValue'](sender)
+          await nextTick()
+          await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
+          assert.ok(copied.includes('https://example.com/files'))
+          assert.ok(copied.includes('Authorization'))
+          assert.ok(copied.includes(scheme.scheme === 'basic' ? 'Basic <base64-credentials>' : 'Bearer <token>'))
+          const code = viewer.find(el => el.type === 'code')
+          assert.equal(code.text + code.children.map(el => el.text).join(''), copied)
+        }
+      } finally { viewer.close() }
+    }
   } finally {
-    viewer.close()
-    if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
-    else delete globalThis.navigator
-  }
-})
-
-test('Bearer copy includes the original token while display, editing and clearing remain masked', async () => {
-  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
-  let copied = ''
-  let saved
-  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {clipboard: {writeText: async value => { copied = value }}}})
-  const document = {security: [{Token: []}], components: {securitySchemes: {Token: {type: 'http', scheme: 'bearer'}}}}
-  const viewer = mountViewer('/spec.json', '#overview', {setup() {
-    provide(documentKey, ref(document))
-    provideMediaTypeSelections()
-    saved = provideAuthCredentials()
-    return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {}, components: document.components})
-  }})
-  globalThis.window.setTimeout = () => 0
-  try {
-    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
-    saved.value.Token = {token: 'opaque.demo-token'}
-    await nextTick()
-    assert.ok(viewer.find(el => el.props['aria-label'] === 'Edit authentication credentials'))
-    assert.doesNotMatch(viewer.text(), /opaque.demo-token/)
-    await viewer.find(el => el.props['aria-label'] === 'Copy request example').props.onClick()
-    assert.ok(copied.includes("-H 'Authorization: Bearer opaque.demo-token'"))
-    assert.doesNotMatch(copied, /Basic|__FABRIC|••••/)
-    viewer.find(el => el.props['aria-label'] === 'Request example sender').props['onUpdate:modelValue']('laravel')
-    saved.value.Token = {token: 'updated.demo-token'}
-    await nextTick()
-    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
-    assert.ok(copied.includes("withHeaders(['Authorization' => 'Bearer updated.demo-token'])"))
-    assert.doesNotMatch(viewer.text(), /opaque.demo-token|updated.demo-token/)
-    delete saved.value.Token
-    await nextTick()
-    assert.ok(viewer.find(el => el.props['aria-label'] === 'Set authentication credentials'))
-    await viewer.find(el => ['Copy request example', 'Copied request'].includes(el.props['aria-label'])).props.onClick()
-    assert.doesNotMatch(copied, /Authorization|opaque.demo-token|updated.demo-token/)
-  } finally {
-    viewer.close()
     if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
     else delete globalThis.navigator
   }
