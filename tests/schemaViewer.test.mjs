@@ -500,8 +500,36 @@ test('recursive schema rendering terminates in properties, items and composition
   document.components.schemas.Composition = {allOf: [{$ref: '#/components/schemas/Composition'}]}
   for (const name of ['Node', 'Array', 'Composition']) {
     const html = await renderWithDocument(Schema, {schema: document.components.schemas[name], components: document.components}, document)
-    assert.match(html, /Recursive schema/)
+    if (name === 'Composition') assert.match(html, /Recursive schema/)
+    else assert.doesNotMatch(html, /Recursive schema/)
     assert.doesNotMatch(html, /Circular reference alias/)
+  }
+})
+
+test('recursive properties preserve names, descriptions and schema links without expanding children', async () => {
+  const {showSchemasKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
+  for (const openapi of ['3.0.3', '3.1.0']) {
+    for (const description of [undefined, 'Property description']) {
+      const document = {openapi, components: {schemas: {Node: {
+        type: 'object', description: 'Schema description', required: ['next'],
+        properties: {next: {$ref: '#/components/schemas/Node', ...(description ? {description} : {})}},
+        additionalProperties: {$ref: '#/components/schemas/Node'},
+      }}}}
+      const html = await renderToString(createSSRApp({setup() {
+        provide(documentKey, ref(document))
+        provide(showSchemasKey, ref(true))
+        return () => h(Schema, {schema: document.components.schemas.Node, components: document.components})
+      }}))
+      assert.equal((html.match(/>next<\/div>/g) ?? []).length, 1)
+      assert.equal((html.match(/>required<\/div>/g) ?? []).length, 1)
+      assert.equal((html.match(/Hide properties/g) ?? []).length, 1)
+      assert.doesNotMatch(html, /Show properties|Recursive schema/)
+      assert.match(html, /href="#schemas\/Node"/)
+      assert.match(html, /\[key: string\]/)
+      assert.equal((html.match(/Schema description/g) ?? []).length, openapi === '3.1.0' && description ? 2 : 3)
+      if (openapi === '3.1.0' && description) assert.match(html, /Property description/)
+      else assert.doesNotMatch(html, /Property description/)
+    }
   }
 })
 
