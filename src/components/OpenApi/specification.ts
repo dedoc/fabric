@@ -1,8 +1,7 @@
 import {parse} from 'yaml'
-import type {Document, Paths} from './types'
+import type {Document} from './types'
 import {httpMethods} from './utils'
 
-export type Specification = Document & {paths: Paths}
 export class SpecificationError extends Error {}
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -14,7 +13,7 @@ function requireObject(value: unknown, location: string): asserts value is Recor
 }
 
 /** Structural checks for the renderer, not a complete OpenAPI conformance validator. */
-export function parseSpecification(source: string): Specification {
+export function parseSpecification(source: string): Document {
   let value: unknown
   try { value = parse(source, {maxAliasCount: 100}) }
   catch { throw new SpecificationError('The specification is not valid JSON or YAML.') }
@@ -104,10 +103,10 @@ export function parseSpecification(source: string): Specification {
     ancestors.delete(node)
   }
   inspect(value, 'specification')
-  return value as Specification
+  return value as Document
 }
 
-export async function fetchSpecification(url: string, signal?: AbortSignal): Promise<{document: Specification, documentUrl: string}> {
+export async function fetchSpecification(url: string, signal?: AbortSignal): Promise<{document: Document, documentUrl: string}> {
   const controller = new AbortController()
   const abort = () => controller.abort()
   signal?.addEventListener('abort', abort, {once: true})

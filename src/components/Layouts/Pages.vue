@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {Components, Paths as PathsType} from "../OpenApi/types.ts";
+import type {Document} from "../OpenApi/types.ts";
 import {computed, onMounted, onUnmounted, provide, ref} from "vue";
 import {documentKey, showSchemasKey} from "../../utils/symbols.ts";
 import {resolveReference} from '../OpenApi/references'
@@ -21,20 +21,20 @@ import {resolveOperationBase} from "../OpenApi/servers.ts";
 const props = withDefaults(defineProps<{
   base?: string,
   documentUrl?: string,
-  document: any, // todo: should not be here!
-  components: Components, // todo: should not be here!
-  paths: PathsType,
+  document: Document,
   showSchemas?: boolean,
 }>(), {showSchemas: true})
 
 provide(showSchemasKey, computed(() => props.showSchemas))
-const sourceDocument = computed(() => ({...props.document, paths: props.paths, components: props.components}))
+const sourceDocument = computed(() => props.document)
+const paths = computed(() => props.document.paths ?? {})
+const components = computed(() => props.document.components ?? {})
 provide(documentKey, sourceDocument)
 
 const navigation = computed(() => {
   const issues: ReferenceIssue[] = []
   const report = (issue: ReferenceIssue) => issues.push(issue)
-  return {operations: getInlineOperations(props.paths, sourceDocument.value, report), webhooks: getWebhookOperations(sourceDocument.value, report), issues}
+  return {operations: getInlineOperations(paths.value, sourceDocument.value, report), webhooks: getWebhookOperations(sourceDocument.value, report), issues}
 })
 const operations = computed(() => navigation.value.operations)
 const webhooks = computed(() => navigation.value.webhooks)
@@ -48,7 +48,7 @@ function getPageIdFromUrl (): string|undefined {
 
 const selectedPageId = ref<string|undefined>(getPageIdFromUrl() || 'overview')
 
-const schemas = computed(() => Object.entries(props.components.schemas ?? {}).map(([name, schema]) => ({
+const schemas = computed(() => Object.entries(components.value.schemas ?? {}).map(([name, schema]) => ({
   id: `schemas/${encodeURIComponent(name)}`,
   name,
   schema,
@@ -71,7 +71,7 @@ const operationBase = computed(() => {
   if (!selected) return ''
   return resolveOperationBase(
     props.document.servers ?? (props.base === undefined ? undefined : [{url: props.base}]),
-    resolveReference<PathItem>(sourceDocument.value, props.paths[selected.path], 'pathItem').value ?? {}, selected.operation, props.documentUrl,
+    resolveReference<PathItem>(sourceDocument.value, paths.value[selected.path], 'pathItem').value ?? {}, selected.operation, props.documentUrl,
   )
 })
 

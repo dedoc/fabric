@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import {onErrorCaptured, onMounted, onUnmounted, provide, ref, watch} from 'vue'
-import Pages from './Layouts/Pages.vue'
-import SpecError from './SpecError.vue'
-import {documentKey} from '../utils/symbols'
-import type {Document} from './OpenApi/types'
-import {fetchSpecification, SpecificationError} from './OpenApi/specification'
-import type {Specification} from './OpenApi/specification'
+import {onMounted, onUnmounted, ref} from 'vue'
+import Fabric from '../index'
+import {fetchSpecification} from './OpenApi/specification'
 
-const props = withDefaults(defineProps<{showSchemas?: boolean, specUrl?: string}>(), {showSchemas: true})
+const props = defineProps<{specUrl?: string}>()
 
 // Uncomment one URL at a time to switch the test specification.
 // const specUrl = '/spotify/open-api-schema.yaml'
 // const specUrl = '/converterer/openapi.json'
-const specUrl = '/specs/redocly-petstore.yaml'
-// const specUrl = '/specs/fabric-reference.yaml'
+// const specUrl = '/specs/redocly-petstore.yaml'
+const specUrl = '/specs/fabric-reference.yaml'
 // const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml'
 // const specUrl = 'https://raw.githubusercontent.com/Redocly/redoc/main/demo/openapi.yaml'
 // const specUrl = 'https://api.savvycal.com/v1/spec'
@@ -35,53 +31,28 @@ const proxySources: Record<string, string> = {
   '/spotify/open-api-schema.yaml': 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml',
   '/converterer/openapi.json': 'https://api.converterer.com/openapi.json',
 }
-const document = ref<Document>({})
-const specification = ref<Specification>()
-const documentUrl = ref('')
-const state = ref<'loading' | 'ready' | 'error'>('loading')
-const message = ref('')
-let controller: AbortController | undefined
-let revision = 0
 
-provide(documentKey, document)
+const container = ref<HTMLElement>()
+const controller = new AbortController()
+let viewer: ReturnType<typeof Fabric.init> | undefined
 
-async function load() {
-  const current = ++revision
-  controller?.abort()
-  controller = new AbortController()
-  state.value = 'loading'
-  specification.value = undefined
-  message.value = ''
-  try {
-    const url = props.specUrl ?? specUrl
-    const result = await fetchSpecification(url, controller.signal)
-    if (current !== revision) return
-    document.value = result.document
-    specification.value = result.document
-    documentUrl.value = proxySources[url] ?? result.documentUrl
-    state.value = 'ready'
-  } catch (error) {
-    if (current !== revision) return
-    message.value = error instanceof SpecificationError ? error.message : 'The specification could not be displayed. Check the document and try again.'
-    state.value = 'error'
-  }
+function mount() {
+  if (!container.value) return
+  const url = props.specUrl ?? specUrl
+  const originalUrl = proxySources[url]
+  viewer = Fabric.init(container.value, originalUrl ? {
+    openApiDocument: async () => JSON.stringify((await fetchSpecification(url, controller.signal)).document),
+    openApiDocumentUrl: originalUrl,
+  } : {openApiDocumentUrl: url})
 }
 
-onErrorCaptured((error) => {
-  console.error('API reference rendering failed', error)
-  message.value = 'Something in this specification could not be displayed. Check the document and try again.'
-  state.value = 'error'
-  return false
+onMounted(mount)
+onUnmounted(() => {
+  controller.abort()
+  viewer?.destroy()
 })
-onMounted(load)
-watch(() => props.specUrl, load)
-onUnmounted(() => { revision++; controller?.abort() })
 </script>
 
 <template>
-  <SpecError v-if="state === 'error'" :message="message" @retry="load" />
-  <main v-else-if="state === 'loading'" class="grid min-h-dvh place-items-center px-6" role="status">
-    <p class="text-sm text-gray-500 dark:text-gray-400">Loading API reference…</p>
-  </main>
-  <Pages v-else-if="specification" :key="revision" :document="specification" :document-url="documentUrl" :components="specification.components ?? {}" :paths="specification.paths" :show-schemas="showSchemas" />
+  <div ref="container" />
 </template>

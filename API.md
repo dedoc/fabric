@@ -8,7 +8,7 @@ type FabricRootOptions = FabricOptions
 
 type FabricOptions = {
 	openApiDocument: string | () => Promise<string>,
-	schemas: bool,
+	showSchemas: bool,
 	logo: { title: string } | { image: string, alt: string } | false,
 }
 ```
@@ -23,7 +23,7 @@ Fabric.init({
 ```js
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
-	schemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
+	showSchemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
 	logo: { title: string } | { image: string, alt: string } | false,  
 });
 ```

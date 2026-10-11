@@ -841,10 +841,11 @@ async function renderPages(components, hash = '', options = {}) {
   const previousWindow = globalThis.window
   globalThis.window = {location: {href: `http://localhost/${hash}`}}
   try {
-    const document = {info: {title: 'API'}, components}
+    const {document: suppliedDocument, paths, ...pageOptions} = options
+    const document = {info: {title: 'API'}, ...suppliedDocument, components, paths: paths ?? suppliedDocument?.paths ?? {}}
     return await renderToString(createSSRApp({setup() {
       provide(documentKey, ref(document))
-      return () => h(Pages, {document, components, paths: {}, base: 'https://api.example.com', ...options})
+      return () => h(Pages, {document, base: 'https://api.example.com', ...pageOptions})
     }}))
   } finally {
     if (previousWindow === undefined) delete globalThis.window

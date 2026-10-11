@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {existsSync, readFileSync} from 'node:fs'
 import {createServer as createHttpServer} from 'node:http'
 import {after, test} from 'node:test'
 import {createServer, transformWithEsbuild} from 'vite'
@@ -10,18 +11,21 @@ const server = await createServer({configFile: false, plugins: [{
   name: 'client-components-for-tests',
   async transform(source, id) {
     if (!id.endsWith('.vue')) return
-    const {descriptor} = parseVue(source)
+    const {descriptor} = parseVue(source, {filename: id})
     if (!descriptor.script && !descriptor.scriptSetup) {
       return compileTemplate({source: descriptor.template.content, filename: id, id}).code + '\nexport default {render}'
     }
-    const compiled = compileScript(descriptor, {id, inlineTemplate: true})
+    const compiled = compileScript(descriptor, {id, inlineTemplate: true, fs: {
+      fileExists: existsSync,
+      readFile: file => readFileSync(file, 'utf8'),
+    }})
     return transformWithEsbuild(compiled.content, id, {loader: 'ts'})
   },
 }], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
 const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/descriptionHtml.ts')
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
-const {default: Viewer} = await server.ssrLoadModule('/src/components/HelloWorld.vue')
+const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.vue')
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
@@ -153,7 +157,7 @@ test('slow remote loads time out and abort the outstanding fetch', async t => {
   } finally { globalThis.fetch = original; t.mock.timers.reset() }
 })
 
-function mountViewer(url = '/spec.json', hash = '#overview', component) {
+function mountViewer(options = {openApiDocumentUrl: '/spec.json'}, hash = '#overview', component) {
   const originalWindow = globalThis.window
   globalThis.window = {location: {href: `https://example.com/${hash}`}, history: {pushState() {}}, scrollTo() {}, addEventListener() {}, removeEventListener() {},
     matchMedia: () => ({addEventListener() {}, removeEventListener() {}})}
@@ -182,8 +186,8 @@ function mountViewer(url = '/spec.json', hash = '#overview', component) {
     nextSibling: el => el.parent?.children[el.parent.children.indexOf(el) + 1],
   })
   const root = node('root')
-  const source = ref(url)
-  const app = renderer.createApp(component ?? {render: () => h(Viewer, {specUrl: source.value})})
+  const source = ref(typeof options === 'string' ? {openApiDocumentUrl: options} : options)
+  const app = renderer.createApp(component ?? {render: () => h(Viewer, {key: source.value, ...source.value})})
   app.config.warnHandler = () => {}
   app.mount(root)
   const text = el => el.text + el.children.map(text).join(' ')
@@ -253,6 +257,76 @@ test('the small error page retries loading and recovers to the API reference', a
   } finally { viewer.close(); globalThis.fetch = original }
 })
 
+test('inline JSON, YAML, and async document loaders render without fetching', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = async () => { throw new Error('Inline documents must not be fetched') }
+  try {
+    const yaml = 'openapi: 3.0.3\ninfo: {title: Recovered API, version: "1"}\npaths: {}'
+    for (const source of [JSON.stringify(valid), yaml, async () => yaml]) {
+      const viewer = mountViewer({openApiDocument: source})
+      try {
+        await until(() => viewer.text().includes('Recovered API'))
+        assert.doesNotMatch(viewer.text(), /Unable to display this API/)
+      } finally { viewer.close() }
+    }
+  } finally { globalThis.fetch = original }
+})
+
+test('a supplied document takes precedence over its URL and uses that URL as its base', async () => {
+  const original = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = async () => { calls++; throw new Error('The document URL must not be fetched') }
+  const document = {...valid, servers: [{url: '/v1'}], info: {...valid.info, 'x-logo': {url: './logo.png'}}}
+  try {
+    for (const source of [JSON.stringify(document), async () => JSON.stringify(document)]) {
+      const viewer = mountViewer({openApiDocument: source, openApiDocumentUrl: 'https://upstream.example.com/docs/openapi.yaml'})
+      try {
+        await until(() => viewer.text().includes('Recovered API'))
+        assert.match(viewer.text(), /https:\/\/upstream.example.com\/v1/)
+        assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://upstream.example.com/docs/logo.png')
+      } finally { viewer.close() }
+    }
+    assert.equal(calls, 0)
+  } finally { globalThis.fetch = original }
+})
+
+test('relative document URLs resolve against the host page without fetching supplied documents', async () => {
+  const document = {...valid, info: {...valid.info, 'x-logo': {url: './logo.png'}}}
+  const viewer = mountViewer({openApiDocument: JSON.stringify(document), openApiDocumentUrl: '/docs/openapi.yaml'})
+  try {
+    await until(() => viewer.text().includes('Recovered API'))
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/docs/logo.png')
+  } finally { viewer.close() }
+})
+
+test('a URL passed as document text is parsed rather than fetched', async () => {
+  const original = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify(valid)) }
+  const viewer = mountViewer({openApiDocument: 'https://example.com/spec.json', openApiDocumentUrl: '/fallback.json'})
+  try {
+    await until(() => viewer.text().includes('Unable to display this API'))
+    assert.equal(calls, 0)
+  } finally { viewer.close(); globalThis.fetch = original }
+})
+
+test('retry invokes an async document loader again without fetching its self URL', async () => {
+  let calls = 0
+  const viewer = mountViewer({
+    openApiDocument: async () => {
+      if (++calls === 1) throw new Error('Temporary failure')
+      return JSON.stringify(valid)
+    },
+    openApiDocumentUrl: 'https://upstream.example.com/openapi.yaml',
+  })
+  try {
+    await until(() => viewer.text().includes('Unable to display this API'))
+    viewer.button().props.onClick()
+    await until(() => viewer.text().includes('Recovered API'))
+    assert.equal(calls, 2)
+  } finally { viewer.close() }
+})
+
 test('Stripe-style form encoding renders the operation instead of the error page', async () => {
   const original = globalThis.fetch
   const path = '/v1/payment_records/{id}/report_payment_attempt_informational'
@@ -294,7 +368,7 @@ test('unresolved schemas show local warnings while navigation remains usable', a
   } finally { viewer.close(); globalThis.fetch = original }
 })
 
-test('switching sources aborts old requests and ignores stale results', async () => {
+test('remounting with a new source aborts old requests and keeps the new viewer independent', async () => {
   const original = globalThis.fetch
   let resolveFirst
   let firstSignal
@@ -303,7 +377,7 @@ test('switching sources aborts old requests and ignores stale results', async ()
     : Promise.resolve(new Response(JSON.stringify(valid)))
   const viewer = mountViewer('/first.json')
   try {
-    viewer.source.value = '/second.json'
+    viewer.source.value = {openApiDocumentUrl: '/second.json'}
     await until(() => viewer.text().includes('Recovered API'))
     assert.equal(firstSignal.aborted, true)
     resolveFirst(new Response('Bad specification'))
