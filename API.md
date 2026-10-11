@@ -1,6 +1,18 @@
 Planned Fabric API
 
 ## Init the spec
+```ts
+Fabric.init(options: FabricRootOptions);
+
+type FabricRootOptions = FabricOptions
+
+type FabricOptions = {
+	openApiDocument: string | () => Promise<string>,
+	schemas: bool,
+	logo: { title: string } | { image: string, alt: string } | false,
+}
+```
+
 ```js
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
@@ -12,6 +24,15 @@ Fabric.init({
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
 	schemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
+	logo: { title: string } | { image: string, alt: string } | false,  
+});
+```
+
+## Multiple API versions or specs
+```js
+Fabric.init({
+	specs: (FabricOptions & { name: string, slug: string, order: number })[],
+	defaultSpec: string,
 	logo: { title: string } | { image: string, alt: string } | false,  
 });
 ```

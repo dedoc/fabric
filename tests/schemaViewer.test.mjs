@@ -8,6 +8,8 @@ import {renderToString} from 'vue/server-renderer'
 
 const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
+// Keep content assertions independent of syntax highlighting spans.
+const withoutHighlighting = html => html.replace(/(<code\b[^>]*>)(.*?)(<\/code>)/gs, (_, open, code, close) => open + code.replace(/<\/?span\b[^>]*>|<!--.*?-->/gs, '') + close)
 const {default: Schema} = await server.ssrLoadModule('/src/components/OpenApi/Schema.vue')
 const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
 const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
@@ -458,7 +460,7 @@ test('reference fixture resolves aliases, escaped names and non-component locati
   }
   const {default: Operation} = await server.ssrLoadModule('/src/components/OpenApi/Operation.vue')
   const html = await renderWithDocument(Operation, {base: 'https://api.example.com', path: '/alias', method: 'post', operation, components}, document)
-  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Authorization: Basic/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(html, pattern)
+  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Authorization: Basic/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(withoutHighlighting(html), pattern)
   assert.doesNotMatch(html, /Reference warning/)
   const schema = resolveExampleSchema(components.schemas.FromPath, components, document)
   assert.deepEqual(createSchemaExample(schema), {id: 7})
@@ -794,7 +796,7 @@ test('download path server appears in the endpoint and request example', async (
     paths: {'/': {servers: [{url: 'https://download.converterer.com'}], post: {operationId: 'download'}}},
   })
   assert.match(html, /https:\/\/download.converterer\.com<\/span>\//)
-  assert.match(html, /curl -X POST &#39;https:\/\/download.converterer\.com\/&#39;/)
+  assert.match(withoutHighlighting(html), /curl -X POST &#39;https:\/\/download.converterer\.com\/&#39;/)
   assert.doesNotMatch(html, /api\.converterer\.com|operations\/get--|operations\/servers/)
 })
 
@@ -809,7 +811,7 @@ test('operation server overrides reach request examples after page selection', a
     }},
   })
   assert.match(html, /https:\/\/spec.example.com\/v2<\/span>\/files/)
-  assert.match(html, /curl -X GET &#39;https:\/\/spec.example.com\/v2\/files&#39;/)
+  assert.match(withoutHighlighting(html), /curl -X GET &#39;https:\/\/spec.example.com\/v2\/files&#39;/)
   assert.doesNotMatch(html, /root\.example\.com|path\.example\.com|curl -X POST/)
 })
 
@@ -822,10 +824,10 @@ test('request curl sends URL-encoded fields for form content', async () => {
     },
   })}))
   assert.match(html, /Content-Type: application\/x-www-form-urlencoded/)
-  assert.match(html, /--data-urlencode &#39;name=dog&#39;\\&#39;&#39;s &amp; cat&#39;/)
-  assert.match(html, /--data-urlencode &#39;category=\{&quot;id&quot;:1\}&#39;/)
-  assert.match(html, /--data-urlencode &#39;photoUrls=one&#39;/)
-  assert.match(html, /--data-urlencode &#39;photoUrls=two&#39;/)
+  assert.match(withoutHighlighting(html), /--data-urlencode &#39;name=dog&#39;\\&#39;&#39;s &amp; cat&#39;/)
+  assert.match(withoutHighlighting(html), /--data-urlencode &#39;category=\{&quot;id&quot;:1\}&#39;/)
+  assert.match(withoutHighlighting(html), /--data-urlencode &#39;photoUrls=one&#39;/)
+  assert.match(withoutHighlighting(html), /--data-urlencode &#39;photoUrls=two&#39;/)
   assert.doesNotMatch(html, / -d /)
 })
 
@@ -1057,7 +1059,7 @@ test('opens schema hashes and renders the title, description and tabbed example'
   assert.equal((html.match(/A person in the workspace\./g) ?? []).length, 1)
   assert.match(html, /JSON schema/)
   assert.match(html, /TypeScript/)
-  assert.match(html, /&quot;id&quot;: 42/)
+  assert.match(withoutHighlighting(html), /&quot;id&quot;: 42/)
   assert.doesNotMatch(html, />Examples?<\/div>/)
   assert.match(html, /aria-current="page"/)
 })
@@ -1187,8 +1189,8 @@ test('response payload format follows its documentation selection independently 
       provideMediaTypeSelections()
       return () => h(Consumer)
     }}))
-    const request = html.split('aria-label="Request example"')[1].split('</section>')[0]
-    const response = html.split('aria-label="Response example"')[1].split('</section>')[0]
+    const request = withoutHighlighting(html.split('aria-label="Request example"')[1].split('</section>')[0])
+    const response = withoutHighlighting(html.split('aria-label="Response example"')[1].split('</section>')[0])
     assert.match(request, /Content-Type: application\/json/)
     assert.doesNotMatch(request, /XML response/)
     if (selected === 'application/xml') {
@@ -1317,8 +1319,8 @@ test('request curl and response examples serialize selected XML schemas', async 
   assert.match(html, /<option value="laravel">Laravel<\/option>/)
   assert.match(html, /<option value="payload">XML<\/option>/)
   assert.doesNotMatch(html, /<option value="payload">JSON<\/option>/)
-  assert.equal((html.match(/&lt;pet id=&quot;7&quot;&gt;/g) ?? []).length, 2)
-  assert.equal((html.match(/&lt;name&gt;doggie&lt;\/name&gt;/g) ?? []).length, 2)
+  assert.equal((withoutHighlighting(html).match(/&lt;pet id=&quot;7&quot;&gt;/g) ?? []).length, 2)
+  assert.equal((withoutHighlighting(html).match(/&lt;name&gt;doggie&lt;\/name&gt;/g) ?? []).length, 2)
 })
 
 test('request curl includes a generated JSON payload when no explicit example exists', async () => {
@@ -1330,9 +1332,9 @@ test('request curl includes a generated JSON payload when no explicit example ex
     operation: {requestBody: {content}},
   })}))
   assert.match(html, /Content-Type: application\/json/)
-  assert.match(html, /-d &#39;\{/)
-  assert.match(html, /&quot;name&quot;: &quot;doggie&quot;/)
-  assert.match(html, /&quot;enabled&quot;: true/)
+  assert.match(withoutHighlighting(html), /-d &#39;\{/)
+  assert.match(withoutHighlighting(html), /&quot;name&quot;: &quot;doggie&quot;/)
+  assert.match(withoutHighlighting(html), /&quot;enabled&quot;: true/)
 })
 
 test('request picker offers only the payload format matching the selected content type', async () => {

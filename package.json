@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pierre/highlights": "^0.1.3",
     "markdown-it": "^14.1.0",
     "sanitize-html": "^2.17.0",
     "vue": "^3.4.37",

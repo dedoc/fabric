@@ -323,6 +323,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pierre/highlights@npm:^0.1.3":
+  version: 0.1.3
+  resolution: "@pierre/highlights@npm:0.1.3"
+  checksum: 10c0/ab49d09a3578d2cd605393fea562f25ead292124573a1cebecf47d0df7ba2759bfddad917f43d2ecbc76b5ffa89a0c21189043bd7ee4472a1a12aff869dc488d
+  languageName: node
+  linkType: hard
+
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
@@ -1182,6 +1189,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "fabric@workspace:."
   dependencies:
+    "@pierre/highlights": "npm:^0.1.3"
     "@tailwindcss/typography": "npm:^0.5.14"
     "@types/markdown-it": "npm:^14.1.2"
     "@types/sanitize-html": "npm:^2.16.0"

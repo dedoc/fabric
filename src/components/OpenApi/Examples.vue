@@ -14,6 +14,7 @@ import Select from '../UI/Select.vue'
 import Description from './Description.vue'
 import {useCompositionExample} from './useCompositionSelections'
 import {useStoredChoice} from './useStoredChoice'
+import HighlightedCode from './HighlightedCode.vue'
 
 const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
 const emit = defineEmits<{authenticate: [trigger: HTMLElement]}>()
@@ -90,14 +91,13 @@ function generateRequestCode(display: boolean) {
   return code
 }
 const requestCode = computed(() => generateRequestCode(false))
-const displayCode = computed(() => {
-  const code = generateRequestCode(true)
-  if (requestView.value !== 'example' || requestExample.value === 'payload' || !httpAuth.value) return {before: code, after: '', chip: false}
-  const index = code.indexOf(authPlaceholder)
-  return index < 0 ? {before: code, after: '', chip: false} : {
-    before: code.slice(0, index), after: code.slice(index + authPlaceholder.length), chip: true,
-  }
-})
+const displayCode = computed(() => generateRequestCode(true))
+const displayPlaceholder = computed(() => requestView.value === 'example' && requestExample.value !== 'payload' && httpAuth.value ? authPlaceholder : undefined)
+function mediaLanguage(type: string) {
+  return isJsonContentType(type) ? 'json' : isXmlContentType(type) ? 'xml' : 'text'
+}
+const requestLanguage = computed(() => requestView.value === 'schema' ? 'json' : requestExample.value === 'payload' ? mediaLanguage(requestType.value) : requestExample.value === 'laravel' ? 'php' : 'bash')
+const responseLanguage = computed(() => responseView.value === 'schema' ? 'json' : mediaLanguage(responseType.value))
 const responseCode = computed(() => {
   if (responseView.value === 'schema') return format(originalResponseMedia.value?.schema)
   if (responseIssues.value.length) return ''
@@ -133,7 +133,7 @@ async function copy(code: string, panel: string) {
           <Description v-if="requestSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="requestSample.description" />
         </div>
         <p v-if="requestView === 'example' && requestSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ requestSample.error }}</p>
-        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode.before || displayCode.chip"><code class="font-jetbrains-mono">{{ displayCode.before }}<button v-if="displayCode.chip" type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button>{{ displayCode.after }}</code></pre>
+        <pre tabindex="0" class="m-0 min-h-0 overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="displayCode"><HighlightedCode :code="displayCode" :language="requestLanguage" :placeholder="displayPlaceholder"><button type="button" class="inline-flex h-[1lh] items-center gap-1 rounded-md bg-gray-950/5 px-1.5 py-0 align-bottom font-sans text-gray-600 hover:bg-gray-950/10 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 data-[auth-restored-focus]:!outline-none" aria-haspopup="dialog" :aria-label="savedAuthorization ? 'Edit authentication credentials' : 'Set authentication credentials'" @click="emit('authenticate', $event.currentTarget as HTMLElement)"><svg viewBox="0 0 16 16" fill="currentColor" class="size-4 shrink-0" :class="savedAuthorization ? 'text-green-600' : 'text-gray-400'" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clip-rule="evenodd" /></svg>{{ savedAuthorization ? '••••••••' : 'Set credentials' }}</button></HighlightedCode></pre>
         <p v-else-if="requestView === 'schema' || !requestSample.error" class="p-4 leading-5 text-gray-500">{{ requestView === 'schema' ? 'No schema provided.' : requestSample.model?.value === '' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <section class="flex max-h-[32rem] min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-xl border border-gray-950/10 text-sm sm:text-xs min-[1200px]:max-h-none" aria-label="Response example">
@@ -152,7 +152,7 @@ async function copy(code: string, panel: string) {
           <Description v-if="responseSample.description" class="text-sm leading-5 text-gray-500 sm:text-xs" :content="responseSample.description" />
         </div>
         <p v-if="responseView === 'example' && responseSample.error" role="note" class="shrink-0 p-4 leading-5 text-amber-700">{{ responseSample.error }}</p>
-        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><code class="font-jetbrains-mono">{{ responseCode }}</code></pre>
+        <pre tabindex="0" class="m-0 min-h-0 flex-auto overflow-auto overscroll-contain [scrollbar-width:thin] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-500 p-4 font-jetbrains-mono text-sm leading-6 text-[#435a78] sm:text-xs sm:leading-5 [tab-size:2]" v-if="responseCode"><HighlightedCode :code="responseCode" :language="responseLanguage" /></pre>
         <p v-else-if="responseView === 'schema' || !responseSample.error" class="p-4 leading-5 text-gray-500">{{ responseView === 'schema' ? 'No schema provided.' : responseSample.source === 'Supplied example' ? 'Empty example.' : 'No example provided.' }}</p>
       </section>
       <p class="sr-only" role="status">{{ copied ? 'Example copied.' : copyError }}</p>
