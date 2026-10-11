@@ -20,5 +20,5 @@ const twClasses = computed(() => {
 </script>
 
 <template>
-  <div class="font-jetbrains-mono uppercase" :class="twClasses">{{ method }}</div>
+  <div class="font-jetbrains-mono uppercase" :class="twClasses"><slot />{{ method }}</div>
 </template>

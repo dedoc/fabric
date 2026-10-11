@@ -15,7 +15,7 @@ import {useStoredChoice} from './useStoredChoice'
 import HighlightedCode from './HighlightedCode.vue'
 import {authorizationHeaderExample} from './security'
 
-const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation}>()
+const props = defineProps<{base: string, components: Components, path: string, method: string, operation: Operation, webhookName?: string}>()
 const references = useReferences(() => props.components)
 const requestView = ref('example')
 const preferredRequestExample = useStoredChoice('fabric:request-sender', requestExampleSenders.map(sender => sender.id), requestExampleSenders[0].id)
@@ -110,7 +110,7 @@ async function copy(code: string, panel: string) {
     <div class="flex flex-col gap-5 min-[1200px]:sticky min-[1200px]:top-8 min-[1200px]:max-h-[calc(100dvh-64px)]">
       <section class="flex max-h-[28rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border border-[color:var(--schema-border-color)] dark:bg-[#111111] text-sm sm:text-xs min-[1200px]:max-h-[40dvh]" aria-label="Request example">
         <div class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[color:var(--schema-border-color)] px-4 py-2">
-          <div class="flex min-w-0 flex-1 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-gray-500 dark:text-gray-400" :title="path">{{ path }}</span></div>
+          <div class="flex min-w-0 flex-1 items-center gap-2"><MethodChip class="shrink-0 whitespace-nowrap" :method="method" /><span class="truncate text-gray-500 dark:text-gray-400" :title="webhookName ?? path">{{ webhookName ?? path }}</span></div>
           <span v-if="requestView === 'schema'" class="shrink-0 text-gray-600 dark:text-gray-400">JSON</span>
           <Select v-else v-model="requestExample" :options="requestExampleOptions" class="shrink-0 whitespace-nowrap" aria-label="Request example sender" />
           <Select class="shrink-0 whitespace-nowrap" v-model="requestView" :options="[{value: 'example', label: 'Example'}, {value: 'schema', label: 'Schema'}]" aria-label="Request example or schema" />

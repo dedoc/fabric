@@ -2,6 +2,7 @@
 import MethodChip from "../../OpenApi/Partials/MethodChip.vue";
 import {OperationNavigation} from "./types.ts";
 import NavigationItem from "./NavigationItem.vue";
+import WebhookIcon from "../../UI/WebhookIcon.vue";
 
 defineProps<{
   isSelected: boolean,
@@ -22,7 +23,9 @@ const emit = defineEmits<{
       @click="emit('navigate', navigation.id)"
   >
     <template #trailing>
-      <MethodChip class="shrink-0 text-xs !text-gray-400" :method="navigation.method"/>
+      <MethodChip class="flex shrink-0 items-center gap-1.5 text-xs !text-gray-400" :method="navigation.method">
+        <WebhookIcon v-if="navigation.webhook" class="size-3.5 shrink-0" />
+      </MethodChip>
     </template>
   </NavigationItem>
 </template>

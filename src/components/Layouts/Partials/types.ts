@@ -12,4 +12,5 @@ export type OperationNavigation = {
     type: 'operation',
     name: string,
     method: string,
+    webhook?: boolean,
 }

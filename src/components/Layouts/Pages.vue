@@ -87,7 +87,7 @@ function handlePageSelect (pageId: string) {
 }
 
 // get the navigation tree using the first tag of the operation as a folder name
-function buildNavigationTree (operations: InlineOperation[]): NavigationType[] {
+function buildNavigationTree (operations: InlineOperation[], webhook = false): NavigationType[] {
   const tree = operations.reduce<NavigationType[]>((acc, operation) => {
     const folder = operation.operation.tags?.[0]
     if (! folder) {
@@ -97,6 +97,7 @@ function buildNavigationTree (operations: InlineOperation[]): NavigationType[] {
         type: 'operation',
         name: getOperationTitle(operation.path, operation.operation),
         method: operation.method,
+        webhook,
       })
 
       return acc
@@ -120,6 +121,7 @@ function buildNavigationTree (operations: InlineOperation[]): NavigationType[] {
       type: 'operation',
       name: getOperationTitle(operation.path, operation.operation),
       method: operation.method,
+      webhook,
     })
 
     return acc
@@ -138,7 +140,7 @@ const filteredNavigation = computed(() => buildNavigationTree(operations.value.f
 const filteredWebhooks = computed(() => buildNavigationTree(webhooks.value.filter(operation =>
   `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
     .toLowerCase().includes(search.value.toLowerCase())
-)))
+), true))
 function syncLocation() {
   selectedPageId.value = getPageIdFromUrl() || 'overview'
   window.scrollTo(0, 0)
@@ -213,7 +215,7 @@ onUnmounted(() => {
         <Overview v-if="selectedPageId === 'overview'" :document="sourceDocument" :paths="paths" :components="components" :document-url="documentUrl" @navigate="handlePageSelect" />
         <SchemaPage v-if="selectedSchema" :key="selectedSchema.id" :name="selectedSchema.name" :schema="selectedSchema.schema" :components="components" />
         <article v-if="selectedWebhook" :key="selectedWebhook.id" class="min-w-0 [overflow-wrap:anywhere]">
-          <Operation webhook base="https://your-app.example" :path="`/webhooks/${encodeURIComponent(selectedWebhook.path)}`" :method="selectedWebhook.method" :operation="selectedWebhook.operation" :components="components" />
+          <Operation webhook :webhook-name="selectedWebhook.path" base="https://your-app.example" :path="`/webhooks/${encodeURIComponent(selectedWebhook.path)}`" :method="selectedWebhook.method" :operation="selectedWebhook.operation" :components="components" />
         </article>
         <div v-if="selectedOperation" :key="selectedOperation.id">
           <article class="min-w-0 [overflow-wrap:anywhere]">
