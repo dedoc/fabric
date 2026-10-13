@@ -10,4 +10,5 @@ type FabricOpenApiDocumentLink =
 
 export type FabricOptions = FabricOpenApiDocumentLink & {
     guides?: Record<string, string>,
+    referenceLabel?: boolean,
 }

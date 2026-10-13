@@ -16,6 +16,12 @@ export const fabricOptions: PlaygroundSpec[] = [
     openApiDocumentUrl: '/specs/fabric-reference.yaml',
     guides: {auth, pagination, errors, projects},
   },
+  {
+    value: '/specs/nav-section-preview.yaml',
+    label: 'Navigation sections · OpenAPI 3.2',
+    openApiDocumentUrl: '/specs/nav-section-preview.yaml',
+    referenceLabel: false,
+  },
   {value: '/specs/fabric-reference-3.0.yaml', label: 'Nullable Lab · OpenAPI 3.0', openApiDocumentUrl: '/specs/fabric-reference-3.0.yaml'},
   {value: '/specs/redocly-petstore.yaml', label: 'Redocly Petstore', openApiDocumentUrl: 'https://raw.githubusercontent.com/Redocly/redoc/v2.0.0-rc.1/demo/openapi.yaml'},
   {value: '/spotify/open-api-schema.yaml', label: 'Spotify · development proxy', openApiDocumentUrl: 'https://developer.spotify.com/reference/web-api/open-api-schema.yaml'},

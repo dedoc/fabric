@@ -10,7 +10,7 @@ export type OperationTagGroup = {
 }
 
 export function isNavigationTag(tag?: Tag): boolean {
-  return !tag?.kind || tag.kind === 'nav'
+  return !tag?.kind || tag.kind === 'nav' || tag.kind === 'nav-section'
 }
 
 /** Tag order orders siblings; only explicit relationships create nesting. */

@@ -27,7 +27,8 @@ const props = withDefaults(defineProps<{
   document: Document,
   guides?: Record<string, string>,
   showSchemas?: boolean,
-}>(), {showSchemas: true})
+  referenceLabel?: boolean,
+}>(), {showSchemas: true, referenceLabel: true})
 
 provide(showSchemasKey, computed(() => props.showSchemas))
 const sourceDocument = computed(() => props.document)
@@ -111,7 +112,7 @@ function buildNavigationTree (operations: InlineOperation[], webhook = false, gr
     const guides = guideFolders.find(item => item.name === (group.tag?.name ?? group.name))
     if (guides) usedGuides.add(guides)
     return {
-      id: group.key, type: 'folder', name: group.name,
+      id: group.key, type: group.tag?.kind === 'nav-section' ? 'section' : 'folder', name: group.name,
       children: [...(guides?.type === 'folder' ? guides.children : []), ...group.operations.map(entry), ...group.children.map(folder)],
     }
   }
@@ -197,7 +198,7 @@ onUnmounted(() => {
           <NavigationItem label="Overview" href="#overview" :active="selectedPageId === 'overview'" :aria-current="selectedPageId === 'overview' ? 'page' : undefined" @click.prevent="handlePageSelect('overview')" />
           <NavigationItem v-for="guide of introductionGuides" :key="guide.id" :label="guide.title" :href="`#${guide.id}`" :active="selectedPageId === guide.id" :aria-current="selectedPageId === guide.id ? 'page' : undefined" @click.prevent="handlePageSelect(guide.id)" />
         </nav>
-        <div class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
+        <div v-if="referenceLabel" class="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>
         <nav aria-label="API reference" class="-mx-2">
           <Navigation v-for="item of filteredNavigation" :key="item.id" :navigation="item" :selected-id="selectedPageId" @navigate="handlePageSelect" />
           <p v-if="!filteredNavigation.length" class="p-4 text-[13px] text-gray-500 dark:text-gray-400">No matching operations.</p>

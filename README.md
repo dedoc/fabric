@@ -2,7 +2,7 @@
 
 A Vue API reference viewer for OpenAPI 3.0, 3.1 and 3.2 documents.
 
-Tags use OpenAPI 3.2 `parent` for nesting and `summary` for display labels. Tags with no `kind`, or `kind: nav`, organize navigation; other kinds (including `badge` and `audience`) appear as operation labels. Operations appear under every navigation tag they declare. Tag order only orders siblings; it never implies a parent. The overview uses the same groups and counts each operation once per group.
+Tags use OpenAPI 3.2 `parent` for nesting and `summary` for display labels. Tags with no `kind`, or `kind: nav`, organize navigation into collapsible groups. Fabric also supports `kind: nav-section` for always-visible navigation sections with headings styled like “Reference”; their operations and child groups appear beneath the heading without an extra level of indentation. Other kinds (including `badge` and `audience`) appear as operation labels. Operations appear under every navigation tag they declare. Tag order only orders siblings; it never implies a parent. The overview uses the same groups and counts each operation once per group.
 
 Audience labels use the `Audience:` prefix. Badge labels are fully rounded chips colored by the `--primary` CSS variable, with theme-specific defaults.
 
@@ -44,6 +44,8 @@ view:
 
 The specification URL is requested from the host page's origin. Adjust it for
 your Scramble route; cross-origin specification URLs require CORS permission.
+
+Set `referenceLabel: false` in the `Fabric.init` options to hide the sidebar’s “Reference” heading, for example when using `nav-section` tags. It defaults to `true` and only controls that heading; navigation order, Webhooks, and Schemas remain unchanged. The Navigation sections playground example sets it to `false`.
 
 ## Use another specification
 

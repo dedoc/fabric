@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {FolderNavigation} from "./types.ts";
+import {FolderNavigation, SectionNavigation} from "./types.ts";
 import {ref, watch} from "vue";
 import Navigation from "./Navigation.vue";
 import NavigationItem from "./NavigationItem.vue";
@@ -17,11 +17,10 @@ const isOpened = ref(isSelected(props.navigation, props.selectedId))
 watch(() => props.selectedId, id => { if (isSelected(props.navigation, id)) isOpened.value = true })
 
 // find if the selectedId is in the children recursively
-function isSelected (navigation: FolderNavigation, selectedId?: string): boolean {
-  if (navigation.children.filter(c => c.type !== 'folder').some(child => child.id === selectedId)) {
-    return true
-  }
-  return navigation.children.filter(c => c.type === 'folder').some(child => isSelected(child, selectedId))
+function isSelected (navigation: FolderNavigation | SectionNavigation, selectedId?: string): boolean {
+  return navigation.children.some(child => child.type === 'folder' || child.type === 'section'
+    ? isSelected(child, selectedId)
+    : child.id === selectedId)
 }
 </script>
 

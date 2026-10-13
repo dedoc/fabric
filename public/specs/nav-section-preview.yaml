@@ -1,0 +1,64 @@
+openapi: 3.2.0
+info:
+  title: Navigation sections
+  version: '1.0'
+  description: An example of navigation sections with nested endpoint groups.
+tags:
+  - name: catalog
+    summary: Catalog
+    kind: nav-section
+  - name: pets
+    summary: Pets
+    parent: catalog
+    kind: nav
+  - name: stores
+    summary: Stores
+    parent: catalog
+    kind: nav
+  - name: administration
+    summary: Administration
+    kind: nav-section
+  - name: users
+    summary: Users
+    parent: administration
+    kind: nav
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List pets
+      tags: [pets]
+      responses:
+        '200':
+          description: A list of pets.
+    post:
+      operationId: createPet
+      summary: Create a pet
+      tags: [pets]
+      responses:
+        '201':
+          description: Pet created.
+  /stores:
+    get:
+      operationId: listStores
+      summary: List stores
+      tags: [stores]
+      responses:
+        '200':
+          description: A list of stores.
+  /status:
+    get:
+      operationId: status
+      summary: Check service status
+      tags: [administration]
+      responses:
+        '200':
+          description: Service status.
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      tags: [users]
+      responses:
+        '200':
+          description: A list of users.

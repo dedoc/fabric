@@ -1,4 +1,11 @@
-export type Navigation = FolderNavigation|OperationNavigation|GuideNavigation
+export type Navigation = FolderNavigation|SectionNavigation|OperationNavigation|GuideNavigation
+
+export type SectionNavigation = {
+    id: string,
+    type: 'section',
+    name: string,
+    children: Navigation[],
+}
 
 export type GuideNavigation = {
     id: string,

@@ -126,6 +126,47 @@ test('filtering keeps only ancestors of matching operations and kind-only operat
   assert.deepEqual(groupOperationsByTags(document, []).groups, [])
 })
 
+test('nav-section groups operations and renders an always-visible heading for endpoints, guides and webhooks', async () => {
+  const document = {openapi: '3.2.0', info, paths: {
+    '/pets': {get: {...paths['/pets'].get, tags: ['pets']}},
+    '/status': {get: {operationId: 'status', summary: 'Check status', tags: ['catalog'], responses: {}}},
+  }, tags: [
+    {name: 'pets', summary: 'Pets', parent: 'catalog', kind: 'nav'},
+    {name: 'catalog', summary: 'Animal catalog', kind: 'nav-section'},
+    {name: 'unused', kind: 'nav-section'},
+  ], webhooks: {created: {post: {summary: 'Pet created', tags: ['catalog'], responses: {}}}}}
+  const {groups, untagged} = groupOperationsByTags(document, getInlineOperations(document.paths))
+  assert.deepEqual(groups.map(group => group.name), ['Animal catalog'])
+  assert.equal(groups[0].operations[0].operation.operationId, 'status')
+  assert.equal(groups[0].children[0].name, 'Pets')
+  assert.equal(tagGroupOperations(groups[0]).length, 2)
+  assert.deepEqual(untagged, [])
+  assert.deepEqual(groupOperationsByTags(document, []).groups, [])
+
+  const html = await render(document, '#operations/pets', {catalog: '---\ntitle: Catalog guide\ngroup: catalog\n---\nGuide content.'})
+  const sidebar = html.match(/<nav aria-label="API reference"[^>]*>(.*?)<\/nav>/s)[1]
+  const section = sidebar.match(/<section aria-label="Animal catalog"[^>]*>(.*?)<\/section>/s)[1]
+  assert.match(section, /<div class="mb-3 px-2 text-\[13px\] font-medium">Animal catalog<\/div>/)
+  assert.match(section, /Catalog guide.*Check status.*Pets.*List pets/s)
+  assert.equal((section.match(/aria-expanded="true"/g) ?? []).length, 1)
+  assert.doesNotMatch(sidebar, /unused/)
+  const overview = await render(document)
+  assert.match(overview, /<section aria-label="Animal catalog"[^>]*>.*Check status/s)
+  assert.match(overview, /<nav aria-label="Webhooks"[^>]*>.*<section aria-label="Animal catalog"[^>]*>.*Pet created/s)
+})
+
+test('selected operations open folders through nested nav-sections', async () => {
+  const document = {openapi: '3.2.0', info, paths, tags: [
+    {name: 'pets', parent: 'catalog'},
+    {name: 'catalog', summary: 'Catalog section', parent: 'animals', kind: 'nav-section'},
+    {name: 'animals', summary: 'Animals'},
+  ]}
+  const html = await render(document, '#operations/pets')
+  const sidebar = html.match(/<nav aria-label="API reference"[^>]*>(.*?)<\/nav>/s)[1]
+  assert.match(sidebar, /Animals.*<section aria-label="Catalog section".*pets.*List pets/s)
+  assert.equal((sidebar.match(/aria-expanded="true"/g) ?? []).length, 2)
+})
+
 test('parser accepts 3.2 tags and webhook-only documents and rejects malformed tag structures', () => {
   const document = {openapi: '3.2.0', info, paths, tags: [{name: 'pets', summary: 'Pets', parent: 'animals', kind: 'nav'}, {name: 'animals'}]}
   assert.deepEqual(parseSpecification(JSON.stringify(document)), document)

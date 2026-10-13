@@ -51,5 +51,5 @@ onUnmounted(() => controller?.abort())
   <main v-else-if="state === 'loading'" class="grid min-h-dvh place-items-center px-6" role="status">
     <p class="text-sm text-gray-500 dark:text-gray-400">Loading API reference…</p>
   </main>
-  <Pages v-else-if="specification" :document="specification" :document-url="documentUrl" :guides="guides" />
+  <Pages v-else-if="specification" :document="specification" :document-url="documentUrl" :guides="guides" :reference-label="referenceLabel" />
 </template>
