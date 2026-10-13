@@ -19,6 +19,7 @@
     background-color: theme('colors.white');
     color-scheme: light;
     --primary-color: theme('colors.gray.800');
+    --primary: theme('colors.blue.600');
 
     --sections-gap: theme('spacing.8');
     --schema-border-color: theme('colors.gray.200 / 75%');
@@ -31,6 +32,7 @@
 :root.dark {
     background-color: theme('colors.gray.950');
     color-scheme: dark;
+    --primary: theme('colors.blue.400');
     --schema-border-color: theme('colors.gray.800');
     --navigation-item-highlight: theme('colors.gray.800');
 }

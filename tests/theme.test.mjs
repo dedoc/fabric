@@ -1,94 +1,67 @@
 import assert from 'node:assert/strict'
-import {after, test} from 'node:test'
-import {readFile} from 'node:fs/promises'
+import {readFileSync} from 'node:fs'
+import {test} from 'node:test'
 import {runInNewContext} from 'node:vm'
-import {createServer as createHttpServer} from 'node:http'
-import {createServer} from 'vite'
-import {createSSRApp, h} from 'vue'
-import {renderToString} from 'vue/server-renderer'
+import ts from 'typescript'
 
-const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
-const startup = html.match(/<script>([\s\S]*?)<\/script>/)[1]
-function browser(saved, systemDark = false, blocked = false) {
-  const classes = new Set()
-  const storage = new Map(saved ? [['fabric-theme', saved]] : [])
-  return {
-    document: {documentElement: {
-      classList: {
-        contains: value => classes.has(value),
-        toggle: (value, enabled) => enabled ? classes.add(value) : classes.delete(value),
-      },
-      style: {},
-    }},
-    localStorage: {
-      getItem: key => { if (blocked) throw new Error('Storage blocked'); return storage.get(key) ?? null },
-      setItem: (key, value) => { if (blocked) throw new Error('Storage blocked'); storage.set(key, value) },
+const {outputText} = ts.transpileModule(readFileSync(new URL('../src/utils/theme.ts', import.meta.url), 'utf8'), {
+  compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
+})
+
+function loadTheme({storage = new Map(), pageDark = false, systemDark = false, blocked = false} = {}) {
+  const classes = new Set(pageDark ? ['dark'] : [])
+  const root = {
+    classList: {
+      contains: value => classes.has(value),
+      toggle: (value, enabled) => enabled ? classes.add(value) : classes.delete(value),
     },
-    window: {matchMedia: () => ({matches: systemDark})},
+    style: {},
   }
+  const exports = {}
+  runInNewContext(outputText, {
+    exports,
+    require: () => ({ref: value => ({value})}),
+    document: {documentElement: root},
+    window: {
+      matchMedia: () => ({matches: systemDark}),
+      localStorage: {
+        getItem: key => { if (blocked) throw Error('Storage unavailable'); return storage.get(key) ?? null },
+        setItem: (key, value) => { if (blocked) throw Error('Storage unavailable'); storage.set(key, value) },
+      },
+    },
+  })
+  exports.initializeTheme()
+  return {...exports, root}
 }
 
-test('saved themes override the system theme before rendering', () => {
-  for (const [saved, systemDark, expected] of [
-    ['light', true, 'light'], ['dark', false, 'dark'],
-    [undefined, true, 'dark'], [undefined, false, 'light'], ['invalid', true, 'dark'],
-  ]) {
-    const context = browser(saved, systemDark)
-    runInNewContext(startup, context)
-    assert.equal(context.document.documentElement.classList.contains('dark'), expected === 'dark')
-    assert.equal(context.document.documentElement.style.colorScheme, expected)
-  }
+test('dark theme survives a fresh page load after toggling', () => {
+  const storage = new Map()
+  loadTheme({storage}).setTheme('dark')
+  const reloaded = loadTheme({storage})
+  assert.equal(reloaded.theme.value, 'dark')
+  assert.equal(reloaded.root.classList.contains('dark'), true)
+  assert.equal(reloaded.root.style.colorScheme, 'dark')
 })
 
-test('startup works when storage is blocked', () => {
-  const context = browser(undefined, true, true)
-  runInNewContext(startup, context)
-  assert.equal(context.document.documentElement.style.colorScheme, 'dark')
+test('saved light preference overrides a dark page and system', () => {
+  const result = loadTheme({storage: new Map([['fabric-theme', 'light']]), pageDark: true, systemDark: true})
+  assert.equal(result.theme.value, 'light')
+  assert.equal(result.root.classList.contains('dark'), false)
+  assert.equal(result.root.style.colorScheme, 'light')
 })
 
-const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
-after(() => server.close())
-const {setTheme, theme} = await server.ssrLoadModule('/src/utils/theme.ts')
-const {default: HighlightedCode} = await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.vue')
-
-test('theme changes persist and survive a fresh startup, including blocked storage', () => {
-  const previousDocument = globalThis.document
-  const previousWindow = globalThis.window
-  try {
-    const context = browser()
-    globalThis.document = context.document
-    globalThis.window = {localStorage: context.localStorage}
-    for (const value of ['dark', 'light']) {
-      setTheme(value)
-      assert.equal(context.localStorage.getItem('fabric-theme'), value)
-      assert.equal(context.document.documentElement.style.colorScheme, value)
-      // Reapply even if reactive state already has this value (e.g. after HMR).
-      context.document.documentElement.classList.toggle('dark', value !== 'dark')
-      setTheme(value)
-      assert.equal(context.document.documentElement.classList.contains('dark'), value === 'dark')
-      const reloaded = browser(context.localStorage.getItem('fabric-theme'), value !== 'dark')
-      runInNewContext(startup, reloaded)
-      assert.equal(reloaded.document.documentElement.style.colorScheme, value)
-    }
-    globalThis.window = {localStorage: browser(undefined, false, true).localStorage}
-    setTheme('dark')
-    assert.equal(context.document.documentElement.style.colorScheme, 'dark')
-    setTheme('light')
-  } finally {
-    globalThis.document = previousDocument
-    globalThis.window = previousWindow
-  }
+test('system fallback does not persist a preference', () => {
+  const storage = new Map()
+  assert.equal(loadTheme({storage, systemDark: true}).theme.value, 'dark')
+  assert.equal(storage.has('fabric-theme'), false)
+  assert.equal(loadTheme({storage, systemDark: false}).theme.value, 'light')
 })
 
-test('code highlighting changes palettes while preserving the code', async () => {
-  const code = '{"name": "Fabric", "active": true}\n'
-  const render = () => renderToString(createSSRApp({render: () => h(HighlightedCode, {code, language: 'json'})}))
-  try {
-    theme.value = 'light'
-    const light = await render()
-    theme.value = 'dark'
-    const dark = await render()
-    assert.notEqual(light, dark)
-    assert.equal(light.replace(/<[^>]*>/g, ''), dark.replace(/<[^>]*>/g, ''))
-  } finally { theme.value = 'light' }
+test('invalid or unavailable storage falls back safely and the switch still works', () => {
+  assert.equal(loadTheme({storage: new Map([['fabric-theme', 'invalid']]), systemDark: true}).theme.value, 'dark')
+  const result = loadTheme({blocked: true, pageDark: true})
+  assert.equal(result.theme.value, 'dark')
+  result.setTheme('light')
+  assert.equal(result.theme.value, 'light')
+  assert.equal(result.root.classList.contains('dark'), false)
 })

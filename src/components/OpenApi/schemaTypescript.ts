@@ -146,7 +146,7 @@ export function createSchemaTypescript(schema: Schema, document: Document, name 
         sources.push(targetSchema)
       }
       // OpenAPI 3.0 ignores reference siblings, including nested references.
-      if (!document.openapi?.startsWith('3.1.')) continue
+      if (!/^3\.[12]\./.test(document.openapi ?? '')) continue
     }
     sources.push(...Object.values(source.properties ?? {}), ...(source.allOf ?? []), ...(source.anyOf ?? []), ...(source.oneOf ?? []), ...(source.prefixItems ?? []))
     if (source.items) sources.push(source.items)

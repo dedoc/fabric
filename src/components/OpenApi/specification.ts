@@ -18,8 +18,8 @@ export function parseSpecification(source: string): Document {
   try { value = parse(source, {maxAliasCount: 100}) }
   catch { throw new SpecificationError('The specification is not valid JSON or YAML.') }
   requireObject(value, 'The specification')
-  if (typeof value.openapi !== 'string' || !/^3\.[01]\.\d+$/.test(value.openapi)) {
-    throw new SpecificationError('Use an OpenAPI 3.0 or 3.1 specification.')
+  if (typeof value.openapi !== 'string' || !/^3\.[012]\.\d+$/.test(value.openapi)) {
+    throw new SpecificationError('Use an OpenAPI 3.0, 3.1 or 3.2 specification.')
   }
   requireObject(value.info, 'info')
   for (const field of ['title', 'version']) {
@@ -27,7 +27,26 @@ export function parseSpecification(source: string): Document {
       throw new SpecificationError(`info.${field} must be a non-empty string.`)
     }
   }
-  if (value.paths === undefined && value.webhooks !== undefined && value.openapi.startsWith('3.1.')) value.paths = {}
+  if (value.tags !== undefined) {
+    if (!Array.isArray(value.tags)) throw new SpecificationError('tags must be an array.')
+    for (const tag of value.tags) {
+      requireObject(tag, 'tags entries')
+      if (typeof tag.name !== 'string' || !tag.name) throw new SpecificationError('tags entries need a name.')
+      for (const field of ['summary', 'parent', 'kind']) {
+        if (tag[field] !== undefined && typeof tag[field] !== 'string') throw new SpecificationError(`Tag ${field} must be a string.`)
+      }
+    }
+  }
+  if (!value.openapi.startsWith('3.2.') && value['x-tagGroups'] !== undefined) {
+    if (!Array.isArray(value['x-tagGroups'])) throw new SpecificationError('x-tagGroups must be an array.')
+    for (const group of value['x-tagGroups']) {
+      requireObject(group, 'x-tagGroups entries')
+      if (typeof group.name !== 'string' || !Array.isArray(group.tags) || group.tags.some(tag => typeof tag !== 'string')) {
+        throw new SpecificationError('x-tagGroups entries need a name and an array of tag names.')
+      }
+    }
+  }
+  if (value.paths === undefined && value.webhooks !== undefined && !value.openapi.startsWith('3.0.')) value.paths = {}
   requireObject(value.paths, 'paths')
   if (value.webhooks !== undefined) {
     requireObject(value.webhooks, 'webhooks')

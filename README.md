@@ -1,6 +1,12 @@
 # Fabric API reference
 
-A Vue API reference viewer for OpenAPI 3.0 and 3.1 documents.
+A Vue API reference viewer for OpenAPI 3.0, 3.1 and 3.2 documents.
+
+Tags use OpenAPI 3.2 `parent` for nesting and `summary` for display labels. Tags with no `kind`, or `kind: nav`, organize navigation; other kinds (including `badge` and `audience`) appear as operation labels. Operations appear under every navigation tag they declare. Tag order only orders siblings; it never implies a parent. The overview uses the same groups and counts each operation once per group.
+
+Audience labels use the `Audience:` prefix. Badge labels are fully rounded chips colored by the `--primary` CSS variable, with theme-specific defaults.
+
+For OpenAPI 3.0/3.1, root-level `x-tagGroups: [{name: Catalog, tags: [Pets, Stores]}]` groups tags in the supplied group/member order. As in Redoc, tagged operations omitted from all groups are omitted from grouped navigation; untagged operations stay accessible. OpenAPI 3.2 ignores `x-tagGroups` entirely and uses native tag relationships.
 
 ## Run
 
@@ -10,6 +16,34 @@ yarn dev
 ```
 
 Fabric Reference Lab is the default test specification, loaded from `public/specs/fabric-reference.yaml`. All playground specifications are configured in the `fabricOptions` array in `src/playground/specs.ts`. Each entry contains Fabric options plus its selector label and load URL; only Fabric Reference Lab includes the playground guides. The bundled Redocly Petstore copy uses the compatible `v2.0.0-rc.1` demo with its retired logo URL replaced by the working upstream repository asset. The main-branch demo has a malformed array schema.
+
+## Build for CDN embedding
+
+```sh
+yarn build:lib
+```
+
+This bundles the viewer and its dependencies (including Vue) into `dist/fabric.js`,
+with styles in `dist/fabric.css`. The JavaScript exposes `window.Fabric`; no Vue
+installation or module loader is needed in the host page. The playground and
+public fixtures are excluded. This command builds the bundle without running
+TypeScript checks; `yarn build` remains the playground build with type checking.
+Both builds replace the contents of `dist`.
+
+Upload the `dist` folder to your static/CDN host and use its URLs in the Scramble
+view:
+
+```html
+<link rel="stylesheet" href="https://YOUR_HOST/fabric.css">
+<div id="fabric"></div>
+<script src="https://YOUR_HOST/fabric.js"></script>
+<script>
+  Fabric.init('#fabric', {openApiDocumentUrl: '/docs/api.json'});
+</script>
+```
+
+The specification URL is requested from the host page's origin. Adjust it for
+your Scramble route; cross-origin specification URLs require CORS permission.
 
 ## Use another specification
 
@@ -48,7 +82,7 @@ For programmatic use, `resolveReference(document, entry, kind)` in `src/componen
 See [Schema support](./SCHEMA_SUPPORT.md) for the supported display subset, regression fixtures, and limitations such as unimplemented discriminators and constraint-aware example generation. Unsupported schema keywords are documented there without new UI warnings.
 
 ```sh
-node --test tests/localReferences.test.mjs tests/schemaGraph.test.mjs tests/schemaViewer.test.mjs tests/specSafety.test.mjs
+node --test tests/localReferences.test.mjs tests/schemaGraph.test.mjs tests/schemaViewer.test.mjs tests/specSafety.test.mjs tests/tags.test.mjs
 yarn vite build
 yarn build
 ```

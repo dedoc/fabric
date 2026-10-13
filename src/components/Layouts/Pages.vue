@@ -19,6 +19,7 @@ import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOper
 import {resolveOperationBase} from "../OpenApi/servers.ts";
 import {parseGuides} from '../../guides'
 import Description from '../OpenApi/Description.vue'
+import {groupOperationsByTags, type OperationTagGroup} from '../OpenApi/tags'
 
 const props = withDefaults(defineProps<{
   base?: string,
@@ -91,59 +92,32 @@ function handlePageSelect (pageId: string) {
   mobileNavigationOpen.value = false
 }
 
-// get the navigation tree using the first tag of the operation as a folder name
 function buildNavigationTree (operations: InlineOperation[], webhook = false, groupedGuides: ReturnType<typeof parseGuides> = []): NavigationType[] {
   const guideFolders: NavigationType[] = []
   for (const guide of groupedGuides) {
     if (!guide.group) continue
     let folder = guideFolders.find(item => item.type === 'folder' && item.name === guide.group)
     if (!folder) {
-      folder = {id: guide.group, type: 'folder', name: guide.group, children: []}
+      folder = {id: `tag/${guide.group}`, type: 'folder', name: guide.group, children: []}
       guideFolders.push(folder)
     }
     if (folder.type === 'folder') folder.children.push({id: guide.id, type: 'guide', name: guide.title})
   }
-  const tree = operations.reduce<NavigationType[]>((acc, operation) => {
-    const folder = operation.operation.tags?.[0]
-    if (! folder) {
-      // add to the end
-      acc.push({
-        id: operation.id,
-        type: 'operation',
-        name: getOperationTitle(operation.path, operation.operation),
-        method: operation.method,
-        webhook,
-      })
-
-      return acc
+  const entry = (operation: InlineOperation): NavigationType => ({
+    id: operation.id, type: 'operation', name: getOperationTitle(operation.path, operation.operation), method: operation.method, webhook,
+  })
+  const usedGuides = new Set<NavigationType>()
+  const folder = (group: OperationTagGroup): NavigationType => {
+    const guides = guideFolders.find(item => item.name === (group.tag?.name ?? group.name))
+    if (guides) usedGuides.add(guides)
+    return {
+      id: group.key, type: 'folder', name: group.name,
+      children: [...(guides?.type === 'folder' ? guides.children : []), ...group.operations.map(entry), ...group.children.map(folder)],
     }
-
-    let folderNavigation = acc.find(nav => nav.id === folder && nav.type === 'folder')
-    if (! folderNavigation) {
-      folderNavigation = {
-        id: folder,
-        type: 'folder',
-        name: folder,
-        children: [],
-      }
-      acc.push(folderNavigation)
-    }
-
-    if (folderNavigation.type !== 'folder') return acc
-
-    folderNavigation.children.push({
-      id: operation.id,
-      type: 'operation',
-      name: getOperationTitle(operation.path, operation.operation),
-      method: operation.method,
-      webhook,
-    })
-
-    return acc
-  }, guideFolders)
-  const tagOrder = new Map<string, number>((props.document.tags ?? []).map((tag: {name: string}, index: number) => [tag.name, index]))
-  const rank = (item: NavigationType) => item.type === 'folder' ? tagOrder.get(item.name) ?? tagOrder.size : tagOrder.size
-  return tree.sort((a, b) => rank(a) - rank(b))
+  }
+  const {groups, untagged} = groupOperationsByTags(props.document, operations)
+  const folders = groups.map(folder)
+  return [...guideFolders.filter(guide => !usedGuides.has(guide)), ...folders, ...untagged.map(entry)]
 }
 
 const mobileNavigationOpen = ref(false)
@@ -152,13 +126,34 @@ const filteredGuides = computed(() => guides.value.filter(guide =>
   `${guide.title} ${guide.group ?? ''}`.toLowerCase().includes(search.value.toLowerCase())
 ))
 const introductionGuides = computed(() => filteredGuides.value.filter(guide => !guide.group))
-const filteredNavigation = computed(() => buildNavigationTree(operations.value.filter(operation =>
-  `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
+const tagSearchText = computed(() => {
+  const tags = new Map((props.document.tags ?? []).map(tag => [tag.name, tag]))
+  const names = new Set([...tags.keys(), ...operations.value.concat(webhooks.value).flatMap(item => item.operation.tags ?? [])])
+  return new Map([...names].map(name => {
+    const labels: string[] = []
+    const seen = new Set<string>()
+    let current: string | undefined = name
+    while (current && !seen.has(current)) {
+      seen.add(current)
+      const tag = tags.get(current)
+      labels.push(current, tag?.summary ?? '')
+      current = tag?.parent
+    }
+    if (!props.document.openapi?.startsWith('3.2.')) {
+      labels.push(...(props.document['x-tagGroups'] ?? []).filter(group => group.tags.includes(name)).map(group => group.name))
+    }
+    return [name, labels.join(' ')]
+  }))
+})
+function matchesSearch(operation: InlineOperation): boolean {
+  return `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${(operation.operation.tags ?? []).map(name => tagSearchText.value.get(name) ?? name).join(' ')}`
     .toLowerCase().includes(search.value.toLowerCase())
+}
+const filteredNavigation = computed(() => buildNavigationTree(operations.value.filter(operation =>
+  matchesSearch(operation)
 ), false, filteredGuides.value.filter(guide => guide.group)))
 const filteredWebhooks = computed(() => buildNavigationTree(webhooks.value.filter(operation =>
-  `${getOperationTitle(operation.path, operation.operation)} ${operation.path} ${operation.operation.tags?.join(' ') ?? ''}`
-    .toLowerCase().includes(search.value.toLowerCase())
+  matchesSearch(operation)
 ), true))
 function syncLocation() {
   selectedPageId.value = getPageIdFromUrl() || 'overview'

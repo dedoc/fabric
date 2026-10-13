@@ -11,6 +11,7 @@ import {resolveReference} from './references'
 import type {ReferenceIssue} from './references'
 import type {PathItem} from './types'
 import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
+import {groupOperationsByTags, tagGroupOperations} from './tags'
 
 const props = defineProps<{document: Document, paths: Paths, components: Components, documentUrl?: string}>()
 const emit = defineEmits<{navigate: [id: string]}>()
@@ -36,15 +37,13 @@ const schemes = computed(() => Object.keys(props.components.securitySchemes ?? {
 }))
 
 const groups = computed(() => {
-  const groups = new Map<string, {name: string, id: string, count: number}>()
-  for (const operation of operations.value) {
-    const name = operation.operation.tags?.[0] ?? 'Endpoints'
-    const group = groups.get(name)
-    if (group) group.count++
-    else groups.set(name, {name, id: operation.id, count: 1})
-  }
-  const tagOrder = new Map((props.document.tags ?? []).map((tag, index) => [tag.name, index]))
-  return [...groups.values()].sort((a, b) => (tagOrder.get(a.name) ?? tagOrder.size) - (tagOrder.get(b.name) ?? tagOrder.size))
+  const {groups, untagged} = groupOperationsByTags(props.document, operations.value)
+  const entries = groups.map(group => {
+    const operations = tagGroupOperations(group)
+    return {key: group.key, name: group.name, id: operations[0]!.id, count: operations.length, description: group.tag?.description, externalDocs: group.tag?.externalDocs}
+  })
+  if (untagged.length) entries.push({key: 'untagged', name: 'Endpoints', id: untagged[0]!.id, count: untagged.length, description: undefined, externalDocs: undefined})
+  return entries
 })
 
 // Resolve spec-relative links while keeping metadata links navigable and safe.
@@ -101,11 +100,13 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
       <section v-if="groups.length" aria-labelledby="overview-reference" class="space-y-4 border-t border-gray-950/10 dark:border-gray-700 pt-7">
         <SectionTitle id="overview-reference">Explore the API</SectionTitle>
         <ul role="list" class="divide-y divide-gray-950/5 dark:divide-gray-700">
-          <li v-for="group in groups" :key="group.name">
+          <li v-for="group in groups" :key="group.key">
             <a :href="`#${group.id}`" class="flex min-h-12 items-baseline justify-between gap-4 py-3 text-base text-gray-900 dark:text-gray-100 hover:text-gray-500 hover:dark:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 sm:text-sm" @click.prevent="emit('navigate', group.id)">
               <div class="min-w-0 font-medium">{{ group.name }}</div>
               <div class="shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{{ group.count }} {{ group.count === 1 ? 'endpoint' : 'endpoints' }} <span aria-hidden="true">→</span></div>
             </a>
+            <Description v-if="group.description" :content="group.description" class="pb-3" />
+            <a v-if="link(group.externalDocs?.url)" :href="link(group.externalDocs?.url)" target="_blank" rel="noopener noreferrer" class="mb-3 inline-block text-sm underline underline-offset-4">{{ group.externalDocs?.description || 'Documentation' }}</a>
           </li>
         </ul>
       </section>

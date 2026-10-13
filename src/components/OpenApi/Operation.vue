@@ -2,13 +2,16 @@
 import type {Components, Operation} from "./types";
 import Request from "./Request.vue";
 import Examples from "./Examples.vue";
-import {computed} from "vue";
+import {computed, inject} from "vue";
 import Description from "./Description.vue";
 import Responses from "./Responses.vue";
 import MethodChip from "./Partials/MethodChip.vue";
 import OperationDatums from "./Partials/OperationDatums.vue";
 import {provideMediaTypeSelections} from "./useMediaType";
 import WebhookIcon from "../UI/WebhookIcon.vue";
+import {documentKey} from '../../utils/symbols'
+import {isNavigationTag} from './tags'
+import Tag from './Partials/Tag.vue'
 
 const props = defineProps<{
   base: string, // todo: should not be here!
@@ -22,6 +25,10 @@ const props = defineProps<{
 
 
 provideMediaTypeSelections()
+const document = inject(documentKey, computed(() => ({})))
+const labels = computed(() => (document.value.tags ?? []).filter(tag =>
+  !isNavigationTag(tag) && props.operation.tags?.includes(tag.name)
+))
 
 const operationSummary = computed(() => {
   return props.operation.summary ?? props.operation.operationId
@@ -32,6 +39,9 @@ const operationSummary = computed(() => {
   <div class="grid grid-cols-1 gap-[--sections-gap] min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" :class="{'min-[1200px]:gap-y-3': operation.description}">
     <div class="col-start-1 min-w-0 space-y-3">
       <h1 v-if="operationSummary" class="text-balance text-2xl font-medium tracking-tight md:text-3xl">{{ operationSummary }}</h1>
+      <ul v-if="labels.length" aria-label="Operation tags" class="flex flex-wrap items-center gap-2">
+        <li v-for="tag in labels" :key="tag.name"><Tag :tag="tag" /></li>
+      </ul>
       <div class="space-y-0.5">
         <div class="flex items-baseline gap-2.5 text-base">
           <MethodChip :method="method" class="shrink-0"/>

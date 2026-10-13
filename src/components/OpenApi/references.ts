@@ -21,7 +21,7 @@ export function resolveReference<T>(document: Document, entry: unknown, kind: Re
   let value: unknown = entry
   while (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.hasOwn(value, '$ref')) {
     const object = value as Record<string, unknown>
-    if (kind === 'schema' && document.openapi?.startsWith('3.1.') && Object.hasOwn(object, '$id')) {
+    if (kind === 'schema' && /^3\.[12]\./.test(document.openapi ?? '') && Object.hasOwn(object, '$id')) {
       return {issues: [{reference: String(object.$id), message: 'Schema resource scopes ($id) are not supported; use document-root pointers'}]}
     }
     if (seen.has(object)) return {issues: [{reference: String(object.$ref), message: messages.circular}]}
@@ -37,7 +37,7 @@ export function resolveReference<T>(document: Document, entry: unknown, kind: Re
     return {issues: [{reference: layers.length ? String((entry as {$ref: string}).$ref) : '', message: 'Reference target must be a supported object'}]}
   }
   let resolved = value as Record<string, unknown>
-  if (kind === 'schema' && document.openapi?.startsWith('3.1.') && Object.hasOwn(resolved, '$id')) {
+  if (kind === 'schema' && /^3\.[12]\./.test(document.openapi ?? '') && Object.hasOwn(resolved, '$id')) {
     return {issues: [{reference: String(resolved.$id), message: 'Schema resource scopes ($id) are not supported; use document-root pointers'}]}
   }
   for (const siblings of layers.reverse()) {
@@ -45,7 +45,7 @@ export function resolveReference<T>(document: Document, entry: unknown, kind: Re
       const conflicts = Object.keys(siblings).filter(key => Object.hasOwn(resolved, key))
       if (conflicts.length) issues.push({reference: String((entry as {$ref: string}).$ref), message: `Conflicting Path Item siblings (${conflicts.join(', ')}); referenced fields take precedence`})
       resolved = {...siblings, ...resolved}
-    } else if (document.openapi?.startsWith('3.1.')) {
+    } else if (/^3\.[12]\./.test(document.openapi ?? '')) {
       if (kind === 'schema' && Object.keys(siblings).length) {
         // Schema siblings apply together with the target in JSON Schema 2020-12.
         resolved = {...siblings, allOf: [resolved, ...(Array.isArray(siblings.allOf) ? siblings.allOf : [])]}

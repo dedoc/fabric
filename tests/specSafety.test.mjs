@@ -440,6 +440,37 @@ test('grouped guides share tag folders, retain order, and support guide-only gro
   } finally { viewer.close() }
 })
 
+test('tag search matches summaries, native ancestors and legacy group names', async () => {
+  for (const openapi of ['3.0.3', '3.1.0', '3.2.0', '3.2.1']) {
+    const viewer = mountViewer({openApiDocument: JSON.stringify({...valid, openapi,
+      tags: [{name: 'pets', summary: 'Pet operations', parent: 'catalog'}, {name: 'catalog', summary: 'Animal catalog'}],
+      'x-tagGroups': [{name: 'Legacy catalog', tags: ['pets']}],
+      paths: {'/pets': {get: {operationId: 'pets', summary: 'List pets', tags: ['pets'], responses: {}}}},
+    })}, '#operations/pets')
+    try {
+      await until(() => viewer.find(el => el.type === 'h1')?.text === 'List pets')
+      for (const query of ['Pet operations', 'Animal catalog', 'Legacy catalog']) {
+        const previousDocument = globalThis.document
+        globalThis.document = {activeElement: null}
+        try {
+          viewer.find(el => el.type === 'input').props['onUpdate:modelValue'](query)
+          await nextTick()
+        } finally {
+          if (previousDocument === undefined) delete globalThis.document
+          else globalThis.document = previousDocument
+        }
+        const selected = viewer.find(el => el.type === 'button' && el.props['aria-current'] === 'page')
+        if (openapi.startsWith('3.2.') && query === 'Legacy catalog') {
+          assert.equal(selected, undefined)
+          assert.match(viewer.text(), /No matching operations/)
+        } else {
+          assert.ok(selected)
+        }
+      }
+    } finally { viewer.close() }
+  }
+})
+
 test('Stripe-style form encoding renders the operation instead of the error page', async () => {
   const original = globalThis.fetch
   const path = '/v1/payment_records/{id}/report_payment_attempt_informational'

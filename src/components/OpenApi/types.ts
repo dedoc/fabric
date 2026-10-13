@@ -95,7 +95,7 @@ export type Operation = {
     summary?: string,
     description?: string,
     operationId?: string,
-    tags?: string[], // @todo may be tag objects as well
+    tags?: string[],
     parameters?: (Reference|Parameter)[],
     requestBody?: RequestBody|Reference,
     security?: SecurityRequirement[],
@@ -199,9 +199,19 @@ export type Components = {
     pathItems?: { [name: string]: any|PathItem },
 }
 
+export type Tag = {
+    name: string,
+    summary?: string,
+    description?: string,
+    externalDocs?: {description?: string, url: string},
+    parent?: string,
+    kind?: string,
+}
+
 export type Document = {
     paths?: Paths,
-    tags?: {name: string, description?: string, externalDocs?: {description?: string, url: string}}[],
+    tags?: Tag[],
+    'x-tagGroups'?: {name: string, tags: string[]}[],
     openapi?: string,
     webhooks?: Paths,
     info?: {
