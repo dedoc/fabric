@@ -75,3 +75,23 @@ test('title prioritization runs before truncating the result list', () => {
   assert.equal(results.length, 50)
   assert.equal(results[0].id, 'account')
 })
+
+test('background search returns request IDs and replaces its index when the spec changes', async () => {
+  const originalSelf = globalThis.self
+  const messages = []
+  const worker = {postMessage: message => messages.push(message)}
+  globalThis.self = worker
+  try {
+    await server.ssrLoadModule('/src/components/Layouts/search.worker.ts')
+    worker.onmessage({data: {entries}})
+    worker.onmessage({data: {id: 1, query: 'bearer token'}})
+    assert.equal(messages[0].id, 1)
+    assert.equal(messages[0].entries[0].id, 'guides/auth')
+    worker.onmessage({data: {entries: []}})
+    worker.onmessage({data: {id: 2, query: 'bearer token'}})
+    assert.deepEqual(messages[1], {id: 2, entries: []})
+  } finally {
+    if (originalSelf === undefined) delete globalThis.self
+    else globalThis.self = originalSelf
+  }
+})

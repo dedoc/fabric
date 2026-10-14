@@ -71,11 +71,18 @@ export function createSearchIndex(entries: SearchEntry[]) {
 
 export function searchEntries(index: Fuse<SearchEntry>, query: string): SearchEntry[] {
   const terms = query.trim().toLowerCase().split(/\s+/)
-  const titleMatch = (item: SearchEntry) => terms.every(term => item.title.toLowerCase().includes(term))
+  const titleMatch = (item: SearchEntry) => {
+    const title = item.title.toLowerCase()
+    return terms.every(term => title.includes(term))
+  }
   // Keep Fuse's order within each tier, but prefer complete title matches
   // over partial matches boosted by descriptions or other metadata.
-  return index.search(query.trim())
-    .sort((a, b) => Number(titleMatch(b.item)) - Number(titleMatch(a.item)))
-    .slice(0, 50)
-    .map(result => result.item)
+  const matches: SearchEntry[] = []
+  const others: SearchEntry[] = []
+  for (const {item} of index.search(query.trim())) {
+    if (titleMatch(item)) matches.push(item)
+    else if (others.length < 50) others.push(item)
+    if (matches.length === 50) break
+  }
+  return [...matches, ...others].slice(0, 50)
 }

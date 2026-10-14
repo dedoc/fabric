@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {nextTick, onMounted, onUnmounted, ref, shallowRef, watch} from 'vue'
 import {Command, useCommandState} from 'vue-command-palette'
-import {createSearchIndex, searchEntries, type SearchEntry} from '../search'
+import type {SearchEntry} from '../search'
+import SearchWorker from '../search.worker?worker&inline'
+import type {SearchRequest, SearchResponse} from '../search.worker'
 import MethodChip from '../../OpenApi/Partials/MethodChip.vue'
 
 const props = defineProps<{entries: SearchEntry[]}>()
@@ -10,19 +12,64 @@ const dialog = ref<HTMLDialogElement>()
 const trigger = ref<HTMLButtonElement>()
 const input = ref<HTMLInputElement>()
 const query = ref('')
+const completedQuery = ref('')
 const open = ref(false)
 const activeId = ref<string>()
 const shortcut = ref('Ctrl+K')
-const index = computed(() => createSearchIndex(props.entries))
 const {selectedNode, resetStore} = useCommandState()
-const results = computed(() => query.value.trim()
-  ? searchEntries(index.value, query.value)
-  : props.entries.slice(0, 50))
+const results = shallowRef<SearchEntry[]>([])
+const pending = ref(false)
+let worker: Worker | undefined
+let requestId = 0
+let navigateWhenReady = false
+
+function post(request: SearchRequest) {
+  worker!.postMessage(request)
+}
+function search() {
+  const id = ++requestId
+  navigateWhenReady = false
+  pending.value = false
+  if (!open.value) return
+  if (!query.value.trim()) {
+    completedQuery.value = ''
+    results.value = props.entries.slice(0, 50)
+    return
+  }
+  pending.value = true
+  post({id, query: query.value})
+}
+watch(query, search, {flush: 'sync'})
+watch(() => props.entries, entries => {
+  if (worker) post({entries})
+  search()
+})
+
+function onEnter(event: KeyboardEvent) {
+  event.preventDefault()
+  if (pending.value) {
+    event.stopPropagation()
+    navigateWhenReady = true
+  }
+}
 
 async function show() {
+  if (!worker) {
+    worker = new SearchWorker()
+    worker.onmessage = (event: MessageEvent<SearchResponse>) => {
+      if (event.data.id !== requestId || !open.value) return
+      pending.value = false
+      completedQuery.value = query.value
+      results.value = event.data.entries
+      if (navigateWhenReady && results.value.length) select(results.value[0].id)
+      navigateWhenReady = false
+    }
+    post({entries: props.entries})
+  }
   resetStore()
   query.value = ''
   open.value = true
+  search()
   await nextTick()
   dialog.value?.showModal()
   input.value?.focus()
@@ -73,6 +120,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onShortcut, true)
+  worker?.terminate()
 })
 </script>
 
@@ -86,10 +134,10 @@ onUnmounted(() => {
   <dialog ref="dialog" aria-label="Search reference" class="fixed inset-x-0 bottom-auto top-[min(15dvh,6rem)] mx-auto my-0 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 text-gray-900 shadow-xl backdrop:bg-gray-950/50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:shadow-none dark:backdrop:bg-black/60" @cancel.prevent="close" @close="open = false" @click="onBackdrop">
     <Command v-if="open" theme="reference-search">
       <div class="flex items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
-        <input ref="input" v-model="query" type="text" role="combobox" aria-label="Search reference" aria-autocomplete="list" aria-expanded="true" aria-controls="reference-search-results" :aria-activedescendant="activeId" autocomplete="off" spellcheck="false" placeholder="Search operations, guides, schemas…" class="h-14 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" @keydown.enter.prevent>
+        <input ref="input" v-model="query" type="text" role="combobox" aria-label="Search reference" aria-autocomplete="list" aria-expanded="true" aria-controls="reference-search-results" :aria-activedescendant="activeId" autocomplete="off" spellcheck="false" placeholder="Search operations, guides, schemas…" class="h-14 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" @keydown.enter="onEnter">
         <button type="button" aria-label="Close search" class="min-h-11 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100" @click="close" @keydown.stop>Esc</button>
       </div>
-      <Command.List id="reference-search-results" aria-label="Search results" class="max-h-[min(60dvh,420px)] overflow-y-auto overscroll-contain p-2">
+      <Command.List id="reference-search-results" aria-label="Search results" :aria-busy="pending" class="max-h-[min(60dvh,420px)] overflow-y-auto overscroll-contain p-2">
         <Command.Item v-for="(item, position) of results" :id="`reference-search-result-${position}`" :key="item.id" :data-value="item.id" class="flex cursor-pointer items-center gap-3 rounded-[--radius] px-3 py-3 text-sm aria-selected:bg-gray-100 dark:aria-selected:bg-white/5" @pointermove="highlightResult" @select="select(item.id)">
           <div class="min-w-0 flex-1">
             <div class="truncate font-medium dark:text-gray-100">{{ item.title }}</div>
@@ -97,7 +145,7 @@ onUnmounted(() => {
           </div>
           <MethodChip v-if="item.method" :method="item.method" class="shrink-0 text-xs" />
         </Command.Item>
-        <p v-if="!results.length" role="status" class="px-3 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No results for “{{ query }}”.</p>
+        <p v-if="!results.length" role="status" class="px-3 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No results for “{{ completedQuery }}”.</p>
       </Command.List>
       <div class="flex gap-4 border-t border-gray-200 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
         <span>↑ ↓ to navigate</span><span>↵ to open</span><span class="ml-auto">{{ results.length }} results</span>
