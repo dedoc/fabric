@@ -100,13 +100,15 @@ const hasDetails = computed(() => !!(info.value?.version || props.document.opena
       <section v-if="groups.length" aria-labelledby="overview-reference" class="space-y-4 border-t border-gray-950/10 dark:border-gray-700 pt-7">
         <SectionTitle id="overview-reference">Explore the API</SectionTitle>
         <ul role="list" class="divide-y divide-gray-950/5 dark:divide-gray-700">
-          <li v-for="group in groups" :key="group.key">
-            <a :href="`#${group.id}`" class="flex min-h-12 items-baseline justify-between gap-4 py-3 text-base text-gray-900 dark:text-gray-100 hover:text-gray-500 hover:dark:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 sm:text-sm" @click.prevent="emit('navigate', group.id)">
-              <div class="min-w-0 font-medium">{{ group.name }}</div>
-              <div class="shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{{ group.count }} {{ group.count === 1 ? 'endpoint' : 'endpoints' }} <span aria-hidden="true">→</span></div>
+          <li v-for="group in groups" :key="group.key" class="py-3">
+            <a :href="`#${group.id}`" class="block text-base text-gray-900 dark:text-gray-100 hover:text-gray-500 hover:dark:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 sm:text-sm" @click.prevent="emit('navigate', group.id)">
+              <div class="flex items-baseline justify-between gap-4">
+                <div class="min-w-0 font-medium">{{ group.name }}</div>
+                <div class="shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{{ group.count }} {{ group.count === 1 ? 'endpoint' : 'endpoints' }} <span aria-hidden="true">→</span></div>
+              </div>
+              <Description v-if="group.description" :content="group.description" class="mt-1" />
             </a>
-            <Description v-if="group.description" :content="group.description" class="pb-3" />
-            <a v-if="link(group.externalDocs?.url)" :href="link(group.externalDocs?.url)" target="_blank" rel="noopener noreferrer" class="mb-3 inline-block text-sm underline underline-offset-4">{{ group.externalDocs?.description || 'Documentation' }}</a>
+            <a v-if="link(group.externalDocs?.url)" :href="link(group.externalDocs?.url)" target="_blank" rel="noopener noreferrer" class="mt-2 inline-block text-sm underline underline-offset-4">{{ group.externalDocs?.description || 'Documentation' }}</a>
           </li>
         </ul>
       </section>

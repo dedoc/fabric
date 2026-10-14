@@ -56,13 +56,13 @@ watch([spec, renderer], () => {
       <span class="text-sm font-semibold">API comparison</span>
       <label class="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
         <span class="text-gray-500 dark:text-gray-400">Spec</span>
-        <select v-model="spec" class="min-h-9 min-w-0 flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500 sm:max-w-96" aria-label="Specification">
+        <select v-model="spec" class="min-h-9 min-w-0 flex-1 rounded-[--radius] border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500 sm:max-w-96" aria-label="Specification">
           <option v-for="option in specs" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </label>
       <label class="flex items-center gap-2 text-sm">
         <span class="text-gray-500 dark:text-gray-400">Renderer</span>
-        <select v-model="renderer" class="min-h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500" aria-label="OpenAPI renderer">
+        <select v-model="renderer" class="min-h-9 rounded-[--radius] border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 py-1.5 pl-2 pr-7 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500" aria-label="OpenAPI renderer">
           <option v-for="option in renderers" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </label>

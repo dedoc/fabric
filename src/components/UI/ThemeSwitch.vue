@@ -9,7 +9,7 @@ import {setTheme, theme} from '../../utils/theme'
     aria-label="Dark theme"
     :aria-checked="theme === 'dark'"
     :title="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
-    class="ml-auto flex min-h-9 shrink-0 items-center rounded-full px-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500"
+    class="ml-auto flex min-h-9 shrink-0 items-center rounded-[--radius] px-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500"
     @click="setTheme(theme === 'dark' ? 'light' : 'dark')"
   >
     <span class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors dark:bg-gray-700">
