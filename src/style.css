@@ -81,6 +81,11 @@
     .prose strong { @apply font-semibold; }
     .prose :is(strong, b, em, i) { color: inherit; }
     .prose blockquote { @apply border-l-2 border-gray-950/10 dark:border-gray-700 pl-4; }
+    .prose .markdown-callout { @apply relative rounded-xl border-0 bg-gray-100/75 p-4 pl-11 text-sm text-gray-700 dark:bg-gray-900 dark:text-gray-300; line-height: 1.6; }
+    .prose .markdown-callout-icon { @apply absolute left-4 text-gray-500/80 dark:text-gray-400/80; top: calc(1rem + 0.25em); }
+    .prose .markdown-callout > * + * { margin-top: 0.5em; }
+    .prose .markdown-callout > :last-child { margin-bottom: 0; }
+    .prose .markdown-callout > .markdown-callout-icon + * { margin-top: 0; }
     .prose hr { @apply border-gray-950/10 dark:border-gray-700; }
     .prose table { @apply block max-w-full overflow-auto text-left text-sm; }
     .prose :is(th, td) { @apply border-b border-gray-950/10 dark:border-gray-700 px-3 py-2; }

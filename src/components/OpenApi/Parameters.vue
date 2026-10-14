@@ -35,7 +35,7 @@ const groupedParameters = computed(() => unreferencedParameters.value.reduce<Par
           {{ group }} Parameters
         </SectionTitle>
       </div>
-      <div class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+      <div class="mt-4 divide-y divide-[color:var(--schema-border-color)]">
         <ParameterDetails v-for="parameter in params" :key="parameter.name" class="py-3 first:pt-0 last:pb-0" :parameter="parameter" :components="components" />
       </div>
     </div>
