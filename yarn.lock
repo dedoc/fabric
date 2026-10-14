@@ -1195,6 +1195,7 @@ __metadata:
     "@types/sanitize-html": "npm:^2.16.0"
     "@vitejs/plugin-vue": "npm:^5.1.2"
     autoprefixer: "npm:^10.4.20"
+    fuse.js: "npm:^7.1.0"
     markdown-it: "npm:^14.1.0"
     postcss: "npm:^8.4.41"
     sanitize-html: "npm:^2.17.0"
@@ -1202,6 +1203,7 @@ __metadata:
     typescript: "npm:^5.5.3"
     vite: "npm:^5.4.1"
     vue: "npm:^3.4.37"
+    vue-command-palette: "npm:^0.2.3"
     vue-tsc: "npm:^2.0.29"
     yaml: "npm:^2.3.4"
   languageName: unknown
@@ -1299,6 +1301,20 @@ __metadata:
   version: 1.1.2
   resolution: "function-bind@npm:1.1.2"
   checksum: 10c0/d8680ee1e5fcd4c197e4ac33b2b4dce03c71f4d91717292785703db200f5c21f977c568d28061226f9b5900cbcd2c84463646134fd5337e7925e0942bc3f46d5
+  languageName: node
+  linkType: hard
+
+"fuse.js@npm:^6.6.2":
+  version: 6.6.2
+  resolution: "fuse.js@npm:6.6.2"
+  checksum: 10c0/c2fe4f234f516e9ea83b06f06f8f3c8b7117f51aa75bbccd052eed0c0423364bf1e360ffbf29cadae8ef6aa39476b7961eaf9d07bed779cea5c83d62b34e2df9
+  languageName: node
+  linkType: hard
+
+"fuse.js@npm:^7.1.0":
+  version: 7.5.0
+  resolution: "fuse.js@npm:7.5.0"
+  checksum: 10c0/1fa51a66063b9b0579921ed1d774864e5e027719d3a4fdb469e6636befa4a9f2f7da626c07da757c6e1ef8a761c7bd3a217e6ecc8e16f0276e1a0f8dd941ff77
   languageName: node
   linkType: hard
 
@@ -1734,6 +1750,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mitt@npm:^3.0.0":
+  version: 3.0.1
+  resolution: "mitt@npm:3.0.1"
+  checksum: 10c0/3ab4fdecf3be8c5255536faa07064d05caa3dd332bd318ff02e04621f7b3069ca1de9106cfe8e7ced675abfc2bec2ce4c4ef321c4a1bb1fb29df8ae090741913
+  languageName: node
+  linkType: hard
+
 "mkdirp@npm:^3.0.1":
   version: 3.0.1
   resolution: "mkdirp@npm:3.0.1"
@@ -1783,6 +1806,15 @@ __metadata:
   bin:
     nanoid: bin/nanoid.cjs
   checksum: 10c0/e3fb661aa083454f40500473bb69eedb85dc160e763150b9a2c567c7e9ff560ce028a9f833123b618a6ea742e311138b591910e795614a629029e86e180660f3
+  languageName: node
+  linkType: hard
+
+"nanoid@npm:^4.0.0":
+  version: 4.0.2
+  resolution: "nanoid@npm:4.0.2"
+  bin:
+    nanoid: bin/nanoid.js
+  checksum: 10c0/3fec62f422bc4727918eda0e7aa43e9cbb2e759be72813a0587b9dac99727d3c7ad972efce7f4f1d4cb5c7c554136a1ec3b1043d1d91d28d818d6acbe98200e5
   languageName: node
   linkType: hard
 
@@ -2606,6 +2638,17 @@ __metadata:
   version: 3.0.8
   resolution: "vscode-uri@npm:3.0.8"
   checksum: 10c0/f7f217f526bf109589969fe6e66b71e70b937de1385a1d7bb577ca3ee7c5e820d3856a86e9ff2fa9b7a0bc56a3dd8c3a9a557d3fedd7df414bc618d5e6b567f9
+  languageName: node
+  linkType: hard
+
+"vue-command-palette@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "vue-command-palette@npm:0.2.3"
+  dependencies:
+    fuse.js: "npm:^6.6.2"
+    mitt: "npm:^3.0.0"
+    nanoid: "npm:^4.0.0"
+  checksum: 10c0/d954a3c469763dd282ac5bfcbbcbe5339e11b066b9393684c8ea363ca5c09a01c2c0db58c8205e62f5cfa297ad488e11dc4550f2911967299359a28912dcdd13
   languageName: node
   linkType: hard
 
