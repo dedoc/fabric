@@ -131,7 +131,7 @@ onUnmounted(() => {
     <kbd class="-my-0.5 -mr-1 shrink-0 rounded bg-gray-100 px-2 py-1 font-sans text-xs leading-4 dark:bg-gray-800">{{ shortcut }}</kbd>
   </button>
   <Teleport to="body" :disabled="!open">
-  <dialog ref="dialog" aria-label="Search reference" class="fixed inset-x-0 bottom-auto top-[min(15dvh,6rem)] mx-auto my-0 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 text-gray-900 shadow-xl backdrop:bg-gray-950/50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:shadow-none dark:backdrop:bg-black/60" @cancel.prevent="close" @close="open = false" @click="onBackdrop">
+  <dialog ref="dialog" aria-label="Search reference" class="fixed inset-x-0 bottom-auto top-[min(15dvh,6rem)] mx-auto my-0 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-transparent bg-white p-0 text-gray-900 shadow-2xl backdrop:bg-gray-950/50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:shadow-none dark:backdrop:bg-black/60" @cancel.prevent="close" @close="open = false" @click="onBackdrop">
     <Command v-if="open" theme="reference-search">
       <div class="flex items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
         <input ref="input" v-model="query" type="text" role="combobox" aria-label="Search reference" aria-autocomplete="list" aria-expanded="true" aria-controls="reference-search-results" :aria-activedescendant="activeId" autocomplete="off" spellcheck="false" placeholder="Search operations, guides, schemas…" class="h-14 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" @keydown.enter="onEnter">

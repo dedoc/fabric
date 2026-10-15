@@ -55,10 +55,14 @@ function onBackdropClick(event: MouseEvent) {
       <span>{{ optional ? 'Auth optional' : 'Auth required' }}</span>
       <span class="absolute -inset-y-3 inset-x-0 sm:hidden" aria-hidden="true"></span>
     </button>
-    <dialog ref="dialog" aria-label="Authentication" @close="onClose" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-gray-950/10 dark:border-gray-700 bg-white dark:bg-gray-900 dark:shadow-none p-6 text-gray-700 dark:text-gray-300 backdrop:bg-gray-950/30 dark:backdrop:bg-black/60" @click="onBackdropClick">
-      <div class="flex items-center justify-between gap-4 pb-5">
+    <dialog ref="dialog" aria-label="Authentication" @close="onClose" class="fixed inset-x-0 bottom-auto top-[min(15dvh,6rem)] mx-auto my-0 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-transparent dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl dark:shadow-none px-6 pb-6 pt-4 text-gray-700 dark:text-gray-300 backdrop:bg-gray-950/50 dark:backdrop:bg-black/60" @click="onBackdropClick">
+      <div class="flex items-center justify-between gap-4 pb-2">
         <h2 class="text-balance text-lg font-semibold text-gray-900 dark:text-gray-100">Authentication</h2>
-        <button type="button" class="rounded-[--radius] px-3 py-2 text-base text-gray-500 dark:text-gray-400 hover:bg-gray-950/5 hover:dark:bg-white/5 hover:text-gray-900 hover:dark:text-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500 sm:text-sm" @click="dialog?.close()">Close</button>
+        <button type="button" aria-label="Close authentication" class="grid size-11 shrink-0 place-items-center rounded-[--radius] text-gray-500 dark:text-gray-400 hover:bg-gray-950/5 hover:dark:bg-white/5 hover:text-gray-900 hover:dark:text-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-500" @click="dialog?.close()">
+          <svg viewBox="0 0 20 20" fill="none" class="size-5" aria-hidden="true">
+            <path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
       <div class="space-y-4">
         <p v-if="optional" class="text-base sm:text-sm">Authentication is optional. You can use this endpoint without credentials, or authenticate using {{ authenticated.length > 1 ? 'one of the following options' : 'the method below' }}.</p>
