@@ -597,6 +597,38 @@ test('API branding honors explicit links and rejects unsafe URLs and invalid col
   }
 })
 
+test('configured branding replaces spec branding and supports image plus text', async () => {
+  const html = await renderToString(createSSRApp(ApiBrand, {
+    info: {title: 'Selected API', contact: {url: 'https://spec.example/contact'}, 'x-logo': {
+      url: 'https://spec.example/logo.svg', backgroundColor: '#FFFFFF',
+    }},
+    logo: {title: 'Acme', image: {src: 'https://acme.example/logo.svg', alt: '', height: 32}},
+  }))
+  assert.match(html, /src="https:\/\/acme.example\/logo.svg"/)
+  assert.match(html, /alt(?:="")?\s/)
+  assert.match(html, /height:32px/)
+  assert.match(html, />Acme<\/span>/)
+  assert.match(html, /href="#overview"/)
+  assert.doesNotMatch(html, /spec.example|background-color|dark:bg-white/)
+})
+
+test('configured branding supports text, hiding, safe links and named image-only links', async () => {
+  const render = logo => renderToString(createSSRApp(ApiBrand, {info: {title: 'Selected API'}, logo}))
+  assert.match(await render({title: 'Acme', href: false}), />Acme<\/span>/)
+  assert.doesNotMatch(await render({title: 'Acme', href: false}), /<a\b/)
+  assert.doesNotMatch(await render(false), /Selected API|<img|<a\b/)
+  const image = {src: 'https://acme.example/logo.svg', alt: ''}
+  assert.match(await render({image}), /alt="Selected API"/)
+  assert.match(await render({image: {...image, alt: 'Acme'}}), /alt="Acme"/)
+  const external = await render({title: 'Acme', href: 'https://acme.example', target: '_blank'})
+  assert.match(external, /target="_blank"/)
+  assert.match(external, /rel="noopener noreferrer"/)
+  assert.doesNotMatch(await render({title: 'Acme', href: 'javascript:alert(1)'}), /<a\b|javascript:/)
+  const invalid = await render({title: 'Acme', image: {src: 'javascript:alert(1)', alt: 'Acme'}})
+  assert.match(invalid, />Acme<\/span>/)
+  assert.doesNotMatch(invalid, /<img/)
+})
+
 test('authorization placeholders respect inheritance, references and public or combined requirements', () => {
   const document = {security: [{Alias: []}], components: {securitySchemes: {
     Alias: {$ref: '#/components/securitySchemes/Token'},

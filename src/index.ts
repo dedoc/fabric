@@ -4,7 +4,7 @@ import FabricViewer from './components/FabricViewer.vue'
 import type {FabricOptions} from './types'
 import {initializeTheme} from './utils/theme'
 
-export type {FabricOptions} from './types'
+export type {FabricOptions, LogoConfig, LogoImage} from './types'
 
 export function init(target: string | HTMLElement, options: FabricOptions) {
   initializeTheme()

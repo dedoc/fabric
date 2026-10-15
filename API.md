@@ -9,7 +9,7 @@ type FabricRootOptions = FabricOptions
 type FabricOptions = {
 	openApiDocument: string | () => Promise<string>,
 	showSchemas: bool,
-	logo: { title: string } | { image: string, alt: string } | false,
+	logo?: LogoConfig | false,
 }
 ```
 
@@ -24,7 +24,7 @@ Fabric.init({
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
 	showSchemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
-	logo: { title: string } | { image: string, alt: string } | false,  
+	logo?: LogoConfig | false,
 });
 ```
 
@@ -33,9 +33,31 @@ Fabric.init({
 Fabric.init({
 	specs: (FabricOptions & { name: string, slug: string, order: number })[],
 	defaultSpec: string,
-	logo: { title: string } | { image: string, alt: string } | false,  
+	logo?: LogoConfig | false,
 });
 ```
+
+## Logo
+
+```ts
+type LogoImage = {
+  src: string
+  srcDark?: string
+  alt: string
+  height?: number // displayed pixels; default 36, aspect ratio preserved
+}
+
+type LogoConfig = {
+  title?: string
+  image?: LogoImage
+  href?: string | false // default: selected API overview; false: no link
+  target?: '_self' | '_blank' // default: _self
+}
+```
+
+Branding belongs to the selected API. Omit `logo` to use `info.x-logo`, or set it to `false` to hide branding. A configured object replaces spec branding entirely. Set `title`, `image`, or both; an empty object falls back to the selected API title. A missing, invalid, or failed image uses the configured title, falling back to the selected API title when none is set. A missing `srcDark` uses `src`.
+
+Config image and link paths resolve against the host page URL; spec branding paths resolve against the specification URL. Only HTTP(S) image and link URLs are accepted. Use `alt: ''` for an image beside text that already names the brand. Image-only branding uses `alt`, with the API title supplying an accessible name if `alt` is empty.
 
 ## Guides
 ```js

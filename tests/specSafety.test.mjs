@@ -27,6 +27,8 @@ const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
 const {parseGuides} = await server.ssrLoadModule('/src/guides.ts')
 const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.vue')
+const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
+const {theme} = await server.ssrLoadModule('/src/utils/theme.ts')
 const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
@@ -229,6 +231,54 @@ test('slow remote loads time out and abort the outstanding fetch', async t => {
     await result
     assert.equal(signal.aborted, true)
   } finally { globalThis.fetch = original; t.mock.timers.reset() }
+})
+
+test('viewer passes selected API logo config through and resolves paths against the host', async () => {
+  const viewer = mountViewer({
+    openApiDocument: JSON.stringify({...valid, info: {...valid.info, title: 'Selected API', 'x-logo': {
+      url: 'https://spec.example/logo.svg',
+    }}}),
+    openApiDocumentUrl: 'https://spec.example/docs/openapi.json',
+    logo: {title: 'Custom brand', image: {src: '/brand.svg', alt: ''}, href: '/home'},
+  })
+  try {
+    await until(() => viewer.find(el => el.type === 'img'))
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/brand.svg')
+    assert.equal(viewer.find(el => el.props.href === 'https://example.com/home').props.target, '_self')
+    viewer.find(el => el.type === 'img').props.onError()
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img'), undefined)
+    assert.ok(viewer.find(el => el.type === 'span' && el.text === 'Custom brand'))
+  } finally { viewer.close() }
+})
+
+test('branding switches theme images and resets failures when the selected API or config changes', async () => {
+  const originalTheme = theme.value
+  theme.value = 'light'
+  const info = ref({title: 'First API'})
+  const logo = ref({image: {src: '/light.svg', srcDark: '/dark.svg', alt: 'Acme', height: 32}})
+  const viewer = mountViewer({}, '#overview', {render: () => h(ApiBrand, {info: info.value, logo: logo.value})})
+  try {
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/light.svg')
+    theme.value = 'dark'
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/dark.svg')
+    viewer.find(el => el.type === 'img').props.onError()
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img'), undefined)
+    assert.match(viewer.text(), /First API/)
+    info.value = {title: 'Second API'}
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/dark.svg')
+    viewer.find(el => el.type === 'img').props.onError()
+    await nextTick()
+    logo.value = {image: {src: '/normal.svg', alt: 'Other', height: 24}}
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/normal.svg')
+    theme.value = 'light'
+    await nextTick()
+    assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/normal.svg')
+  } finally { viewer.close(); theme.value = originalTheme }
 })
 
 function mountViewer(options = {openApiDocumentUrl: '/spec.json'}, hash = '#overview', component) {

@@ -10,6 +10,7 @@ import Paths from "../OpenApi/Paths.vue";
 import SchemaPage from "../OpenApi/SchemaPage.vue";
 import Overview from "../OpenApi/Overview.vue";
 import ApiBrand from '../OpenApi/ApiBrand.vue'
+import type {LogoConfig} from '../../types'
 import Operation from "../OpenApi/Operation.vue";
 import {Navigation as NavigationType} from "./Partials/types.ts";
 import Navigation from "./Partials/Navigation.vue";
@@ -30,7 +31,8 @@ const props = withDefaults(defineProps<{
   guides?: Record<string, string>,
   showSchemas?: boolean,
   referenceLabel?: boolean,
-}>(), {showSchemas: true, referenceLabel: true})
+  logo?: LogoConfig | false,
+}>(), {showSchemas: true, referenceLabel: true, logo: undefined})
 
 provide(showSchemasKey, computed(() => props.showSchemas))
 const sourceDocument = computed(() => props.document)
@@ -150,7 +152,7 @@ onUnmounted(() => {
 <template>
   <div class="isolate bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
     <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
-      <ApiBrand :info="document.info" :document-url="documentUrl" />
+      <ApiBrand :info="document.info" :document-url="documentUrl" :logo="logo" />
       <button type="button" class="min-h-9 rounded-[--radius] border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
       </button>

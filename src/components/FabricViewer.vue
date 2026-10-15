@@ -6,7 +6,7 @@ import {fetchSpecification, parseSpecification, SpecificationError} from './Open
 import type {Document} from './OpenApi/types'
 import type {FabricOptions} from '../types'
 
-const props = defineProps<FabricOptions>()
+const props = withDefaults(defineProps<FabricOptions>(), {logo: undefined})
 
 const specification = ref<Document>()
 const documentUrl = ref('')
@@ -51,5 +51,5 @@ onUnmounted(() => controller?.abort())
   <main v-else-if="state === 'loading'" class="grid min-h-dvh place-items-center px-6" role="status">
     <p class="text-sm text-gray-500 dark:text-gray-400">Loading API reference…</p>
   </main>
-  <Pages v-else-if="specification" :document="specification" :document-url="documentUrl" :guides="guides" :reference-label="referenceLabel" />
+  <Pages v-else-if="specification" :document="specification" :document-url="documentUrl" :guides="guides" :reference-label="referenceLabel" :logo="logo" />
 </template>

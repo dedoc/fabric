@@ -63,6 +63,18 @@ When embedding the viewer, pass `specUrl` and optionally `showSchemas` to `src/c
 
 `info.x-logo` displays a logo above navigation, with support for `url`, `altText`, hexadecimal `backgroundColor`, and `href` (defaulting to `info.contact.url`). Relative URLs resolve against the specification URL. Images and links accept HTTP(S) URLs; missing, invalid, or failed images fall back to the API title.
 
+Override selected API branding with `logo` in the `Fabric.init` options:
+
+```js
+logo: {
+  title: 'Acme',
+  image: {src: '/logo.svg', srcDark: '/logo-on-dark.svg', alt: '', height: 32},
+  href: 'https://acme.com',
+}
+```
+
+Use text, an image, or both. Config replaces spec branding entirely; omitted config uses `info.x-logo`, and `logo: false` hides branding. Config paths resolve against the host page URL. Image height defaults to 36 pixels and preserves aspect ratio. Missing dark variants use the normal image; invalid or failed images use the configured title, or the selected API title when none is set. The default link opens the API overview in the same tab; `href: false` disables linking, and `target: '_blank'` opens a new tab. For image-only logos, provide the brand name as `alt`; use `alt: ''` beside equivalent visible text. See [logo types](./API.md#logo).
+
 ## Errors and description safety
 
 The loader checks HTTP status, JSON/YAML parsing, supported versions, required document metadata, and key rendering structures. These checks are not a complete OpenAPI conformance validator. Loading has a 30-second timeout. Loading, parsing, structural, and descendant rendering failures show a small error page with a retry action.

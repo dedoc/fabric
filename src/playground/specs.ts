@@ -14,6 +14,10 @@ export const fabricOptions: PlaygroundSpec[] = [
     value: '/specs/fabric-reference.yaml',
     label: 'Fabric Reference Lab · OpenAPI 3.1',
     openApiDocumentUrl: '/specs/fabric-reference.yaml',
+    logo: {
+      title: 'Fabric Reference Lab',
+      image: {src: '/fabric-logo-light.svg', srcDark: '/fabric-logo-dark.svg', alt: '', height: 24},
+    },
     guides: {auth, pagination, errors, projects},
   },
   {
