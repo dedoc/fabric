@@ -151,7 +151,7 @@ onUnmounted(() => {
 
 <template>
   <div class="isolate bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
-    <header class="sticky top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
+    <header class="sticky md:pt-2 top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
       <ApiBrand :info="document.info" :document-url="documentUrl" :logo="logo" />
       <button type="button" class="min-h-9 rounded-[--radius] border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" :aria-expanded="mobileNavigationOpen" aria-controls="docs-navigation" @click="mobileNavigationOpen = !mobileNavigationOpen">
         {{ mobileNavigationOpen ? 'Close menu' : 'Menu' }}
@@ -186,7 +186,7 @@ onUnmounted(() => {
         <div class="sticky bottom-0 z-10 -mx-5 flex shrink-0 items-center gap-1 bg-white dark:bg-gray-950 px-5 pb-4 pt-2 text-xs text-gray-500 dark:text-gray-400 md:-mx-6 md:px-6">
           <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6 bg-gradient-to-t from-white dark:from-gray-950 to-transparent"></div>
           <span>Powered by</span>
-          <a href="https://dedoc.co/?utm_source=fabric" target="_blank" rel="noopener noreferrer" class="inline-flex items-center font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-600 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500">fabric</a>
+          <a href="https://scramble.dedoc.co/?utm_source=fabric" target="_blank" rel="noopener noreferrer" class="inline-flex items-center font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-600 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500">Scramble</a>
           <ThemeSwitch />
         </div>
         </div>

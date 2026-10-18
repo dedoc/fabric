@@ -381,6 +381,27 @@ test('the small error page retries loading and recovers to the API reference', a
   } finally { viewer.close(); globalThis.fetch = original }
 })
 
+test('viewer config can hide schema navigation while keeping it visible by default', async () => {
+  const document = {...valid, components: {schemas: {Person: {type: 'object', properties: {name: {type: 'string'}}}}}}
+  for (const showSchemas of ['omitted', undefined, true, false]) {
+    const viewer = mountViewer({openApiDocument: JSON.stringify(document), ...(showSchemas === 'omitted' ? {} : {showSchemas})})
+    try {
+      await until(() => viewer.text().includes('Recovered API'))
+      assert.equal(!!viewer.find(el => el.props['aria-label'] === 'Schemas'), showSchemas !== false)
+    } finally { viewer.close() }
+  }
+})
+
+test('reference heading is visible when config is omitted and can be disabled', async () => {
+  for (const referenceLabel of ['omitted', true, false]) {
+    const viewer = mountViewer({openApiDocument: JSON.stringify(valid), ...(referenceLabel === 'omitted' ? {} : {referenceLabel})})
+    try {
+      await until(() => viewer.text().includes('Recovered API'))
+      assert.equal(!!viewer.find(el => el.text === 'Reference'), referenceLabel !== false)
+    } finally { viewer.close() }
+  }
+})
+
 test('inline JSON, YAML, and async document loaders render without fetching', async () => {
   const original = globalThis.fetch
   globalThis.fetch = async () => { throw new Error('Inline documents must not be fetched') }

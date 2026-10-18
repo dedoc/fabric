@@ -30,5 +30,7 @@ export type FabricOptions = FabricOpenApiDocumentLink & {
     /** Replaces spec branding. Omitted: use info.x-logo. false: hide branding. */
     logo?: LogoConfig | false,
     guides?: Record<string, string>,
+    /** Show schema navigation and links. Defaults to true. */
+    showSchemas?: boolean,
     referenceLabel?: boolean,
 }

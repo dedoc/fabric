@@ -9,6 +9,7 @@ type FabricRootOptions = FabricOptions
 type FabricOptions = {
 	openApiDocument: string | () => Promise<string>,
 	showSchemas: bool,
+	referenceLabel?: boolean, // default: true; show the sidebar's Reference heading
 	logo?: LogoConfig | false,
 }
 ```
@@ -24,6 +25,7 @@ Fabric.init({
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
 	showSchemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
+	referenceLabel: false, // hide only the Reference heading; navigation, Webhooks, and Schemas stay unchanged
 	logo?: LogoConfig | false,
 });
 ```
@@ -36,6 +38,30 @@ Fabric.init({
 	logo?: LogoConfig | false,
 });
 ```
+
+## Navigation sections
+
+Use `kind: nav-section` on an OpenAPI 3.2 tag to create an always-visible navigation section. Its name (or `summary`, when supplied) becomes the section heading; its operations and child groups appear beneath it without an extra level of indentation.
+
+```yaml
+openapi: 3.2.0
+tags:
+  - name: catalog
+    summary: Catalog
+    kind: nav-section
+  - name: products
+    summary: Products
+    parent: catalog
+paths:
+  /products:
+    get:
+      tags: [products]
+      responses:
+        '200':
+          description: Product list
+```
+
+Set `referenceLabel: false` in the Fabric config to hide the default “Reference” heading when these section headings provide the grouping. This only hides that heading; navigation order, Webhooks, and Schemas stay unchanged.
 
 ## Logo
 
