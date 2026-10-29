@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {createXmlExample} from '../src/components/OpenApi/xmlExamples'
-import {formatMediaExample, isXmlContentType} from '../src/components/OpenApi/mediaExamples'
-import type {Schema} from '../src/components/OpenApi/types'
+import {createXmlExample} from '@/core/openapi/xmlExamples'
+import {formatMediaExample, isXmlContentType} from '@/core/openapi/mediaExamples'
+import type {Schema} from '@/core/openapi/types'
 
 test('serializes escaped text, attributes, and falsy values', () => {
   const schema: Schema = {xml: {name: 'message'}, properties: {

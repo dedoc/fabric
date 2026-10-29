@@ -1,8 +1,8 @@
-import type {FabricOptions} from '../types'
-import auth from './guides/auth.md?raw'
-import pagination from './guides/pagination.md?raw'
-import errors from './guides/errors.md?raw'
-import projects from './guides/projects.md?raw'
+import type {FabricOptions} from '@/types'
+import auth from '@/playground/guides/auth.md?raw'
+import pagination from '@/playground/guides/pagination.md?raw'
+import errors from '@/playground/guides/errors.md?raw'
+import projects from '@/playground/guides/projects.md?raw'
 
 // value is the URL to load; openApiDocumentUrl preserves the upstream base for proxies.
 export type PlaygroundSpec = FabricOptions & {value: string, label: string}

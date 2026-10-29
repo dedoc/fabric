@@ -2,12 +2,16 @@ import assert from 'node:assert/strict'
 import {existsSync, readFileSync} from 'node:fs'
 import {createServer as createHttpServer} from 'node:http'
 import {after, test} from 'node:test'
+import {fileURLToPath} from 'node:url'
 import {createServer, transformWithEsbuild} from 'vite'
-import {compileScript, compileTemplate, parse as parseVue} from '@vue/compiler-sfc'
+import {compileScript, compileTemplate, parse as parseVue, registerTS} from '@vue/compiler-sfc'
 import {createRenderer, h, nextTick, provide, ref} from 'vue'
+import ts from 'typescript'
+
+registerTS(() => ts)
 
 // Compile client render functions so the lightweight host can exercise mounted UI states.
-const server = await createServer({configFile: false, plugins: [{
+const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, plugins: [{
   name: 'client-components-for-tests',
   async transform(source, id) {
     if (!id.endsWith('.vue')) return
@@ -23,9 +27,9 @@ const server = await createServer({configFile: false, plugins: [{
   },
 }], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
-const {renderDescription} = await server.ssrLoadModule('/src/components/OpenApi/descriptionHtml.ts')
-const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
-const {parseGuides} = await server.ssrLoadModule('/src/guides.ts')
+const {renderDescription} = await server.ssrLoadModule('/src/core/openapi/descriptionHtml.ts')
+const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/core/openapi/specification.ts')
+const {parseGuides} = await server.ssrLoadModule('/src/core/guides.ts')
 const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.vue')
 const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
 const {theme} = await server.ssrLoadModule('/src/utils/theme.ts')

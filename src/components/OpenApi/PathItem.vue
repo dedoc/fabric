@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type {Paths, Components, PathItem} from "./types";
-import Operation from "./Operation.vue";
-import {getInlineOperations} from "./utils";
+import type {Paths, Components, PathItem} from "@/core/openapi/types";
+import Operation from "@/components/OpenApi/Operation.vue";
+import {getInlineOperations} from "@/core/openapi/utils";
 import {computed} from 'vue'
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import type {ReferenceIssue} from './references'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from '@/core/openapi/references'
 
 const props = defineProps<{
   base: string, // todo: should not be here!

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type {Components, Parameter, Reference} from "./types";
-import ParameterDetails from './ParameterDetails.vue'
+import type {Components, Parameter, Reference} from "@/core/openapi/types";
+import ParameterDetails from '@/components/OpenApi/ParameterDetails.vue'
 import {computed} from "vue";
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import SectionTitle from "./Partials/SectionTitle.vue";
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import SectionTitle from "@/components/OpenApi/Partials/SectionTitle.vue";
 
 const props = defineProps<{
   components: Components, // todo: should not be here!

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Components, Parameter} from './types'
-import Schema from './Schema.vue'
-import Description from './Description.vue'
-import ValueExamples from './ValueExamples.vue'
-import {provideCompositionScope} from './useCompositionSelections'
+import type {Components, Parameter} from '@/core/openapi/types'
+import Schema from '@/components/OpenApi/Schema.vue'
+import Description from '@/components/OpenApi/Description.vue'
+import ValueExamples from '@/components/OpenApi/ValueExamples.vue'
+import {provideCompositionScope} from '@/components/OpenApi/useCompositionSelections'
 
 const props = defineProps<{parameter: Parameter, components: Components}>()
 provideCompositionScope(computed(() => `parameter:${props.parameter.in}:${props.parameter.name}`))

@@ -1,4 +1,4 @@
-import type {Schema} from './types'
+import type {Schema} from '@/core/openapi/types'
 
 type Bound = {value: number, exclusive: boolean}
 

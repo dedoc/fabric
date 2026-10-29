@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Components, Schema as SchemaType} from './types'
-import Description from './Description.vue'
-import Schema from './Schema.vue'
-import SchemaExamples from './SchemaExamples.vue'
-import {resolveExampleSchema} from './schemaExamples'
-import {useReferences} from './useReferences'
-import {provideCompositionSelections} from './useCompositionSelections'
+import type {Components, Schema as SchemaType} from '@/core/openapi/types'
+import Description from '@/components/OpenApi/Description.vue'
+import Schema from '@/components/OpenApi/Schema.vue'
+import SchemaExamples from '@/components/OpenApi/SchemaExamples.vue'
+import {resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import {provideCompositionSelections} from '@/components/OpenApi/useCompositionSelections'
 
 const props = defineProps<{name: string, schema: SchemaType, components: Components}>()
 provideCompositionSelections()

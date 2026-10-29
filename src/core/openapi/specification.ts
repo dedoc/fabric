@@ -1,6 +1,6 @@
 import {parse} from 'yaml'
-import type {Document} from './types'
-import {httpMethods} from './utils'
+import type {Document} from '@/core/openapi/types'
+import {httpMethods} from '@/core/openapi/utils'
 
 export class SpecificationError extends Error {}
 

@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type {Paths, Components, PathItem, Response, Reference, Parameter} from "./types";
-import MediaType from "./MediaType.vue";
-import Description from "./Description.vue";
+import type {Paths, Components, PathItem, Response, Reference, Parameter} from "@/core/openapi/types";
+import MediaType from "@/components/OpenApi/MediaType.vue";
+import Description from "@/components/OpenApi/Description.vue";
 import {computed, ref} from "vue";
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import ResponseHeader from "./Partials/ResponseHeader.vue";
-import ResponseContent from "./Partials/ResponseContent.vue";
-import ToggleButton from "./Partials/ToggleButton.vue";
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import ResponseHeader from "@/components/OpenApi/Partials/ResponseHeader.vue";
+import ResponseContent from "@/components/OpenApi/Partials/ResponseContent.vue";
+import ToggleButton from "@/components/OpenApi/Partials/ToggleButton.vue";
 
 const props = defineProps<{
   components: Components, // todo: should not be here!
-  statusCode: number,
+  statusCode: string | number,
   response: Response|Reference,
   secondary?: boolean,
 }>()

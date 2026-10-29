@@ -1,4 +1,4 @@
-import type {Operation, PathItem, Server} from './types'
+import type {Operation, PathItem, Server} from '@/core/openapi/types'
 
 /** The most local server list replaces the inherited list. */
 export function resolveOperationBase(

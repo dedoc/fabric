@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {spawnSync} from 'node:child_process'
-import {createRequestExample, requestExampleSenders} from '../src/components/OpenApi/requestExamples'
-import type {MediaType} from '../src/components/OpenApi/types'
+import {createRequestExample, requestExampleSenders} from '@/core/openapi/requestExamples'
+import type {MediaType} from '@/core/openapi/types'
 
 function render(sender: string, contentType = '', media?: MediaType, method = 'post') {
   return requestExampleSenders.find(item => item.id === sender)!.generate(createRequestExample(

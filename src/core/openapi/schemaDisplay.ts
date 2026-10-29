@@ -1,7 +1,7 @@
-import type {Document, Schema} from './types'
-import {resolveReference} from './references'
-import type {ReferenceIssue} from './references'
-import type {SchemaPath} from './compositionExamples'
+import type {Document, Schema} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import type {SchemaPath} from '@/core/openapi/compositionExamples'
 
 export type DisplayField = {schema: Schema, path: SchemaPath, allOfPaths?: SchemaPath[]}
 

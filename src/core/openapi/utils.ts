@@ -1,8 +1,8 @@
-import type {Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "./types.ts";
-import {resolveReference} from './references'
-import type {ReferenceIssue} from './references'
-import {effectiveParameters} from './parameters'
-import {getSchemaBounds} from './schemaBounds'
+import type {Document, HttpMethod, Operation, PathItem, Paths, Schema as SchemaType} from "@/core/openapi/types.ts";
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import {effectiveParameters} from '@/core/openapi/parameters'
+import {getSchemaBounds} from '@/core/openapi/schemaBounds'
 
 export const httpMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'options', 'head', 'patch', 'trace']
 

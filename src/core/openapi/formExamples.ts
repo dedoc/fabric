@@ -1,5 +1,5 @@
-import type {Components, Document, MediaType} from './types'
-import {getMediaExample} from './mediaExamples'
+import type {Components, Document, MediaType} from '@/core/openapi/types'
+import {getMediaExample} from '@/core/openapi/mediaExamples'
 
 export function isFormContentType(contentType: string): boolean {
   return contentType.split(';')[0].trim().toLowerCase() === 'application/x-www-form-urlencoded'

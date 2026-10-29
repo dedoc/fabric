@@ -1,6 +1,6 @@
-import type {Document, Schema} from './types'
-import {resolveReference} from './references'
-import type {ReferenceIssue, ReferenceResolution} from './references'
+import type {Document, Schema} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue, ReferenceResolution} from '@/core/openapi/references'
 
 type Node = {schema: Schema, issues: ReferenceIssue[], children: Node[]}
 

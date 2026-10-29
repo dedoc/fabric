@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type {Paths, Components, PathItem, RequestBody as RequestBodyType, Parameter, Reference} from "./types";
-import Operation from "./Operation.vue";
-import MediaType from "./MediaType.vue";
-import Parameters from "./Parameters.vue";
-import RequestBody from "./RequestBody.vue";
+import type {Paths, Components, PathItem, RequestBody as RequestBodyType, Parameter, Reference} from "@/core/openapi/types";
+import Operation from "@/components/OpenApi/Operation.vue";
+import MediaType from "@/components/OpenApi/MediaType.vue";
+import Parameters from "@/components/OpenApi/Parameters.vue";
+import RequestBody from "@/components/OpenApi/RequestBody.vue";
 
 defineProps<{
   components: Components, // todo: should not be here!

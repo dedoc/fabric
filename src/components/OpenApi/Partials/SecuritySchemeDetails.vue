@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {SecurityScheme} from '../types'
-import Description from '../Description.vue'
-import {securitySchemeLabel} from '../security'
+import type {SecurityScheme} from '@/core/openapi/types'
+import Description from '@/components/OpenApi/Description.vue'
+import {securitySchemeLabel} from '@/core/openapi/security'
 
 const props = defineProps<{name: string, scheme?: SecurityScheme, scopes?: string[]}>()
 const httpScheme = computed(() => props.scheme?.type === 'http' ? props.scheme.scheme.toLowerCase() : '')

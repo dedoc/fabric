@@ -1,14 +1,14 @@
-import type {Components, Document, MediaType, Parameter, Reference, Schema} from '../types'
-import {resolveExampleSchema} from '../schemaExamples'
-import {isSchemaVisible} from '../schemaUsage'
-import {requestParameters} from './parameters'
-import {formatMediaExample, getMediaExample} from '../mediaExamples'
-import {createFormFields, isFormContentType} from '../formExamples'
-import {bashSender} from './bash'
-import {laravelSender} from './laravel'
-import type {RequestExample, RequestExampleSender} from './types'
+import type {Components, Document, MediaType, Parameter, Reference, Schema} from '@/core/openapi/types'
+import {resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import {isSchemaVisible} from '@/core/openapi/schemaUsage'
+import {requestParameters} from '@/core/openapi/requestExamples/parameters'
+import {formatMediaExample, getMediaExample} from '@/core/openapi/mediaExamples'
+import {createFormFields, isFormContentType} from '@/core/openapi/formExamples'
+import {bashSender} from '@/core/openapi/requestExamples/bash'
+import {laravelSender} from '@/core/openapi/requestExamples/laravel'
+import type {RequestExample, RequestExampleSender} from '@/core/openapi/requestExamples/types'
 
-export type {RequestExample, RequestExampleSender} from './types'
+export type {RequestExample, RequestExampleSender} from '@/core/openapi/requestExamples/types'
 export const requestExampleSenders: RequestExampleSender[] = [bashSender, laravelSender]
 
 const fileExtensions: Record<string, string> = {'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'text/plain': 'txt'}

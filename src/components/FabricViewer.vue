@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {onErrorCaptured, onMounted, onUnmounted, ref} from 'vue'
-import Pages from './Layouts/Pages.vue'
-import SpecError from './SpecError.vue'
-import {fetchSpecification, parseSpecification, SpecificationError} from './OpenApi/specification'
-import type {Document} from './OpenApi/types'
-import type {FabricOptions} from '../types'
+import Pages from '@/components/Layouts/Pages.vue'
+import SpecError from '@/components/SpecError.vue'
+import {fetchSpecification, parseSpecification, SpecificationError} from '@/core/openapi/specification'
+import type {Document} from '@/core/openapi/types'
+import type {FabricOptions} from '@/types'
 
 const props = withDefaults(defineProps<FabricOptions>(), {logo: undefined, referenceLabel: true, showSchemas: true})
 

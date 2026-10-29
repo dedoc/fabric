@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
-import type {Document} from './types'
-import type {LogoConfig} from '../../types'
-import {theme} from '../../utils/theme'
+import type {Document} from '@/core/openapi/types'
+import type {LogoConfig} from '@/types'
+import {theme} from '@/utils/theme'
 
 const props = withDefaults(defineProps<{info?: Document['info'], documentUrl?: string, logo?: LogoConfig | false}>(), {logo: undefined})
 const failed = ref(false)

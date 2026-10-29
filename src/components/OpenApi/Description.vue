@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed} from "vue";
-import {renderDescription} from './descriptionHtml'
-import {theme} from '../../utils/theme'
+import {renderDescription} from '@/core/openapi/descriptionHtml'
+import {theme} from '@/utils/theme'
 
 const props = defineProps<{
   content: string,

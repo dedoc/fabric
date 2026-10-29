@@ -1,6 +1,6 @@
-import type {Document, Parameter, Reference} from './types'
-import {resolveReference} from './references'
-import type {ReferenceIssue} from './references'
+import type {Document, Parameter, Reference} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
 
 /** Operations replace inherited parameters by the case-sensitive (name, in) pair. */
 export function effectiveParameters(

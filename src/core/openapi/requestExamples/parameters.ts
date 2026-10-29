@@ -1,6 +1,6 @@
-import type {Document, Parameter, Reference} from '../types'
-import {resolveReference} from '../references'
-import {getMediaExample, isJsonContentType, selectMediaExample} from '../mediaExamples'
+import type {Document, Parameter, Reference} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import {getMediaExample, isJsonContentType, selectMediaExample} from '@/core/openapi/mediaExamples'
 
 const encode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, char => '%' + char.charCodeAt(0).toString(16).toUpperCase())
 const text = (value: unknown): string => value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value)

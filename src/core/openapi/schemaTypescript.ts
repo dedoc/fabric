@@ -1,7 +1,7 @@
-import type {Document, Schema} from './types'
-import type {ReferenceIssue} from './references'
-import {resolveSchemaGraph} from './schemaGraph'
-import {resolveLocalReference} from './localReferences'
+import type {Document, Schema} from '@/core/openapi/types'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import {resolveSchemaGraph} from '@/core/openapi/schemaGraph'
+import {resolveLocalReference} from '@/core/openapi/localReferences'
 
 export type TypeScriptOutput = {code: string, issues: ReferenceIssue[]}
 

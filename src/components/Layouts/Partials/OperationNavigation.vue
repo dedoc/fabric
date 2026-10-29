@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import MethodChip from "../../OpenApi/Partials/MethodChip.vue";
-import {OperationNavigation} from "./types.ts";
-import NavigationItem from "./NavigationItem.vue";
-import WebhookIcon from "../../UI/WebhookIcon.vue";
+import MethodChip from "@/components/OpenApi/Partials/MethodChip.vue";
+import {OperationNavigation} from "@/components/Layouts/Partials/types.ts";
+import NavigationItem from "@/components/Layouts/Partials/NavigationItem.vue";
+import WebhookIcon from "@/components/UI/WebhookIcon.vue";
 
 defineProps<{
   isSelected: boolean,

@@ -89,16 +89,16 @@ Reference siblings follow the document version: OpenAPI 3.0 ignores Reference Ob
 
 Missing targets, circular alias chains, malformed/unsupported pointers, and external references show warnings in the affected section. Incomplete request/response examples cannot be copied as generated samples; raw schema views remain available. External files are never fetched by the reference resolver: bundle them before loading. JSON Schema anchors, resource scopes using `$id`, and boolean schema targets are outside the current supported subset and produce diagnostics when encountered by the resolver. Advanced schema validation and constraint-aware sample generation remain release tasks in `AUDIT.md`.
 
-For programmatic use, `resolveReference(document, entry, kind)` in `src/components/OpenApi/references.ts` returns a value plus diagnostics; `kind` is `schema`, `reference`, or `pathItem`. Pure example helpers accept an optional complete document for full pointer and version support. Their components-only fallback treats references with the OpenAPI 3.0 sibling policy.
+For programmatic use, `resolveReference(document, entry, kind)` in `src/core/openapi/references.ts` returns a value plus diagnostics; `kind` is `schema`, `reference`, or `pathItem`. The framework-independent parsing, reference, schema, example, request-example, search, guide, and public option modules live under `src/core`. Pure example helpers accept an optional complete document for full pointer and version support. Their components-only fallback treats references with the OpenAPI 3.0 sibling policy.
 
 ## Checks
 
 See [Schema support](./SCHEMA_SUPPORT.md) for the supported display subset, regression fixtures, and limitations such as unimplemented discriminators and constraint-aware example generation. Unsupported schema keywords are documented there without new UI warnings.
 
 ```sh
-node --test tests/localReferences.test.mjs tests/schemaGraph.test.mjs tests/schemaViewer.test.mjs tests/specSafety.test.mjs tests/tags.test.mjs
+node --test tests/*.test.mjs
 yarn vite build
 yarn build
 ```
 
-`yarn build` also runs TypeScript checks. Existing renderer type errors and remaining launch gaps are recorded in [AUDIT.md](./AUDIT.md).
+`yarn build` also runs TypeScript checks. Remaining launch gaps are recorded in [AUDIT.md](./AUDIT.md).

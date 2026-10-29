@@ -1,11 +1,11 @@
-import type {Components, Document, Schema} from './types'
-import {resolveSchemaGraph} from './schemaGraph'
-import type {ReferenceIssue} from './references'
-import {createStringExample} from './stringExamples'
-import {createPatternExample} from './patternExamples'
-import {getSchemaBounds} from './schemaBounds'
-import {directionalExample, isSchemaVisible} from './schemaUsage'
-import type {SchemaDirection} from './schemaUsage'
+import type {Components, Document, Schema} from '@/core/openapi/types'
+import {resolveSchemaGraph} from '@/core/openapi/schemaGraph'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import {createStringExample} from '@/core/openapi/stringExamples'
+import {createPatternExample} from '@/core/openapi/patternExamples'
+import {getSchemaBounds} from '@/core/openapi/schemaBounds'
+import {directionalExample, isSchemaVisible} from '@/core/openapi/schemaUsage'
+import type {SchemaDirection} from '@/core/openapi/schemaUsage'
 
 /** Check the supported constraints after combining generated members. */
 function fitsConstraints(value: unknown, schema: Schema, visited = new Map<Schema, Set<unknown>>()): boolean {

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type {Navigation as NavigationType} from "./types.ts";
-import OperationNavigation from "./OperationNavigation.vue";
-import FolderNavigation from "./FolderNavigation.vue";
-import NavigationItem from './NavigationItem.vue'
+import type {Navigation as NavigationType} from "@/components/Layouts/Partials/types.ts";
+import OperationNavigation from "@/components/Layouts/Partials/OperationNavigation.vue";
+import FolderNavigation from "@/components/Layouts/Partials/FolderNavigation.vue";
+import NavigationItem from '@/components/Layouts/Partials/NavigationItem.vue'
 
 defineProps<{
   navigation: NavigationType,

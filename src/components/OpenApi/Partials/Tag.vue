@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {Tag as OpenApiTag} from '../types'
+import type {Tag as OpenApiTag} from '@/core/openapi/types'
 
 defineProps<{tag: OpenApiTag}>()
 </script>

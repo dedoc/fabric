@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import type {Components, Schema} from "./types.ts";
+import type {Components, Schema} from "@/core/openapi/types.ts";
 import {computed, getCurrentInstance, inject, provide, ref, toRaw} from "vue";
-import SchemaAttribute from "./SchemaAttribute.vue";
-import SchemaConstraints from './SchemaConstraints.vue'
-import SchemaTypePreview from "./SchemaTypePreview.vue";
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import {schemaAncestorsKey} from './schemaAncestors'
-import Description from "./Description.vue";
-import ToggleButton from "./Partials/ToggleButton.vue";
-import {schemaDirectionKey, schemaFlag, isSchemaVisible, directionalExample} from './schemaUsage'
-import type {SchemaDirection} from './schemaUsage'
-import {resolveExampleSchema} from './schemaExamples'
-import CompositionTabs from './CompositionTabs.vue'
-import {useCompositionSelections} from './useCompositionSelections'
-import {compositionPathKey} from './compositionExamples'
-import type {SchemaPath} from './compositionExamples'
-import {schemaDisplay} from './schemaDisplay'
+import SchemaAttribute from "@/components/OpenApi/SchemaAttribute.vue";
+import SchemaConstraints from '@/components/OpenApi/SchemaConstraints.vue'
+import SchemaTypePreview from "@/components/OpenApi/SchemaTypePreview.vue";
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import {schemaAncestorsKey} from '@/components/OpenApi/schemaAncestors'
+import Description from "@/components/OpenApi/Description.vue";
+import ToggleButton from "@/components/OpenApi/Partials/ToggleButton.vue";
+import {schemaDirectionKey} from '@/components/OpenApi/schemaUsage'
+import {schemaFlag, isSchemaVisible, directionalExample, type SchemaDirection} from '@/core/openapi/schemaUsage'
+import {resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import CompositionTabs from '@/components/OpenApi/CompositionTabs.vue'
+import {useCompositionSelections} from '@/components/OpenApi/useCompositionSelections'
+import {compositionPathKey} from '@/core/openapi/compositionExamples'
+import type {SchemaPath} from '@/core/openapi/compositionExamples'
+import {schemaDisplay} from '@/core/openapi/schemaDisplay'
 
 const props = withDefaults(defineProps<{
   shouldHideMainType?: boolean, // used to hide top type for schemas

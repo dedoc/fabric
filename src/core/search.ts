@@ -1,7 +1,7 @@
 import Fuse from 'fuse.js'
-import type {Document} from '../OpenApi/types'
-import {getOperationTitle, type InlineOperation} from '../OpenApi/utils'
-import type {parseGuides} from '../../guides'
+import type {Document} from '@/core/openapi/types'
+import {getOperationTitle, type InlineOperation} from '@/core/openapi/utils'
+import type {parseGuides} from '@/core/guides'
 
 export type SearchEntry = {
   id: string,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {createSchemaExample, resolveExampleSchema} from '../src/components/OpenApi/schemaExamples'
-import type {Schema} from '../src/components/OpenApi/types'
+import {createSchemaExample, resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import type {Schema} from '@/core/openapi/types'
 
 test('uses fixed values for nested objects and arrays', () => {
   assert.deepEqual(createSchemaExample({type: 'object', properties: {

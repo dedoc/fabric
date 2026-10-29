@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type {Components, RequestBody, Reference} from "./types";
+import type {Components, RequestBody, Reference} from "@/core/openapi/types";
 import {computed} from 'vue'
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import MediaType from "./MediaType.vue";
-import SectionTitle from "./Partials/SectionTitle.vue";
-import Description from './Description.vue'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import MediaType from "@/components/OpenApi/MediaType.vue";
+import SectionTitle from "@/components/OpenApi/Partials/SectionTitle.vue";
+import Description from '@/components/OpenApi/Description.vue'
 
 const props = defineProps<{
   components: Components, // todo: should not be here!

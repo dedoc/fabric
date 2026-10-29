@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Components, Example, Reference, Schema} from './types'
-import Description from './Description.vue'
-import SchemaAttribute from './SchemaAttribute.vue'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import {useReferences} from './useReferences'
-import {resolveExampleSchema} from './schemaExamples'
-import {directionalExample} from './schemaUsage'
-import type {SchemaDirection} from './schemaUsage'
+import type {Components, Example, Reference, Schema} from '@/core/openapi/types'
+import Description from '@/components/OpenApi/Description.vue'
+import SchemaAttribute from '@/components/OpenApi/SchemaAttribute.vue'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import {resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import {directionalExample, type SchemaDirection} from '@/core/openapi/schemaUsage'
 
 const props = defineProps<{example?: unknown, examples?: Record<string, Example|Reference>, components: Components, schema?: Schema, direction?: SchemaDirection}>()
 const references = useReferences(() => props.components)

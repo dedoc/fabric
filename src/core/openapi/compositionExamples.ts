@@ -1,5 +1,5 @@
-import type {Document, Schema} from './types'
-import {resolveReference} from './references'
+import type {Document, Schema} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
 
 export type SchemaPath = (string | number)[]
 export const compositionPathKey = (path: SchemaPath) => JSON.stringify(path)

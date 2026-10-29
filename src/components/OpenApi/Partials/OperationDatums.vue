@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type {Operation} from '../types'
+import type {Operation} from '@/core/openapi/types'
 import {computed, inject, ref} from 'vue'
-import {documentKey} from '../../../utils/symbols'
-import {operationSecurity, resolveSecurityScheme} from '../security'
-import ReferenceDiagnostics from '../ReferenceDiagnostics.vue'
-import type {ReferenceIssue} from '../references'
-import SecuritySchemeDetails from './SecuritySchemeDetails.vue'
+import {documentKey} from '@/utils/symbols'
+import {operationSecurity, resolveSecurityScheme} from '@/core/openapi/security'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import SecuritySchemeDetails from '@/components/OpenApi/Partials/SecuritySchemeDetails.vue'
 
 const props = defineProps<{operation: Operation}>()
 const document = inject(documentKey)

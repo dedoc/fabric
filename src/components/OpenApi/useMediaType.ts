@@ -1,7 +1,7 @@
 import {computed, inject, provide, reactive, ref} from 'vue'
 import type {InjectionKey} from 'vue'
-import type {MediaType} from './types'
-import {provideCompositionSelections} from './useCompositionSelections'
+import type {MediaType} from '@/core/openapi/types'
+import {provideCompositionSelections} from '@/components/OpenApi/useCompositionSelections'
 
 const selectionsKey: InjectionKey<Map<string, string>> = Symbol('mediaTypeSelections')
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {setTheme, theme} from '../../utils/theme'
+import {setTheme, theme} from '@/utils/theme'
 </script>
 
 <template>

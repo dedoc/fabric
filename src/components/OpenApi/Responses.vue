@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import Response from "./Response.vue";
-import {Components, Operation} from "./types.ts";
-import SectionTitle from "./Partials/SectionTitle.vue";
+import Response from "@/components/OpenApi/Response.vue";
+import type {Components, Operation, Responses as ResponseMap} from "@/core/openapi/types.ts";
+import SectionTitle from "@/components/OpenApi/Partials/SectionTitle.vue";
 
 const props = defineProps<{
   responses: Operation['responses'],
   components: Components,
 }>()
 
-const [primaryResponses, secondaryResponses] = Object.entries(props.responses || {}).reduce(([primary, secondary], response, index) => {
+const [primaryResponses, secondaryResponses] = Object.entries(props.responses || {}).reduce<[ResponseMap, ResponseMap]>(([primary, secondary], response, index) => {
   if (index === 0) {
     primary[response[0]] = response[1]
   } else {

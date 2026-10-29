@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed} from "vue";
-import {responseStatusDescription} from '../responseStatus'
+import {responseStatusDescription} from '@/core/openapi/responseStatus'
 
 const props = defineProps<{
   statusCode: string,

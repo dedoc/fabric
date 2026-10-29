@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Schema} from './types'
-import {getSchemaBounds} from './schemaBounds'
-import SchemaAttribute from './SchemaAttribute.vue'
+import type {Schema} from '@/core/openapi/types'
+import {getSchemaBounds} from '@/core/openapi/schemaBounds'
+import SchemaAttribute from '@/components/OpenApi/SchemaAttribute.vue'
 
 const props = defineProps<{schema: Schema}>()
 const bounds = computed(() => {

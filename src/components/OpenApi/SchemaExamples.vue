@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import {computed, ref} from 'vue'
-import type {Components, Schema} from './types'
-import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
-import {useReferences} from './useReferences'
-import ReferenceDiagnostics from './ReferenceDiagnostics.vue'
-import type {ReferenceIssue} from './references'
-import {useCompositionSelections} from './useCompositionSelections'
-import {selectExampleSchema} from './compositionExamples'
-import {createSchemaTypescript} from './schemaTypescript'
-import {useStoredChoice} from './useStoredChoice'
-import HighlightedCode from './HighlightedCode.vue'
+import type {Components, Schema} from '@/core/openapi/types'
+import {createSchemaExample, resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import {useCompositionSelections} from '@/components/OpenApi/useCompositionSelections'
+import {selectExampleSchema} from '@/core/openapi/compositionExamples'
+import {createSchemaTypescript} from '@/core/openapi/schemaTypescript'
+import {useStoredChoice} from '@/components/OpenApi/useStoredChoice'
+import HighlightedCode from '@/components/OpenApi/HighlightedCode.vue'
 
 const props = defineProps<{schema: Schema, components: Components, name?: string}>()
 const references = useReferences(() => props.components)

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type {Components, Header, Parameter, Response, Schema as SchemaType} from "../types";
+import type {Components, Header, Parameter, Response, Schema as SchemaType} from "@/core/openapi/types";
 import {computed} from 'vue'
-import {useReferences} from '../useReferences'
-import ReferenceDiagnostics from '../ReferenceDiagnostics.vue'
-import MediaType from "../MediaType.vue";
-import Description from "../Description.vue";
-import Schema from "../Schema.vue";
-import {responseStatusDescription} from '../responseStatus'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import MediaType from "@/components/OpenApi/MediaType.vue";
+import Description from "@/components/OpenApi/Description.vue";
+import Schema from "@/components/OpenApi/Schema.vue";
+import {responseStatusDescription} from '@/core/openapi/responseStatus'
 
 const props = defineProps<{
   unreferencedResponse: Response,

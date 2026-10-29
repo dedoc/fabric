@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
-import {setTheme} from '../utils/theme'
-import {fabricOptions, galaxySpecUrl} from '../playground/specs'
+import {setTheme} from '@/utils/theme'
+import {fabricOptions, galaxySpecUrl} from '@/playground/specs'
 
 function syncTheme(event: StorageEvent) {
   if (event.key === 'fabric-theme' && (event.newValue === 'light' || event.newValue === 'dark')) {

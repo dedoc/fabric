@@ -1,5 +1,5 @@
-import type {Document, Tag} from './types'
-import type {InlineOperation} from './utils'
+import type {Document, Tag} from '@/core/openapi/types'
+import type {InlineOperation} from '@/core/openapi/utils'
 
 export type OperationTagGroup = {
   key: string,

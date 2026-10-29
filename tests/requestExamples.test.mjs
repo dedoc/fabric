@@ -3,9 +3,9 @@ import {test, after} from 'node:test'
 import {createServer} from 'vite'
 const server = await createServer({server: {middlewareMode: true, hmr: false}, appType: 'custom'})
 after(() => server.close())
-const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/components/OpenApi/requestExamples/index.ts')
-const {createSchemaExample} = await server.ssrLoadModule('/src/components/OpenApi/schemaExamples.ts')
-const {selectMediaExample, formatMediaExample} = await server.ssrLoadModule('/src/components/OpenApi/mediaExamples.ts')
+const {createRequestExample, requestExampleSenders} = await server.ssrLoadModule('/src/core/openapi/requestExamples/index.ts')
+const {createSchemaExample} = await server.ssrLoadModule('/src/core/openapi/schemaExamples.ts')
+const {selectMediaExample, formatMediaExample} = await server.ssrLoadModule('/src/core/openapi/mediaExamples.ts')
 
 test('binary requests use a shared file placeholder in Bash and Laravel', () => {
   const model = createRequestExample('https://example.com', '/uploads', 'post', 'application/pdf', {schema: {type: 'string', format: 'binary'}}, {})

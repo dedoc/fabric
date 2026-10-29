@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {nextTick, onMounted, onUnmounted, ref, shallowRef, watch} from 'vue'
 import {Command, useCommandState} from 'vue-command-palette'
-import type {SearchEntry} from '../search'
-import SearchWorker from '../search.worker?worker&inline'
-import type {SearchRequest, SearchResponse} from '../search.worker'
-import MethodChip from '../../OpenApi/Partials/MethodChip.vue'
+import type {SearchEntry} from '@/core/search'
+import SearchWorker from '@/components/Layouts/search.worker?worker&inline'
+import type {SearchRequest, SearchResponse} from '@/components/Layouts/search.worker'
+import MethodChip from '@/components/OpenApi/Partials/MethodChip.vue'
 
 const props = defineProps<{entries: SearchEntry[]}>()
 const emit = defineEmits<{navigate: [id: string]}>()

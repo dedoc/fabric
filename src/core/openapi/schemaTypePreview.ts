@@ -1,5 +1,5 @@
-import type {Schema} from './types'
-import {getSchemaTypePreview} from './utils'
+import type {Schema} from '@/core/openapi/types'
+import {getSchemaTypePreview} from '@/core/openapi/utils'
 
 export type SchemaTypePart = {text: string, schemaName?: string}
 

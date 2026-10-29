@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import type {Document} from "../OpenApi/types.ts";
+import type {Document} from "@/core/openapi/types.ts";
 import {computed, onMounted, onUnmounted, provide, ref} from "vue";
-import {documentKey, showSchemasKey} from "../../utils/symbols.ts";
-import {resolveReference} from '../OpenApi/references'
-import type {ReferenceIssue} from '../OpenApi/references'
-import type {PathItem} from '../OpenApi/types'
-import ReferenceDiagnostics from '../OpenApi/ReferenceDiagnostics.vue'
-import Paths from "../OpenApi/Paths.vue";
-import SchemaPage from "../OpenApi/SchemaPage.vue";
-import Overview from "../OpenApi/Overview.vue";
-import ApiBrand from '../OpenApi/ApiBrand.vue'
-import type {LogoConfig} from '../../types'
-import Operation from "../OpenApi/Operation.vue";
-import {Navigation as NavigationType} from "./Partials/types.ts";
-import Navigation from "./Partials/Navigation.vue";
-import NavigationItem from "./Partials/NavigationItem.vue";
-import ThemeSwitch from '../UI/ThemeSwitch.vue'
-import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "../OpenApi/utils.ts";
-import {resolveOperationBase} from "../OpenApi/servers.ts";
-import {parseGuides} from '../../guides'
-import Description from '../OpenApi/Description.vue'
-import {groupOperationsByTags, type OperationTagGroup} from '../OpenApi/tags'
-import SearchPalette from './Partials/SearchPalette.vue'
-import {buildSearchEntries} from './search'
+import {documentKey, showSchemasKey} from "@/utils/symbols.ts";
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import type {PathItem} from '@/core/openapi/types'
+import ReferenceDiagnostics from '@/components/OpenApi/ReferenceDiagnostics.vue'
+import Paths from "@/components/OpenApi/Paths.vue";
+import SchemaPage from "@/components/OpenApi/SchemaPage.vue";
+import Overview from "@/components/OpenApi/Overview.vue";
+import ApiBrand from '@/components/OpenApi/ApiBrand.vue'
+import type {LogoConfig} from '@/types'
+import Operation from "@/components/OpenApi/Operation.vue";
+import {Navigation as NavigationType} from "@/components/Layouts/Partials/types.ts";
+import Navigation from "@/components/Layouts/Partials/Navigation.vue";
+import NavigationItem from "@/components/Layouts/Partials/NavigationItem.vue";
+import ThemeSwitch from '@/components/UI/ThemeSwitch.vue'
+import {getInlineOperations, getWebhookOperations, getOperationTitle, InlineOperation} from "@/core/openapi/utils.ts";
+import {resolveOperationBase} from "@/core/openapi/servers.ts";
+import {parseGuides} from '@/core/guides'
+import Description from '@/components/OpenApi/Description.vue'
+import {groupOperationsByTags, type OperationTagGroup} from '@/core/openapi/tags'
+import SearchPalette from '@/components/Layouts/Partials/SearchPalette.vue'
+import {buildSearchEntries} from '@/core/search'
 
 const props = withDefaults(defineProps<{
   base?: string,

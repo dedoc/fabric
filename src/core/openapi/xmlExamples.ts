@@ -1,4 +1,4 @@
-import type {Schema} from './types'
+import type {Schema} from '@/core/openapi/types'
 
 function escapeXml(value: unknown, attribute = false): string {
   // XML 1.0 cannot represent control characters or unpaired surrogates.

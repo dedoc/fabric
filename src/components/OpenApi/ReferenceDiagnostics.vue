@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {ReferenceIssue} from './references'
+import type {ReferenceIssue} from '@/core/openapi/references'
 defineProps<{issues: ReferenceIssue[]}>()
 </script>
 

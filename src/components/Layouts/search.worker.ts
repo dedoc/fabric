@@ -1,4 +1,4 @@
-import {createSearchIndex, searchEntries, type SearchEntry} from './search'
+import {createSearchIndex, searchEntries, type SearchEntry} from '@/core/search'
 
 export type SearchRequest = {entries: SearchEntry[]} | {id: number, query: string}
 export type SearchResponse = {id: number, entries: SearchEntry[]}

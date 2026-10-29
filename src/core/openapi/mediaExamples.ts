@@ -1,10 +1,10 @@
-import type {Components, Document, Example, MediaType, Schema} from './types'
-import {resolveReference} from './references'
-import type {ReferenceIssue} from './references'
-import {createSchemaExample, resolveExampleSchema} from './schemaExamples'
-import {createXmlExample} from './xmlExamples'
-import {directionalExample, isSchemaVisible} from './schemaUsage'
-import type {SchemaDirection} from './schemaUsage'
+import type {Components, Document, Example, MediaType, Schema} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
+import {createSchemaExample, resolveExampleSchema} from '@/core/openapi/schemaExamples'
+import {createXmlExample} from '@/core/openapi/xmlExamples'
+import {directionalExample, isSchemaVisible} from '@/core/openapi/schemaUsage'
+import type {SchemaDirection} from '@/core/openapi/schemaUsage'
 
 export function isJsonContentType(contentType: string): boolean {
   const type = contentType.split(';')[0].trim().toLowerCase()

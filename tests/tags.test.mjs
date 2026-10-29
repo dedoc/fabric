@@ -7,10 +7,10 @@ import {renderToString} from 'vue/server-renderer'
 
 const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
-const {groupOperationsByTags, tagGroupOperations} = await server.ssrLoadModule('/src/components/OpenApi/tags.ts')
-const {getInlineOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
-const {parseSpecification} = await server.ssrLoadModule('/src/components/OpenApi/specification.ts')
-const {resolveReference} = await server.ssrLoadModule('/src/components/OpenApi/references.ts')
+const {groupOperationsByTags, tagGroupOperations} = await server.ssrLoadModule('/src/core/openapi/tags.ts')
+const {getInlineOperations} = await server.ssrLoadModule('/src/core/openapi/utils.ts')
+const {parseSpecification} = await server.ssrLoadModule('/src/core/openapi/specification.ts')
+const {resolveReference} = await server.ssrLoadModule('/src/core/openapi/references.ts')
 const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
 const info = {title: 'Tags API', version: '1'}
 const paths = {'/pets': {get: {operationId: 'pets', summary: 'List pets', tags: ['pets', 'animals'], responses: {}}}}

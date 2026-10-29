@@ -4,7 +4,7 @@ import {codeToTokens} from '@pierre/highlights'
 import type {Lang, ThemedToken} from '@pierre/highlights'
 import githubLight from '@pierre/highlights/themes/github-light'
 import githubDark from '@pierre/highlights/themes/github-dark'
-import {theme} from '../../utils/theme'
+import {theme} from '@/utils/theme'
 
 const props = defineProps<{code: string, language: Lang}>()
 const highlighted = computed(() => {

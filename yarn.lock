@@ -494,6 +494,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:22.19.3":
+  version: 22.19.3
+  resolution: "@types/node@npm:22.19.3"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/a30a75d503da795ddbd5f8851014f3e91925c2a63fa3f14128d54c998f25d682dfba96dc9589c73cf478b87a16d88beb790b11697bb8cd5bee913079237a58f2
+  languageName: node
+  linkType: hard
+
 "@types/sanitize-html@npm:^2.16.0":
   version: 2.16.2
   resolution: "@types/sanitize-html@npm:2.16.2"
@@ -1192,6 +1201,7 @@ __metadata:
     "@pierre/highlights": "npm:^0.1.3"
     "@tailwindcss/typography": "npm:^0.5.14"
     "@types/markdown-it": "npm:^14.1.2"
+    "@types/node": "npm:22.19.3"
     "@types/sanitize-html": "npm:^2.16.0"
     "@vitejs/plugin-vue": "npm:^5.1.2"
     autoprefixer: "npm:^10.4.20"
@@ -2549,6 +2559,13 @@ __metadata:
   version: 2.1.0
   resolution: "uc.micro@npm:2.1.0"
   checksum: 10c0/8862eddb412dda76f15db8ad1c640ccc2f47cdf8252a4a30be908d535602c8d33f9855dfcccb8b8837855c1ce1eaa563f7fa7ebe3c98fd0794351aab9b9c55fa
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {getSchemaTypeParts} from './schemaTypePreview'
+import {getSchemaTypeParts} from '@/core/openapi/schemaTypePreview'
 import {computed} from 'vue'
-import type {Schema} from './types'
+import type {Schema} from '@/core/openapi/types'
 
 const props = defineProps<{members: Schema[], kind: 'anyOf' | 'oneOf', selected: number, panelId: string}>()
 const emit = defineEmits<{select: [index: number]}>()

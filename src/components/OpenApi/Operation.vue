@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type {Components, Operation} from "./types";
-import Request from "./Request.vue";
-import Examples from "./Examples.vue";
+import type {Components, Operation} from "@/core/openapi/types";
+import Request from "@/components/OpenApi/Request.vue";
+import Examples from "@/components/OpenApi/Examples.vue";
 import {computed, inject} from "vue";
-import Description from "./Description.vue";
-import Responses from "./Responses.vue";
-import MethodChip from "./Partials/MethodChip.vue";
-import OperationDatums from "./Partials/OperationDatums.vue";
-import {provideMediaTypeSelections} from "./useMediaType";
-import WebhookIcon from "../UI/WebhookIcon.vue";
-import {documentKey} from '../../utils/symbols'
-import {isNavigationTag} from './tags'
-import Tag from './Partials/Tag.vue'
+import Description from "@/components/OpenApi/Description.vue";
+import Responses from "@/components/OpenApi/Responses.vue";
+import MethodChip from "@/components/OpenApi/Partials/MethodChip.vue";
+import OperationDatums from "@/components/OpenApi/Partials/OperationDatums.vue";
+import {provideMediaTypeSelections} from "@/components/OpenApi/useMediaType";
+import WebhookIcon from "@/components/UI/WebhookIcon.vue";
+import {documentKey} from '@/utils/symbols'
+import {isNavigationTag} from '@/core/openapi/tags'
+import Tag from '@/components/OpenApi/Partials/Tag.vue'
 
 const props = defineProps<{
   base: string, // todo: should not be here!

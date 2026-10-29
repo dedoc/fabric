@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {FolderNavigation, SectionNavigation} from "./types.ts";
+import {FolderNavigation, SectionNavigation} from "@/components/Layouts/Partials/types.ts";
 import {ref, watch} from "vue";
-import Navigation from "./Navigation.vue";
-import NavigationItem from "./NavigationItem.vue";
+import Navigation from "@/components/Layouts/Partials/Navigation.vue";
+import NavigationItem from "@/components/Layouts/Partials/NavigationItem.vue";
 
 const props = defineProps<{
   navigation: FolderNavigation,

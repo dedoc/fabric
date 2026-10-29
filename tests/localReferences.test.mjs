@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
+import {fileURLToPath} from 'node:url'
 import {createServer} from 'vite'
 
-const server = await createServer({configFile: false, server: {middlewareMode: true, hmr: false}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, server: {middlewareMode: true, hmr: false}})
 after(() => server.close())
-const {resolveLocalReference} = await server.ssrLoadModule('/src/components/OpenApi/localReferences.ts')
-const {resolveReference} = await server.ssrLoadModule('/src/components/OpenApi/references.ts')
+const {resolveLocalReference} = await server.ssrLoadModule('/src/core/openapi/localReferences.ts')
+const {resolveReference} = await server.ssrLoadModule('/src/core/openapi/references.ts')
 
 test('local pointers decode URI fragments and escaped tokens in the correct order', () => {
   const document = {components: {schemas: {

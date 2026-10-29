@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
+import {fileURLToPath} from 'node:url'
 import ts from 'typescript'
 import {readFile} from 'node:fs/promises'
 import {createServer as createHttpServer} from 'node:http'
@@ -9,15 +10,16 @@ import vuePlugin from '@vitejs/plugin-vue'
 import * as Vue from 'vue'
 import {createRenderer, h, nextTick, provide, ref, ssrContextKey} from 'vue'
 
-const server = await createServer({configFile: false, plugins: [vuePlugin()], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, plugins: [vuePlugin()], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
-const {createSchemaTypescript} = await server.ssrLoadModule('/src/components/OpenApi/schemaTypescript.ts')
+const {createSchemaTypescript} = await server.ssrLoadModule('/src/core/openapi/schemaTypescript.ts')
 const {default: SchemaExamples} = await server.ssrLoadModule('/src/components/OpenApi/SchemaExamples.vue')
 const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 // SSR loading supplies setup; compile the client template for event/copy checks.
 for (const [filename, component] of [
   ['SchemaExamples.vue', SchemaExamples],
   ['ReferenceDiagnostics.vue', (await server.ssrLoadModule('/src/components/OpenApi/ReferenceDiagnostics.vue')).default],
+  ['HighlightedCode.vue', (await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.vue')).default],
 ]) {
   const {descriptor} = parse(await readFile(new URL(`../src/components/OpenApi/${filename}`, import.meta.url), 'utf8'))
   const script = compileScript(descriptor, {id: 'typescript-test'})
@@ -470,12 +472,21 @@ test('unrepresentable recursion and excessive nesting report an unavailable outp
 test('TypeScript tab renders and copies types, switches back, and disables unresolved copies', async () => {
   const nodes = []
   const renderer = createRenderer({
-    createElement: tag => { const node = {tag, props: {}, text: ''}; nodes.push(node); return node },
+    createElement: tag => { const node = {tag, props: {}, text: '', children: []}; nodes.push(node); return node },
     createText: text => ({text}), createComment: () => ({}),
-    insert() {}, remove() {}, setText(node, text) {node.text = text},
-    setElementText(node, text) {node.text = text}, patchProp(node, key, previous, value) {node.props[key] = value},
-    parentNode: () => null, nextSibling: () => null,
+    insert(node, parent, anchor) {
+      if (node.parent) node.parent.children.splice(node.parent.children.indexOf(node), 1)
+      const children = parent.children ??= []
+      const index = anchor ? children.indexOf(anchor) : -1
+      children.splice(index < 0 ? children.length : index, 0, node)
+      node.parent = parent
+    },
+    remove(node) { node.parent?.children.splice(node.parent.children.indexOf(node), 1); node.parent = undefined },
+    setText(node, text) {node.text = text},
+    setElementText(node, text) {node.text = text; node.children = []}, patchProp(node, key, previous, value) {node.props[key] = value},
+    parentNode: node => node.parent, nextSibling: node => node.parent?.children[node.parent.children.indexOf(node) + 1],
   })
+  const textContent = node => (node.text ?? '') + (node.children ?? []).map(textContent).join('')
   const schema = ref({oneOf: [{type: 'string'}, {type: 'number'}]})
   const app = renderer.createApp({setup() {
     provide(documentKey, ref({components: {}}))
@@ -493,18 +504,18 @@ test('TypeScript tab renders and copies types, switches back, and disables unres
     tab.props.onClick()
     await nextTick()
     const code = nodes.find(node => node.tag === 'code')
-    assert.equal(code.text, 'export type Choice = string | number;')
+    assert.equal(textContent(code), 'export type Choice = string | number;')
     assert.equal(tab.props['aria-selected'], true)
     const copy = nodes.find(node => node.props['aria-label'] === 'Copy schema example')
     await copy.props.onClick()
-    assert.equal(copied, code.text)
+    assert.equal(copied, textContent(code))
     nodes.find(node => node.props.id === 'schema-example-example').props.onClick()
     await nextTick()
-    assert.equal(code.text, '"string"')
+    assert.equal(textContent(code), '"string"')
     schema.value = {properties: {missing: {$ref: '#/components/schemas/Missing'}}}
     tab.props.onClick()
     await nextTick()
-    assert.equal(code.text, '')
+    assert.equal(textContent(code), '')
     assert.equal(copy.props.disabled, true)
     assert.ok(nodes.some(node => node.text.includes('TypeScript output is unavailable')))
   } finally {

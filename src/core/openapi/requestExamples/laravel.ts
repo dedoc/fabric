@@ -1,5 +1,5 @@
-import type {RequestExampleSender} from './types'
-import {isFormContentType} from '../formExamples'
+import type {RequestExampleSender} from '@/core/openapi/requestExamples/types'
+import {isFormContentType} from '@/core/openapi/formExamples'
 
 const quote = (value: string) => "'" + value.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref} from 'vue'
-import Fabric from '../index'
-import {fetchSpecification} from './OpenApi/specification'
-import {fabricOptions} from '../playground/specs'
+import Fabric from '@/index'
+import {fetchSpecification} from '@/core/openapi/specification'
+import {fabricOptions} from '@/playground/specs'
 
 const props = defineProps<{specUrl?: string}>()
 

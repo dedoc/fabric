@@ -1,6 +1,7 @@
 # API reference viewer release audit
 
 Reviewed: 2026-10-08.
+Verification updated: 2026-10-29.
 
 ## Current position
 
@@ -24,17 +25,18 @@ The active demo is bundled at `public/specs/redocly-petstore.yaml`. `HelloWorld.
 
 ## Verification
 
-Latest checks on 2026-10-08:
+Latest checks on 2026-10-29:
 
 | Check | Result |
 | --- | --- |
-| Local-reference, viewer, and specification-safety suites | 76 passed |
+| JavaScript suites, including core dependency-boundary checks | 181 passed |
 | Schema, form, XML, and request-example suites through Vite SSR | 31 passed |
-| Total automated tests | 107 passed |
-| `yarn vite build` | Passed |
-| `yarn build` | Failed with 4 remaining TypeScript errors |
+| Total automated tests | 212 passed |
+| `yarn build` (TypeScript checks and playground bundle) | Passed |
+| `yarn build:lib` | Passed |
+| Browser smoke checks | Passed: navigation/history, search, schema tabs/copying, media selection, webhooks, themes, 390px mobile navigation, and CDN embedding/retry/destroy/remount |
 
-Remaining build errors are in `Partials/ResponseHeader.vue`, `Responses.vue`, and `Paths.vue`. Reference migration corrected the previous schema, parameter, response-header-object, and request-union errors. Passing tests do not cover every compatibility gap below.
+Response grouping is typed, response components accept string status keys such as `default` and `2XX`, and path keys are passed as strings. All build errors are resolved. Passing tests and smoke checks do not cover every compatibility gap below.
 
 ## Release task sets
 
@@ -42,13 +44,13 @@ Each checkbox is a separately reviewable task. Complete sets 1–5 before a scop
 
 ### 1. Restore the production build
 
-**Finding:** Vite bundles successfully, but the normal release command fails. Several errors expose incomplete handling of optional schemas, references, headers, and response codes.
+**Status:** The production build passes, including TypeScript checks.
 
 - [x] B1 — Handle unresolved/optional schemas explicitly and correct property-name typing in `Schema.vue`.
 - [x] B2 — Type the parameter-property accumulator and pass parameter/reference unions consistently through request components.
-- [ ] B3 — Treat response status keys consistently as strings, including `default` and ranges; correct status-label lookup and response grouping types.
+- [x] B3 — Treat response status keys consistently as strings, including `default` and ranges; correct status-label lookup and response grouping types.
 - [x] B4 — Resolve response-header references and handle schema-based and content-based Header Objects explicitly.
-- [ ] B5 — Correct operation method/key typing in `Paths.vue`; rerun the full build after reference and request changes.
+- [x] B5 — Correct operation method/key typing in `Paths.vue`; rerun the full build after reference and request changes.
 
 **Done when:** `yarn build` passes without disabling type checks or concealing errors with broad casts.
 

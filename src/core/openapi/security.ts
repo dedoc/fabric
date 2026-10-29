@@ -1,6 +1,6 @@
-import type {Components, Document, Operation, SecurityScheme} from './types'
-import {resolveReference} from './references'
-import type {ReferenceIssue} from './references'
+import type {Components, Document, Operation, SecurityScheme} from '@/core/openapi/types'
+import {resolveReference} from '@/core/openapi/references'
+import type {ReferenceIssue} from '@/core/openapi/references'
 
 export function resolveSecurityScheme(name: string, components: Components, document: Document = {components}, report?: (issue: ReferenceIssue) => void): SecurityScheme | undefined {
   const token = encodeURIComponent(name.replace(/~/g, '~0').replace(/\//g, '~1'))

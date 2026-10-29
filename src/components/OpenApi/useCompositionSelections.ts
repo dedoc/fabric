@@ -1,8 +1,8 @@
 import {computed, inject, provide, reactive} from 'vue'
 import type {ComputedRef, InjectionKey} from 'vue'
-import type {Components, MediaType} from './types'
-import {selectExampleSchema} from './compositionExamples'
-import {useReferences} from './useReferences'
+import type {Components, MediaType} from '@/core/openapi/types'
+import {selectExampleSchema} from '@/core/openapi/compositionExamples'
+import {useReferences} from '@/components/OpenApi/useReferences'
 
 const selectionsKey: InjectionKey<Map<string, Map<string, number>>> = Symbol('compositionSelections')
 const scopeKey: InjectionKey<ComputedRef<string>> = Symbol('compositionScope')

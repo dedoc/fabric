@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type {Paths, Components} from "./types";
-import PathItem from "./PathItem.vue";
+import type {Paths, Components} from "@/core/openapi/types";
+import PathItem from "@/components/OpenApi/PathItem.vue";
 
 defineProps<{
   base: string, // todo: should not be here!
@@ -14,7 +14,7 @@ defineProps<{
   <PathItem
     :base="base"
     :components="components"
-    :path="path"
+    :path="String(path)"
     :pathItem="pathItem"
   />
 </div>

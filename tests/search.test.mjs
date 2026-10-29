@@ -5,9 +5,9 @@ import {createServer} from 'vite'
 
 const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
-const {buildSearchEntries, createSearchIndex, searchEntries} = await server.ssrLoadModule('/src/components/Layouts/search.ts')
-const {getInlineOperations, getWebhookOperations} = await server.ssrLoadModule('/src/components/OpenApi/utils.ts')
-const {parseGuides} = await server.ssrLoadModule('/src/guides.ts')
+const {buildSearchEntries, createSearchIndex, searchEntries} = await server.ssrLoadModule('/src/core/search.ts')
+const {getInlineOperations, getWebhookOperations} = await server.ssrLoadModule('/src/core/openapi/utils.ts')
+const {parseGuides} = await server.ssrLoadModule('/src/core/guides.ts')
 const document = {
   openapi: '3.2.0', info: {title: 'Pet API', description: 'Welcome to the catalog'},
   tags: [{name: 'pets', summary: 'Companions', parent: 'catalog'}, {name: 'catalog', summary: 'Animal catalog'}],

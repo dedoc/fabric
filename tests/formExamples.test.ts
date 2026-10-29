@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {createFormFields, isFormContentType} from '../src/components/OpenApi/formExamples'
+import {createFormFields, isFormContentType} from '@/core/openapi/formExamples'
 
 test('generates individual Petstore form fields with compact complex values', () => {
   const fields = createFormFields({schema: {$ref: '#/components/schemas/Pet'}}, {schemas: {

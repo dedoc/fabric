@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed, inject} from 'vue'
-import type {Components, Schema} from './types'
-import {showSchemasKey} from '../../utils/symbols'
-import {getSchemaTypeParts} from './schemaTypePreview'
+import type {Components, Schema} from '@/core/openapi/types'
+import {showSchemasKey} from '@/utils/symbols'
+import {getSchemaTypeParts} from '@/core/openapi/schemaTypePreview'
 
 const props = defineProps<{schema?: Schema, original?: Schema, components: Components}>()
 const showSchemas = inject(showSchemasKey, computed(() => false))

@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type {Components, MediaType} from "./types.ts";
+import type {Components, MediaType} from "@/core/openapi/types.ts";
 import {computed, useSlots} from "vue";
-import Schema from "./Schema.vue";
-import SchemaTypePreview from "./SchemaTypePreview.vue";
-import {getSchemaTypePreview} from "./utils.ts";
-import Select from "../UI/Select.vue";
-import {useMediaType} from "./useMediaType";
-import ValueExamples from './ValueExamples.vue'
-import type {SchemaDirection} from './schemaUsage'
-import {provideCompositionScope} from './useCompositionSelections'
-import Description from './Description.vue'
-import {useReferences} from './useReferences'
-import {schemaDisplay} from './schemaDisplay'
+import Schema from "@/components/OpenApi/Schema.vue";
+import SchemaTypePreview from "@/components/OpenApi/SchemaTypePreview.vue";
+import {getSchemaTypePreview} from "@/core/openapi/utils.ts";
+import Select from "@/components/UI/Select.vue";
+import {useMediaType} from "@/components/OpenApi/useMediaType";
+import ValueExamples from '@/components/OpenApi/ValueExamples.vue'
+import type {SchemaDirection} from '@/core/openapi/schemaUsage'
+import {provideCompositionScope} from '@/components/OpenApi/useCompositionSelections'
+import Description from '@/components/OpenApi/Description.vue'
+import {useReferences} from '@/components/OpenApi/useReferences'
+import {schemaDisplay} from '@/core/openapi/schemaDisplay'
 
 const props = defineProps<{
   components: Components,

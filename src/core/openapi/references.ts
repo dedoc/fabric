@@ -1,5 +1,5 @@
-import type {Document} from './types'
-import {resolveLocalReference} from './localReferences'
+import type {Document} from '@/core/openapi/types'
+import {resolveLocalReference} from '@/core/openapi/localReferences'
 
 export type ReferenceKind = 'schema' | 'reference' | 'pathItem'
 export type ReferenceIssue = {reference: string, message: string}
