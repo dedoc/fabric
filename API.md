@@ -1,4 +1,4 @@
-Planned Fabric API
+Fabric API
 
 ## Init the spec
 ```ts
@@ -30,7 +30,7 @@ Fabric.init({
 });
 ```
 
-## Multiple API versions or specs
+## Multiple API versions or specs (todo)
 ```js
 Fabric.init({
 	specs: (FabricOptions & { name: string, slug: string, order: number })[],
@@ -41,7 +41,7 @@ Fabric.init({
 
 ## Navigation sections
 
-Use `kind: nav-section` on an OpenAPI 3.2 tag to create an always-visible navigation section. Its name (or `summary`, when supplied) becomes the section heading; its operations and child groups appear beneath it without an extra level of indentation.
+Besides standard tag kinds, you can use `kind: nav-section` on an OpenAPI 3.2 tag to create an always-visible navigation section. Its name (or `summary`, when supplied) becomes the section heading; its operations and child groups appear beneath it without an extra level of indentation.
 
 ```yaml
 openapi: 3.2.0
