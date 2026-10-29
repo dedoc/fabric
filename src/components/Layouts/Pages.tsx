@@ -14,6 +14,7 @@ import type {Navigation as NavigationType} from '@/components/Layouts/Partials/t
 import Navigation from '@/components/Layouts/Partials/Navigation'
 import NavigationItem from '@/components/Layouts/Partials/NavigationItem'
 import ThemeSwitch from '@/components/UI/ThemeSwitch'
+import Button from '@/components/UI/Button'
 import {getInlineOperations, getWebhookOperations, getOperationTitle} from '@/core/openapi/utils'
 import type {InlineOperation} from '@/core/openapi/utils'
 import {resolveOperationBase} from '@/core/openapi/servers'
@@ -134,9 +135,9 @@ export default function Pages({base, documentUrl, document, guides: guideSources
       <div className="isolate bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
         <header className="sticky md:pt-2 top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
           <ApiBrand info={document.info} documentUrl={documentUrl} logo={logo} />
-          <button type="button" className="min-h-9 rounded-[--radius] border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" aria-expanded={mobileNavigationOpen} aria-controls="docs-navigation" onClick={() => setMobileNavigationOpen(open => !open)}>
+          <Button className="min-h-9 rounded-[--radius] border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" aria-expanded={mobileNavigationOpen} aria-controls="docs-navigation" onClick={() => setMobileNavigationOpen(open => !open)}>
             {mobileNavigationOpen ? 'Close menu' : 'Menu'}
-          </button>
+          </Button>
         </header>
         <div className="flex items-start md:min-h-dvh">
           <aside id="docs-navigation" className={`sticky top-16 h-[calc(100dvh-64px)] w-full shrink-0 overflow-hidden md:top-14 md:h-[calc(100dvh-56px)] md:w-[248px] min-[1200px]:w-[296px] ${mobileNavigationOpen ? 'max-md:fixed max-md:bottom-0 max-md:z-20 max-md:bg-white max-md:dark:bg-gray-950' : 'max-md:hidden'}`} onKeyDown={event => {if (event.key === 'Escape') setMobileNavigationOpen(false)}}>
@@ -168,7 +169,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
                 <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-full h-6 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
                 <span>Powered by</span>
                 <a href="https://scramble.dedoc.co/?utm_source=fabric" target="_blank" rel="noopener noreferrer" className="inline-flex items-center font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-600 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500">Scramble</a>
-                <ThemeSwitch />
+                <ThemeSwitch className="ml-auto" />
               </div>
             </div>
           </aside>

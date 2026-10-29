@@ -1,4 +1,4 @@
-import {Collapsible} from '@base-ui/react/collapsible'
+import {Collapsible} from '@/components/UI/Collapsible'
 
 export default function ToggleButton({expanded, onExpandedChange, label, className = ''}: {
   expanded: boolean

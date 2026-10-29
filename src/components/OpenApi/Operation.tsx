@@ -7,7 +7,7 @@ import Responses from '@/components/OpenApi/Responses'
 import MethodChip from '@/components/OpenApi/Partials/MethodChip'
 import OperationDatums from '@/components/OpenApi/Partials/OperationDatums'
 import {OperationSelectionsProvider, DocumentContext} from '@/react/context'
-import WebhookIcon from '@/components/UI/WebhookIcon'
+import {WebhookIcon} from '@/components/Icons'
 import {isNavigationTag} from '@/core/openapi/tags'
 import Tag from '@/components/OpenApi/Partials/Tag'
 

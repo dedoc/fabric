@@ -2,6 +2,8 @@
 
 A React API reference viewer for OpenAPI 3.0, 3.1 and 3.2 documents, using Base UI controls.
 
+Shared controls and code panels live in `src/components/UI`; application components use that layer instead of importing Base UI directly. Icons live in `src/components/Icons`, including a plain TypeScript markup helper for Markdown callouts. UI components accept `className` for local styling, with surrounding spacing set by their callers.
+
 Tags use OpenAPI 3.2 `parent` for nesting and `summary` for display labels. Tags with no `kind`, or `kind: nav`, organize navigation into collapsible groups. Fabric also supports `kind: nav-section` for always-visible navigation sections with headings styled like “Reference”; their operations and child groups appear beneath the heading without an extra level of indentation. Other kinds (including `badge` and `audience`) appear as operation labels. Operations appear under every navigation tag they declare. Tag order only orders siblings; it never implies a parent. The overview uses the same groups and counts each operation once per group.
 
 Audience labels use the `Audience:` prefix. Badge labels are fully rounded chips colored by the `--primary` CSS variable, with theme-specific defaults.

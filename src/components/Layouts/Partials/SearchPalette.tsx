@@ -1,5 +1,7 @@
 import {useEffect, useRef, useState} from 'react'
-import {Dialog} from '@base-ui/react/dialog'
+import {Dialog} from '@/components/UI/Dialog'
+import Input from '@/components/UI/Input'
+import {ArrowDownIcon, ArrowUpIcon, EnterIcon, SearchIcon} from '@/components/Icons'
 import type {SearchEntry} from '@/core/search'
 import SearchWorker from '@/components/Layouts/search.worker?worker&inline'
 import type {SearchRequest, SearchResponse} from '@/components/Layouts/search.worker'
@@ -91,12 +93,12 @@ export default function SearchPalette({entries, onNavigate}: {entries: SearchEnt
 
   return <Dialog.Root open={open} onOpenChange={next => {if (next) show(); else close()}}>
     <Dialog.Trigger ref={trigger} className="mb-6 flex w-full cursor-text items-center gap-2 rounded-[--radius] border border-[color:var(--schema-border-color)] px-2.5 py-2 text-left text-sm text-gray-500 dark:text-gray-400 data-[search-restored-focus]:!outline-none">
-      <svg className="size-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor"/><path d="m13 13 4 4" stroke="currentColor"/></svg>
+      <SearchIcon className="size-4 shrink-0" />
       <span className="min-w-0 flex-1 truncate">Search reference…</span>
       <kbd className="-my-0.5 -mr-1 shrink-0 rounded bg-gray-100 px-2 py-1 font-sans text-xs leading-4 dark:bg-gray-800">{shortcut}</kbd>
     </Dialog.Trigger>
     <Dialog.Portal>
-      <Dialog.Backdrop className="fixed inset-0 z-40 bg-gray-950/50 dark:bg-black/60" />
+      <Dialog.Backdrop className="z-40" />
       <Dialog.Popup aria-label="Search reference" initialFocus={input} finalFocus={() => {
         const element = trigger.current
         if (element) {
@@ -104,10 +106,10 @@ export default function SearchPalette({entries, onNavigate}: {entries: SearchEnt
           element.addEventListener('blur', () => element.removeAttribute('data-search-restored-focus'), {once: true})
         }
         return element
-      }} className="fixed left-1/2 top-[min(15dvh,6rem)] z-50 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-transparent bg-white p-0 text-gray-900 shadow-2xl outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:shadow-none">
+      }} className="fixed left-1/2 top-[min(15dvh,6rem)] z-50 max-h-[calc(100dvh-min(15dvh,6rem)-1rem)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden p-0 text-gray-900">
         <Dialog.Title className="sr-only">Search reference</Dialog.Title>
         <div className="flex items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
-          <input ref={input} value={query} onChange={event => search(event.target.value)} type="text" role="combobox" aria-label="Search reference" aria-autocomplete="list" aria-expanded="true" aria-controls="reference-search-results" aria-activedescendant={results.length ? `reference-search-result-${selected}` : undefined} autoComplete="off" spellCheck={false} placeholder="Search operations, guides, schemas…" className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" onKeyDown={event => {
+          <Input ref={input} value={query} onChange={event => search(event.target.value)} type="text" role="combobox" aria-label="Search reference" aria-autocomplete="list" aria-expanded="true" aria-controls="reference-search-results" aria-activedescendant={results.length ? `reference-search-result-${selected}` : undefined} autoComplete="off" spellCheck={false} placeholder="Search operations, guides, schemas…" className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" onKeyDown={event => {
             if (event.nativeEvent.isComposing) return
             if (event.key === 'Enter') {
               event.preventDefault()
@@ -127,7 +129,7 @@ export default function SearchPalette({entries, onNavigate}: {entries: SearchEnt
           </div>)}
           {!results.length && <p role="status" className="px-3 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No results for “{completedQuery}”.</p>}
         </div>
-        <div className="flex gap-4 border-t border-gray-200 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"><span>↑ ↓ to navigate</span><span>↵ to open</span><span className="ml-auto">{results.length} results</span></div>
+        <div className="flex gap-4 border-t border-gray-200 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"><span><ArrowUpIcon /> <ArrowDownIcon /> to navigate</span><span><EnterIcon /> to open</span><span className="ml-auto">{results.length} results</span></div>
       </Dialog.Popup>
     </Dialog.Portal>
   </Dialog.Root>

@@ -1,4 +1,4 @@
-import {Tabs} from '@base-ui/react/tabs'
+import {Tabs} from '@/components/UI/Tabs'
 import type {Schema} from '@/core/openapi/types'
 import {getSchemaTypeParts} from '@/core/openapi/schemaTypePreview'
 
