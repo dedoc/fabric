@@ -1,12 +1,19 @@
-import {ref} from 'vue'
+import {useSyncExternalStore} from 'react'
 
-export const theme = ref<'light' | 'dark'>(typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light')
+type Theme = 'light' | 'dark'
+let theme: Theme = typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+const listeners = new Set<() => void>()
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
+export const getTheme = () => theme
+export const useTheme = () => useSyncExternalStore(subscribe, getTheme, getTheme)
 
 function applyTheme(value: 'light' | 'dark') {
-  theme.value = value
-  if (typeof document === 'undefined') return
-  document.documentElement.classList.toggle('dark', value === 'dark')
-  document.documentElement.style.colorScheme = value
+  theme = value
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', value === 'dark')
+    document.documentElement.style.colorScheme = value
+  }
+  for (const listener of listeners) listener()
 }
 
 export function initializeTheme() {

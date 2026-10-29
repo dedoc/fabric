@@ -3,27 +3,83 @@ import {after, test} from 'node:test'
 import {readFile} from 'node:fs/promises'
 import {createServer as createHttpServer} from 'node:http'
 import {createServer} from 'vite'
-import {createRenderer, createSSRApp, h, provide, ref} from 'vue'
-import {renderToString} from 'vue/server-renderer'
+import React from 'react'
+import {act} from 'react'
+import {createRoot} from 'react-dom/client'
+import {renderToStaticMarkup} from 'react-dom/server'
+import {JSDOM} from 'jsdom'
 
-const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
-after(() => server.close())
+const testDom = new JSDOM('<!doctype html><html><body></body></html>', {url: 'https://example.com/', pretendToBeVisual: true})
+const testDomGlobals = ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'MouseEvent', 'MutationObserver', 'requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle']
+const originalDomGlobals = new Map(testDomGlobals.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]))
+for (const name of testDomGlobals) {
+  const value = name === 'window' ? testDom.window : name === 'document' ? testDom.window.document : testDom.window[name]
+  if (value !== undefined) Object.defineProperty(globalThis, name, {configurable: true, writable: true, value})
+}
+
+const server = await createServer({configFile: false, resolve: {alias: {'@': new URL('../src', import.meta.url).pathname}}, server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+after(() => {
+  server.close()
+  testDom.window.close()
+  for (const [name, descriptor] of originalDomGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor)
+    else delete globalThis[name]
+  }
+})
+const {DocumentContext, ShowSchemasContext, OperationSelectionsProvider} = await server.ssrLoadModule('/src/react/context.tsx')
+const h = React.createElement
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+const renderToString = element => renderToStaticMarkup(element)
+async function openOptions(mounted, label) {
+  const trigger = mounted.container.querySelector(`[aria-label="${label}"]`)
+  assert.ok(trigger, `Expected a selectable control named ${label}`)
+  await act(async () => {
+    trigger.dispatchEvent(new window.MouseEvent('click', {bubbles: true, cancelable: true}))
+    await new Promise(resolve => window.requestAnimationFrame(() => resolve()))
+  })
+  return [...globalThis.document.querySelectorAll('[role="option"]')].map(item => item.textContent.trim())
+}
+async function mountReact(element) {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', {url: 'https://example.com/', pretendToBeVisual: true})
+  const names = ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'MouseEvent', 'MutationObserver', 'requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle']
+  const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]))
+  for (const name of names) {
+    const value = name === 'window' ? dom.window : name === 'document' ? dom.window.document : dom.window[name]
+    if (value !== undefined) Object.defineProperty(globalThis, name, {configurable: true, writable: true, value})
+  }
+  const container = dom.window.document.getElementById('root')
+  const root = createRoot(container)
+  await act(async () => root.render(element))
+  return {
+    container,
+    async render(next) { await act(async () => root.render(next)) },
+    async unmount() {
+      await act(async () => root.unmount())
+      dom.window.close()
+      for (const [name, descriptor] of previous) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor)
+        else delete globalThis[name]
+      }
+    },
+  }
+}
 // Keep content assertions independent of syntax highlighting spans.
 const withoutHighlighting = html => html.replace(/(<code\b[^>]*>)(.*?)(<\/code>)/gs, (_, open, code, close) => open + code.replace(/<\/?span\b[^>]*>|<!--.*?-->/gs, '') + close)
-const textContent = html => html.replace(/<!--.*?-->|<[^>]*>/gs, ' ').replace(/\s+/g, ' ').trim()
-const {default: Schema} = await server.ssrLoadModule('/src/components/OpenApi/Schema.vue')
-const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
-const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
+const parseHtml = html => new JSDOM(html).window.document
+const textContent = html => parseHtml(html).body.textContent.replace(/\s+/g, ' ').trim()
+const {default: Schema} = await server.ssrLoadModule('/src/components/OpenApi/Schema.tsx')
+const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.tsx')
+const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.tsx')
 const {parseSpecification} = await server.ssrLoadModule('/src/core/openapi/specification.ts')
-const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
 const {getSchemaTypeParts} = await server.ssrLoadModule('/src/core/openapi/schemaTypePreview.ts')
-const {useMediaType, provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
-const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
-const {default: ResponseContent} = await server.ssrLoadModule('/src/components/OpenApi/Partials/ResponseContent.vue')
-const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
+const {useMediaType, useCompositionSelections, useCompositionExample} = await server.ssrLoadModule('/src/react/context.tsx')
+const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.tsx')
+const {default: ResponseContent} = await server.ssrLoadModule('/src/components/OpenApi/Partials/ResponseContent.tsx')
+const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.tsx')
 const {resolveOperationBase} = await server.ssrLoadModule('/src/core/openapi/servers.ts')
 const {getInlineOperations, getWebhookOperations} = await server.ssrLoadModule('/src/core/openapi/utils.ts')
-const {default: OperationDatums} = await server.ssrLoadModule('/src/components/OpenApi/Partials/OperationDatums.vue')
+const {default: OperationDatums} = await server.ssrLoadModule('/src/components/OpenApi/Partials/OperationDatums.tsx')
+const {default: SecuritySchemeDetails} = await server.ssrLoadModule('/src/components/OpenApi/Partials/SecuritySchemeDetails.tsx')
 const {operationSecurity, resolveSecurityScheme, authorizationHeaderExample} = await server.ssrLoadModule('/src/core/openapi/security.ts')
 const {createRequestExample} = await server.ssrLoadModule('/src/core/openapi/requestExamples/index.ts')
 const {resolveReference} = await server.ssrLoadModule('/src/core/openapi/references.ts')
@@ -31,9 +87,8 @@ const {resolveExampleSchema, createSchemaExample} = await server.ssrLoadModule('
 const referenceFixture = JSON.parse(await readFile(new URL('./fixtures/local-references.json', import.meta.url), 'utf8'))
 const requestFixture = parseSpecification(await readFile(new URL('../public/specs/fabric-reference.yaml', import.meta.url), 'utf8'))
 const {effectiveParameters} = await server.ssrLoadModule('/src/core/openapi/parameters.ts')
-const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/OpenApi/ParameterDetails.vue')
+const {default: ParameterDetails} = await server.ssrLoadModule('/src/components/OpenApi/ParameterDetails.tsx')
 const {selectExampleSchema, compositionPathKey} = await server.ssrLoadModule('/src/core/openapi/compositionExamples.ts')
-const {useCompositionSelections, useCompositionExample} = await server.ssrLoadModule('/src/components/OpenApi/useCompositionSelections.ts')
 const {getSchemaBounds} = await server.ssrLoadModule('/src/core/openapi/schemaBounds.ts')
 const {schemaDisplay} = await server.ssrLoadModule('/src/core/openapi/schemaDisplay.ts')
 
@@ -225,7 +280,7 @@ test('request bodies prefer their description and keep examples in the request e
 })
 
 test('response bodies retain their schema description and keep examples in the response example panel', async () => {
-  const {default: SecondaryResponse} = await server.ssrLoadModule('/src/components/OpenApi/SecondaryResponse.vue')
+  const {default: SecondaryResponse} = await server.ssrLoadModule('/src/components/OpenApi/SecondaryResponse.tsx')
   const components = {schemas: {SingleEventResponse: {allOf: [{$ref: '#/components/schemas/Event'}]}, Event: {
     type: 'object', description: 'The event schema description', example: {id: 'event-example'},
     properties: {id: {type: 'string', description: 'The event ID', example: 'event-example'}},
@@ -260,7 +315,7 @@ test('array response bodies retain collection and item descriptions', async () =
   const response = {description: 'Success', content: {'application/json': {schema: {$ref: '#/components/schemas/TimeZoneListResponse'}}}}
   const html = (await renderWithDocument(ResponseContent, {components, unreferencedResponse: response}, {components})).replace(/<!--.*?-->/gs, '')
   assert.match(html, /List of time zones with localized information/)
-  assert.match(html, /TimeZone\[\]/)
+  assert.match(textContent(html), /TimeZone\s*\[\]/)
   assert.match(html, /Information about a single time zone/)
 })
 
@@ -278,13 +333,14 @@ test('response body descriptions prefer the allOf wrapper over its referenced ch
 })
 
 test('required referenced and optional inline request bodies retain descriptions even without content', async () => {
-  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
+  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.tsx')
   const components = requestFixture.components
   const required = await renderWithDocument(RequestBody, {components, requestBody: {$ref: '#/components/requestBodies/ProjectUpdateAlias'}}, requestFixture)
   assert.match(required, /Required referenced request body/)
   assert.match(required, />required<\/span>/)
   assert.match(required, /aria-label="Request body content type"/)
-  assert.match(required, /<option value="application\/x-www-form-urlencoded"/)
+  assert.match(required, /aria-label="Request body content type"/)
+  assert.match(required, /title="application\/json"/)
   const optional = await renderWithDocument(RequestBody, {components, requestBody: requestFixture.paths['/projects/preview'].post.requestBody}, requestFixture)
   assert.match(optional, /Omit the body to preview a default project/)
   assert.doesNotMatch(optional, />required<\/span>/)
@@ -327,7 +383,7 @@ test('parameter examples preserve falsy values and precedence over referenced sc
       name: 'value', in: 'query', schema: {$ref: '#/components/schemas/Value'}, example,
     }}, document)
     assert.doesNotMatch(html, /schema-fallback/)
-    assert.ok(html.includes(example === '' ? '&#39;&#39;' : String(example)))
+    assert.ok(textContent(html).includes(example === '' ? "''" : String(example)))
   }
   const html = await renderWithDocument(ParameterDetails, {components: {}, parameter: {
     name: 'flag', in: 'query', schema: {type: 'boolean'}, examples: {missing: {$ref: '#/missing'}},
@@ -336,11 +392,7 @@ test('parameter examples preserve falsy values and precedence over referenced sc
 })
 
 async function renderWithDocument(component, props, document) {
-  return renderToString(createSSRApp({setup() {
-    provide(documentKey, ref(document))
-    provideMediaTypeSelections()
-    return () => h(component, props)
-  }}))
+  return renderToString(h(DocumentContext.Provider, {value: document}, h(OperationSelectionsProvider, null, h(component, props))))
 }
 
 test('nullable types agree across OpenAPI 3.0, 3.1 unions, arrays and null examples', async () => {
@@ -441,9 +493,10 @@ test('reference fixture resolves aliases, escaped names and non-component locati
     parameters: [{$ref: '#/components/parameters/Trace'}],
     requestBody: {$ref: '#/components/requestBodies/Alias'},
   }
-  const {default: Operation} = await server.ssrLoadModule('/src/components/OpenApi/Operation.vue')
+  const {default: Operation} = await server.ssrLoadModule('/src/components/OpenApi/Operation.tsx')
   const html = await renderWithDocument(Operation, {base: 'https://api.example.com', path: '/alias', method: 'post', operation, components}, document)
-  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /Basic authentication/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(withoutHighlighting(html), pattern)
+  for (const pattern of [/Trace identifier/, /Remaining count/, /Local response description/, /&quot;id&quot;: 7/, /&quot;id&quot;: 8/]) assert.match(withoutHighlighting(html), pattern)
+  assert.match(await renderAuthentication(operation, document), /Basic authentication/)
   assert.doesNotMatch(html, /Reference warning/)
   const schema = resolveExampleSchema(components.schemas.FromPath, components, document)
   assert.deepEqual(createSchemaExample(schema), {id: 7})
@@ -492,7 +545,6 @@ test('recursive schema rendering terminates in properties, items and composition
 })
 
 test('recursive properties preserve names, descriptions and schema links without expanding children', async () => {
-  const {showSchemasKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
   for (const openapi of ['3.0.3', '3.1.0']) {
     for (const description of [undefined, 'Property description']) {
       const document = {openapi, components: {schemas: {Node: {
@@ -500,11 +552,7 @@ test('recursive properties preserve names, descriptions and schema links without
         properties: {next: {$ref: '#/components/schemas/Node', ...(description ? {description} : {})}},
         additionalProperties: {$ref: '#/components/schemas/Node'},
       }}}}
-      const html = await renderToString(createSSRApp({setup() {
-        provide(documentKey, ref(document))
-        provide(showSchemasKey, ref(true))
-        return () => h(Schema, {schema: document.components.schemas.Node, components: document.components})
-      }}))
+      const html = renderToString(h(DocumentContext.Provider, {value: document}, h(ShowSchemasContext.Provider, {value: true}, h(Schema, {schema: document.components.schemas.Node, components: document.components}))))
       assert.equal((html.match(/>next<\/div>/g) ?? []).length, 1)
       assert.equal((html.match(/>required<\/div>/g) ?? []).length, 1)
       assert.equal((html.match(/Hide properties/g) ?? []).length, 1)
@@ -519,8 +567,8 @@ test('recursive properties preserve names, descriptions and schema links without
 })
 
 test('bad body, response, header and named-example references stay local and disable incomplete example copies', async () => {
-  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.vue')
-  const {default: Response} = await server.ssrLoadModule('/src/components/OpenApi/Response.vue')
+  const {default: RequestBody} = await server.ssrLoadModule('/src/components/OpenApi/RequestBody.tsx')
+  const {default: Response} = await server.ssrLoadModule('/src/components/OpenApi/Response.tsx')
   const components = referenceFixture.components
   const body = await renderWithDocument(RequestBody, {requestBody: {$ref: 'body.yaml#/Body'}, components}, referenceFixture)
   assert.match(body, /External references are not supported/)
@@ -547,7 +595,7 @@ test('example payloads containing literal $ref keys remain data', () => {
 
 
 test('API branding resolves spec-relative logos and contact links with accessible text', async () => {
-  const html = await renderToString(createSSRApp(ApiBrand, {
+  const html = await renderToString(h(ApiBrand, {
     documentUrl: 'https://example.com/spec/openapi.yaml',
     info: {title: 'Example API', contact: {url: '../support'}, 'x-logo': {
       url: './logo.svg', altText: 'Example logo', backgroundColor: '#FFFFFF',
@@ -560,7 +608,7 @@ test('API branding resolves spec-relative logos and contact links with accessibl
 })
 
 test('API branding honors explicit links and rejects unsafe URLs and invalid colors', async () => {
-  const render = info => renderToString(createSSRApp(ApiBrand, {info}))
+  const render = info => renderToString(h(ApiBrand, {info}))
   const html = await render({contact: {url: 'https://example.com/support'}, 'x-logo': {
     url: 'https://example.com/logo.png', href: 'https://example.com/home', backgroundColor: 'url(https://example.com)',
   }})
@@ -577,7 +625,7 @@ test('API branding honors explicit links and rejects unsafe URLs and invalid col
 })
 
 test('configured branding replaces spec branding and supports image plus text', async () => {
-  const html = await renderToString(createSSRApp(ApiBrand, {
+  const html = await renderToString(h(ApiBrand, {
     info: {title: 'Selected API', contact: {url: 'https://spec.example/contact'}, 'x-logo': {
       url: 'https://spec.example/logo.svg', backgroundColor: '#FFFFFF',
     }},
@@ -592,7 +640,7 @@ test('configured branding replaces spec branding and supports image plus text', 
 })
 
 test('configured branding supports text, hiding, safe links and named image-only links', async () => {
-  const render = logo => renderToString(createSSRApp(ApiBrand, {info: {title: 'Selected API'}, logo}))
+  const render = logo => renderToString(h(ApiBrand, {info: {title: 'Selected API'}, logo}))
   assert.match(await render({title: 'Acme', href: false}), />Acme<\/span>/)
   assert.doesNotMatch(await render({title: 'Acme', href: false}), /<a\b/)
   assert.doesNotMatch(await render(false), /Selected API|<img|<a\b/)
@@ -623,10 +671,24 @@ test('authorization placeholders respect inheritance, references and public or c
 })
 
 async function renderAuthentication(operation, document) {
-  return renderToString(createSSRApp({setup() {
-    provide(documentKey, ref(document))
-    return () => h(OperationDatums, {operation})
-  }}))
+  const mounted = await mountReact(h(DocumentContext.Provider, {value: document}, h(OperationSelectionsProvider, null, h(OperationDatums, {operation}))))
+  try {
+    const trigger = mounted.container.querySelector('button[aria-haspopup="dialog"]')
+    if (!trigger) return mounted.container.innerHTML
+    await act(async () => trigger.dispatchEvent(new window.MouseEvent('click', {bubbles: true, cancelable: true})))
+    await act(async () => new Promise(resolve => window.requestAnimationFrame(() => resolve())))
+    return globalThis.document.body.innerHTML
+  } finally { await mounted.unmount() }
+}
+
+async function renderAuthenticationDetails(operation, document) {
+  const groups = operationSecurity(operation, document).filter(group => group.length)
+  return renderToString(h('div', null, ...groups.flatMap(group => group.map(entry => h(SecuritySchemeDetails, {
+    key: entry.name,
+    name: entry.name,
+    scopes: entry.scopes,
+    scheme: resolveSecurityScheme(entry.name, document.components ?? {}, document),
+  })))))
 }
 
 test('Basic authentication shows inherited scheme descriptions', async () => {
@@ -641,6 +703,7 @@ test('Basic authentication shows inherited scheme descriptions', async () => {
   assert.doesNotMatch(html, /Bearer/)
   const overview = await renderPages(document.components, '#overview', {document})
   assert.match(overview, /Basic authentication/)
+  assert.match(overview, /Leave the password empty/)
   assert.match(overview, /Leave the password empty/)
 })
 
@@ -669,7 +732,7 @@ test('authentication alternatives, combined requirements, scopes and API key loc
   assert.match(html, /<dt[^>]*>Format<\/dt>/)
   assert.match(html, /<dd[^>]*>JWT<\/dd>/)
   assert.match(html, /OAuth 2.0/)
-  assert.match(html, /<dialog[^>]*aria-label="Authentication"/)
+  assert.ok(parseHtml(html).querySelector('[role="dialog"][aria-label="Authentication"]'))
   for (const location of ['query', 'cookie']) {
     const result = await renderAuthentication({security: [{Key: []}]}, {components: {securitySchemes: {
       Key: {type: 'apiKey', name: 'key', in: location},
@@ -745,7 +808,7 @@ test('download path server appears in the endpoint and request example', async (
     paths: {'/': {servers: [{url: 'https://download.converterer.com'}], post: {operationId: 'download'}}},
   })
   assert.match(html, /https:\/\/download.converterer\.com<\/span>\//)
-  assert.match(withoutHighlighting(html), /curl -X POST &#39;https:\/\/download.converterer\.com\/&#39;/)
+  assert.match(textContent(withoutHighlighting(html)), /curl -X POST 'https:\/\/download.converterer\.com\/'/)
   assert.doesNotMatch(html, /api\.converterer\.com|operations\/get--|operations\/servers/)
 })
 
@@ -760,33 +823,34 @@ test('operation server overrides reach request examples after page selection', a
     }},
   })
   assert.match(html, /https:\/\/spec.example.com\/v2<\/span>\/files/)
-  assert.match(withoutHighlighting(html), /curl -X GET &#39;https:\/\/spec.example.com\/v2\/files&#39;/)
+  assert.match(textContent(withoutHighlighting(html)), /curl -X GET 'https:\/\/spec.example.com\/v2\/files'/)
   assert.doesNotMatch(html, /root\.example\.com|path\.example\.com|curl -X POST/)
 })
 
 test('request curl sends URL-encoded fields for form content', async () => {
-  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+  const html = renderToString(h(OperationSelectionsProvider, null, h(Examples, {
     base: '', components: {}, path: '/pet', method: 'post', operation: {
       requestBody: {content: {'application/x-www-form-urlencoded': {example: {
         name: "dog's & cat", category: {id: 1}, photoUrls: ['one', 'two'],
       }}}}, responses: {},
     },
-  })}))
+  })))
   assert.match(html, /Content-Type: application\/x-www-form-urlencoded/)
-  assert.match(withoutHighlighting(html), /--data-urlencode &#39;name=dog&#39;\\&#39;&#39;s &amp; cat&#39;/)
-  assert.match(withoutHighlighting(html), /--data-urlencode &#39;category=\{&quot;id&quot;:1\}&#39;/)
-  assert.match(withoutHighlighting(html), /--data-urlencode &#39;photoUrls=one&#39;/)
-  assert.match(withoutHighlighting(html), /--data-urlencode &#39;photoUrls=two&#39;/)
+  const code = textContent(withoutHighlighting(html))
+  assert.match(code, /--data-urlencode 'name=dog'\\''s & cat'/)
+  assert.match(code, /--data-urlencode 'category=\{"id":1\}'/)
+  assert.match(code, /--data-urlencode 'photoUrls=one'/)
+  assert.match(code, /--data-urlencode 'photoUrls=two'/)
   assert.doesNotMatch(html, / -d /)
 })
 
 async function renderReference(target) {
-  return renderToString(createSSRApp({render: () => h(Schema, {
+  return renderToString(h(ShowSchemasContext.Provider, {value: true}, h(Schema, {
     schema: {$ref: '#/components/schemas/MetadataInstanceValue'},
     components: {schemas: {MetadataInstanceValue: target}},
     propertyTitle: 'value',
     level: 1,
-  })}))
+  })))
 }
 
 test('renders a referenced oneOf schema without a top-level type', async () => {
@@ -812,22 +876,23 @@ test('composition tabs show only the selected member and keep referenced labels 
   for (const [keyword, label] of [['anyOf', 'any of'], ['oneOf', 'one of']]) {
     const html = await renderReference({[keyword]: options, default: 'a4'})
     assert.ok(html.includes(`aria-label="${label}"`))
-    assert.match(html, /role="tab" aria-selected="true"/)
+    assert.ok(parseHtml(html).querySelector('[role="tab"][aria-selected="true"]'))
     assert.match(html, /role="tabpanel"/)
     assert.doesNotMatch(html, /width|height|Hide options|Option 1/)
   }
   const html = await renderReference({oneOf: [{$ref: '#/components/schemas/Label'}, {type: 'number'}]})
-  assert.match(html, /role="tab"[^>]*>Label<\/button>/)
-  assert.doesNotMatch(html, /<a[^>]*>Label<\/a>/)
+  const labelTab = [...parseHtml(html).querySelectorAll('[role="tab"]')].find(tab => tab.textContent.trim() === 'Label')
+  assert.ok(labelTab)
+  assert.equal(labelTab.tagName, 'BUTTON')
 })
 
 test('renders const constraints, including falsy and structured values', async () => {
   for (const value of ['Pong!', null, false, 0, '', {message: 'Pong!'}]) {
     const html = await renderReference({const: value})
-    const text = html.replace(/<[^>]*>/g, '')
+    const text = textContent(html)
     assert.match(text, /Const/)
-    const formatted = value === '' ? '&#39;&#39;' : typeof value === 'object' ? JSON.stringify(value) : String(value)
-    assert.ok(text.replaceAll('&quot;', '"').includes(formatted))
+    const formatted = value === '' ? "''" : typeof value === 'object' ? JSON.stringify(value) : String(value)
+    assert.ok(text.includes(formatted))
   }
 })
 
@@ -839,18 +904,20 @@ test('accepts other referenced schemas without a top-level type', async () => {
 })
 
 async function renderPages(components, hash = '', options = {}) {
-  const previousWindow = globalThis.window
-  globalThis.window = {location: {href: `http://localhost/${hash}`}}
+  const previous = new Map(['window', 'document'].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]))
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', {url: `http://localhost/${hash}`})
+  Object.defineProperty(globalThis, 'window', {configurable: true, writable: true, value: dom.window})
+  Object.defineProperty(globalThis, 'document', {configurable: true, writable: true, value: dom.window.document})
   try {
     const {document: suppliedDocument, paths, ...pageOptions} = options
     const document = {info: {title: 'API'}, ...suppliedDocument, components, paths: paths ?? suppliedDocument?.paths ?? {}}
-    return await renderToString(createSSRApp({setup() {
-      provide(documentKey, ref(document))
-      return () => h(Pages, {document, base: 'https://api.example.com', ...pageOptions})
-    }}))
+    return renderToString(h(Pages, {document, base: 'https://api.example.com', ...pageOptions}))
   } finally {
-    if (previousWindow === undefined) delete globalThis.window
-    else globalThis.window = previousWindow
+    dom.window.close()
+    for (const [name, descriptor] of previous) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor)
+      else delete globalThis[name]
+    }
   }
 }
 
@@ -976,7 +1043,7 @@ test('legacy overview links resolve to the overview page', async () => {
     })
     assert.match(html, /Manage <strong>files<\/strong>/)
     assert.match(html, /href="#operations\/list"/)
-    assert.match(html, /href="#overview"[^>]*aria-current="page"/)
+    assert.equal(parseHtml(html).querySelector('a[href="#overview"][aria-current="page"]')?.textContent.trim(), 'Overview')
   }
 })
 
@@ -1021,7 +1088,9 @@ test('array schema pages and response bodies show the referenced item type with 
   }}}}
   for (const hash of ['#schemas/LinkSlotListResponse', '#operations/get-slots']) {
     const html = await renderPages(components, hash, {paths})
-    assert.match(html.replace(/<!--.*?-->/gs, ''), /href="#schemas\/LinkSlot"[^>]*>LinkSlot<\/a>\[\]/)
+    const link = parseHtml(html).querySelector('a[href="#schemas/LinkSlot"]')
+    assert.ok(link)
+    assert.match(link.parentElement.textContent, /LinkSlot\s*\[\]/)
     assert.match(html, />rank<\/div>/)
   }
 })
@@ -1059,28 +1128,36 @@ test('shows array union types and renders each included resource variant', async
   }}
   const schema = {type: 'array', items: {anyOf: [{$ref: '#/components/schemas/ComponentGroup'}, {$ref: '#/components/schemas/Incident'}]}}
   assert.equal(getSchemaTypeParts(schema).map(part => part.text).join(''), '(ComponentGroup | Incident)[]')
-  const html = await renderToString(createSSRApp({render: () => h(Schema, {schema, components, propertyTitle: 'included', level: 1})}))
+  const html = renderToString(h(Schema, {schema, components, propertyTitle: 'included', level: 1}))
   const text = html.replace(/<[^>]*>/g, '')
   assert.match(text, /\(ComponentGroup \| Incident\)\[\]/)
   assert.ok((text.match(/ComponentGroup/g) ?? []).length >= 2)
   assert.ok((text.match(/Incident/g) ?? []).length >= 2)
 })
 
-test('content type selection changes media and handles changing or empty content', () => {
+test('content type selection changes media and handles changing or empty content', async () => {
   const json = {schema: {type: 'object'}, example: {message: 'JSON'}}
   const xml = {schema: {type: 'string'}, example: '<message>XML</message>'}
-  const content = ref({'application/json': json, 'application/xml': xml})
-  const selection = useMediaType(() => content.value)
-  assert.equal(selection.type.value, 'application/json')
-  assert.deepEqual(selection.media.value, json)
-  selection.type.value = 'application/xml'
-  assert.deepEqual(selection.media.value, xml)
-  content.value = {'text/plain': {example: 'text'}}
-  assert.equal(selection.type.value, 'text/plain')
-  assert.equal(selection.media.value.example, 'text')
-  content.value = {}
-  assert.equal(selection.type.value, '')
-  assert.equal(selection.media.value, undefined)
+  let controls
+  function Consumer({initialContent}) {
+    const [content, setContent] = React.useState(initialContent)
+    const selection = useMediaType(content)
+    controls = {selection, setContent}
+    return h('div', null, selection.type)
+  }
+  const mounted = await mountReact(h(Consumer, {initialContent: {'application/json': json, 'application/xml': xml}}))
+  try {
+    assert.equal(controls.selection.type, 'application/json')
+    assert.deepEqual(controls.selection.media, json)
+    await act(async () => controls.selection.setType('application/xml'))
+    assert.deepEqual(controls.selection.media, xml)
+    await act(async () => controls.setContent({'text/plain': {example: 'text'}}))
+    assert.equal(controls.selection.type, 'text/plain')
+    assert.equal(controls.selection.media.example, 'text')
+    await act(async () => controls.setContent({}))
+    assert.equal(controls.selection.type, '')
+    assert.equal(controls.selection.media, undefined)
+  } finally { await mounted.unmount() }
 })
 
 test('body views expose available media and render the selected schema', async () => {
@@ -1092,13 +1169,16 @@ test('body views expose available media and render the selected schema', async (
     [RequestBody, {requestBody: {content}}, 'Request body content type'],
     [ResponseContent, {unreferencedResponse: {description: 'Success', content}}, 'Response body content type'],
   ]) {
-    const html = await renderToString(createSSRApp({render: () => h(component, {components: {}, ...props})}))
-    assert.match(html, new RegExp(`aria-label="${label}"`))
-    assert.match(html, /title="application\/json"/)
-    assert.match(html, /<option value="application\/json"/)
-    assert.match(html, /<option value="application\/xml"/)
-    assert.match(html, /jsonProperty/)
-    assert.doesNotMatch(html, /xmlProperty/)
+    const mounted = await mountReact(h(OperationSelectionsProvider, null, h(component, {components: {}, ...props})))
+    try {
+      assert.ok(mounted.container.querySelector(`[aria-label="${label}"]`))
+      assert.match(mounted.container.innerHTML, /title="application\/json"/)
+      assert.match(mounted.container.textContent, /jsonProperty/)
+      assert.doesNotMatch(mounted.container.textContent, /xmlProperty/)
+      const options = await openOptions(mounted, label)
+      assert.ok(options.includes('application/json'))
+      assert.ok(options.includes('application/xml'))
+    } finally { await mounted.unmount() }
   }
 })
 
@@ -1109,65 +1189,60 @@ test('response payload format follows its documentation selection independently 
     'application/xml': {example: '<message>XML response</message>'},
   }
   for (const selected of Object.keys(content)) {
-    const Consumer = {setup() {
-      useMediaType(() => content, () => 'response:200').type.value = selected
-      return () => h(Examples, {
+    let setType
+    function Consumer() {
+      setType = useMediaType(content, 'response:200').setType
+      return h(Examples, {
         components: {}, base: 'https://example.com', path: '/messages', method: 'post',
         operation: {requestBody: {content}, responses: {200: {description: 'Success', content}}},
       })
-    }}
-    const html = await renderToString(createSSRApp({setup() {
-      provideMediaTypeSelections()
-      return () => h(Consumer)
-    }}))
-    const request = withoutHighlighting(html.split('aria-label="Request example"')[1].split('</section>')[0])
-    const response = withoutHighlighting(html.split('aria-label="Response example"')[1].split('</section>')[0])
-    assert.match(request, /Content-Type: application\/json/)
-    assert.doesNotMatch(request, /XML response/)
-    if (selected === 'application/xml') {
-      assert.match(response, /&lt;message&gt;XML response&lt;\/message&gt;/)
-      assert.doesNotMatch(response, /JSON response/)
-    } else {
-      assert.match(response, /&quot;message&quot;: &quot;JSON response&quot;/)
-      assert.doesNotMatch(response, /XML response/)
     }
+    const mounted = await mountReact(h(OperationSelectionsProvider, null, h(Consumer)))
+    try {
+      await act(async () => setType(selected))
+      const html = mounted.container.innerHTML
+      const request = withoutHighlighting(html.split('aria-label="Request example"')[1].split('</section>')[0])
+      const response = textContent(withoutHighlighting(html.split('aria-label="Response example"')[1].split('</section>')[0]))
+      assert.match(request, /Content-Type: application\/json/)
+      assert.doesNotMatch(request, /XML response/)
+      if (selected === 'application/xml') {
+        assert.match(response, /<message>XML response<\/message>/)
+        assert.doesNotMatch(response, /JSON response/)
+      } else {
+        assert.match(response, /"message": "JSON response"/)
+        assert.doesNotMatch(response, /XML response/)
+      }
+    } finally { await mounted.unmount() }
   }
 })
 
 test('documentation and examples share selections separately for requests and each response status', async () => {
   const content = {'application/json': {example: 'JSON'}, 'application/xml': {example: 'XML'}}
-  const status = ref('200')
   let selections
-  const Consumer = {setup() {
+  function Consumer() {
+    const [status, setStatus] = React.useState('200')
     selections = {
-      requestDocs: useMediaType(() => content, () => 'request'),
-      requestExample: useMediaType(() => content, () => 'request'),
-      successDocs: useMediaType(() => content, () => 'response:200'),
-      errorDocs: useMediaType(() => content, () => 'response:400'),
-      responseExample: useMediaType(() => content, () => `response:${status.value}`),
+      requestDocs: useMediaType(content, 'request'),
+      requestExample: useMediaType(content, 'request'),
+      successDocs: useMediaType(content, 'response:200'),
+      errorDocs: useMediaType(content, 'response:400'),
+      responseExample: useMediaType(content, `response:${status}`),
+      setStatus,
     }
-    return () => h('div')
-  }}
-  const renderer = createRenderer({
-    createElement: () => ({}), createText: () => ({}), createComment: () => ({}),
-    insert() {}, remove() {}, setText() {}, setElementText() {}, patchProp() {},
-    parentNode: () => null, nextSibling: () => null,
-  })
-  const app = renderer.createApp({setup() {
-    provideMediaTypeSelections()
-    return () => h(Consumer)
-  }})
-  app.mount({})
-  selections.requestDocs.type.value = 'application/xml'
-  assert.equal(selections.requestExample.media.value.example, 'XML')
-  assert.equal(selections.responseExample.media.value.example, 'JSON')
-  selections.successDocs.type.value = 'application/xml'
-  assert.equal(selections.responseExample.media.value.example, 'XML')
-  status.value = '400'
-  assert.equal(selections.responseExample.media.value.example, 'JSON')
-  status.value = '200'
-  assert.equal(selections.responseExample.media.value.example, 'XML')
-  app.unmount()
+    return h('div')
+  }
+  const mounted = await mountReact(h(OperationSelectionsProvider, null, h(Consumer)))
+  try {
+    await act(async () => selections.requestDocs.setType('application/xml'))
+    assert.equal(selections.requestExample.media.example, 'XML')
+    assert.equal(selections.responseExample.media.example, 'JSON')
+    await act(async () => selections.successDocs.setType('application/xml'))
+    assert.equal(selections.responseExample.media.example, 'XML')
+    await act(async () => selections.setStatus('400'))
+    assert.equal(selections.responseExample.media.example, 'JSON')
+    await act(async () => selections.setStatus('200'))
+    assert.equal(selections.responseExample.media.example, 'XML')
+  } finally { await mounted.unmount() }
 })
 
 test('selected nested alternatives regenerate parent examples and preserve allOf members without mutating the spec', () => {
@@ -1193,35 +1268,29 @@ test('selected nested alternatives regenerate parent examples and preserve allOf
   assert.equal(createSchemaExample(selectExampleSchema(schema, document, selections).schema).paper, 'a4')
 })
 
-test('composition selections synchronize examples and isolate request, response status and media type', () => {
+test('composition selections synchronize examples and isolate request, response status and media type', async () => {
   const media = {example: 'authored', schema: {oneOf: [{type: 'string', example: 'a4'}, {type: 'number', example: 42}]}}
-  let docs, request, response, xml
-  const Consumer = {setup() {
-    docs = useCompositionSelections(() => 'request:application/json')
-    request = useCompositionExample(() => media, () => 'request:application/json', () => ({}))
-    response = useCompositionExample(() => media, () => 'response:200:application/json', () => ({}))
-    xml = useCompositionExample(() => media, () => 'request:application/xml', () => ({}))
-    return () => h('div')
-  }}
-  const renderer = createRenderer({
-    createElement: () => ({}), createText: () => ({}), createComment: () => ({}),
-    insert() {}, remove() {}, setText() {}, setElementText() {}, patchProp() {},
-    parentNode: () => null, nextSibling: () => null,
-  })
-  const app = renderer.createApp({setup() {
-    provideMediaTypeSelections()
-    return () => h(Consumer)
-  }})
-  app.mount({})
-  assert.equal(request.value.example, 'authored')
-  docs.select(compositionPathKey(['oneOf']), 1)
-  assert.equal(request.value.example, undefined)
-  assert.equal(createSchemaExample(request.value.schema), 42)
-  assert.equal(response.value.example, 'authored')
-  assert.equal(xml.value.example, 'authored')
-  docs.select(compositionPathKey(['oneOf']), 0)
-  assert.equal(createSchemaExample(request.value.schema), 'a4')
-  app.unmount()
+  let controls
+  function Consumer() {
+    controls = {
+      docs: useCompositionSelections('request:application/json'),
+      request: useCompositionExample(media, 'request:application/json', {}),
+      response: useCompositionExample(media, 'response:200:application/json', {}),
+      xml: useCompositionExample(media, 'request:application/xml', {}),
+    }
+    return h('div')
+  }
+  const mounted = await mountReact(h(OperationSelectionsProvider, null, h(Consumer)))
+  try {
+    assert.equal(controls.request.example, 'authored')
+    await act(async () => controls.docs.select(compositionPathKey(['oneOf']), 1))
+    assert.equal(controls.request.example, undefined)
+    assert.equal(createSchemaExample(controls.request.schema), 42)
+    assert.equal(controls.response.example, 'authored')
+    assert.equal(controls.xml.example, 'authored')
+    await act(async () => controls.docs.select(compositionPathKey(['oneOf']), 0))
+    assert.equal(createSchemaExample(controls.request.schema), 'a4')
+  } finally { await mounted.unmount() }
 })
 
 
@@ -1231,32 +1300,32 @@ test('request curl and response examples serialize selected XML schemas', async 
     name: {type: 'string', example: 'doggie'},
   }}}}
   const content = {'application/xml': {schema: {$ref: '#/components/schemas/Pet'}}}
-  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+  const html = renderToString(h(OperationSelectionsProvider, null, h(Examples, {
     components, base: 'https://example.com', path: '/pets', method: 'post',
     operation: {requestBody: {content}, responses: {200: {description: 'Success', content}}},
-  })}))
+  })))
   assert.match(html, /Content-Type: application\/xml/)
   assert.match(html, /Bash/)
   assert.match(html, /aria-label="Request example sender"/)
-  assert.match(html, /<option value="laravel">Laravel<\/option>/)
-  assert.match(html, /<option value="payload">XML<\/option>/)
-  assert.doesNotMatch(html, /<option value="payload">JSON<\/option>/)
-  assert.equal((withoutHighlighting(html).match(/&lt;pet id=&quot;7&quot;&gt;/g) ?? []).length, 2)
-  assert.equal((withoutHighlighting(html).match(/&lt;name&gt;doggie&lt;\/name&gt;/g) ?? []).length, 2)
+  const code = textContent(withoutHighlighting(html))
+  assert.match(code, /<\?xml version="1.0"/)
+  assert.equal((code.match(/<pet id="7">/g) ?? []).length, 2)
+  assert.equal((code.match(/<name>doggie<\/name>/g) ?? []).length, 2)
 })
 
 test('request curl includes a generated JSON payload when no explicit example exists', async () => {
   const content = {'application/json': {schema: {type: 'object', properties: {
     name: {type: 'string', default: 'doggie'}, enabled: {type: 'boolean'},
   }}}}
-  const html = await renderToString(createSSRApp({render: () => h(Examples, {
+  const html = renderToString(h(OperationSelectionsProvider, null, h(Examples, {
     components: {}, base: 'https://example.com', path: '/pets', method: 'post',
     operation: {requestBody: {content}},
-  })}))
+  })))
   assert.match(html, /Content-Type: application\/json/)
-  assert.match(withoutHighlighting(html), /-d &#39;\{/)
-  assert.match(withoutHighlighting(html), /&quot;name&quot;: &quot;doggie&quot;/)
-  assert.match(withoutHighlighting(html), /&quot;enabled&quot;: true/)
+  const code = textContent(withoutHighlighting(html))
+  assert.match(code, /-d '\{/)
+  assert.match(code, /"name": "doggie"/)
+  assert.match(code, /"enabled": true/)
 })
 
 test('request picker offers only the payload format matching the selected content type', async () => {
@@ -1266,15 +1335,18 @@ test('request picker offers only the payload format matching the selected conten
     ['text/xml; charset=utf-8', 'XML'], ['application/x-www-form-urlencoded', null],
     ['multipart/form-data', null], ['', null],
   ]) {
-    const html = await renderToString(createSSRApp({render: () => h(Examples, {
+    const mounted = await mountReact(h(OperationSelectionsProvider, null, h(Examples, {
       components: {}, base: 'https://example.com', path: '/pets', method: 'post',
       operation: {requestBody: type ? {content: {[type]: {example: {name: 'doggie'}}}} : undefined},
-    })}))
-    assert.match(html, /<option value="bash"[^>]*>Bash<\/option>/)
-    assert.match(html, /<option value="laravel">Laravel<\/option>/)
-    if (label) {
-      assert.ok(html.includes(`<option value="payload">${label}</option>`))
-      assert.ok(!html.includes(`<option value="payload">${label === 'JSON' ? 'XML' : 'JSON'}</option>`))
-    } else assert.doesNotMatch(html, /<option value="payload">/)
+    })))
+    try {
+      const options = await openOptions(mounted, 'Request example sender')
+      assert.ok(options.includes('Bash'))
+      assert.ok(options.includes('Laravel'))
+      if (label) {
+        assert.ok(options.includes(label))
+        assert.ok(!options.includes(label === 'JSON' ? 'XML' : 'JSON'))
+      } else assert.ok(!options.includes('JSON') && !options.includes('XML'))
+    } finally { await mounted.unmount() }
   }
 })

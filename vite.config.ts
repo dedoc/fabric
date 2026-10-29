@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import {fileURLToPath} from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [vue()],
+  plugins: [react()],
   resolve: {
     alias: {'@': fileURLToPath(new URL('./src', import.meta.url))},
   },

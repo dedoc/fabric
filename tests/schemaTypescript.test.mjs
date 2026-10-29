@@ -2,33 +2,20 @@ import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
 import {fileURLToPath} from 'node:url'
 import ts from 'typescript'
-import {readFile} from 'node:fs/promises'
 import {createServer as createHttpServer} from 'node:http'
-import {compileScript, compileTemplate, parse} from '@vue/compiler-sfc'
 import {createServer} from 'vite'
-import vuePlugin from '@vitejs/plugin-vue'
-import * as Vue from 'vue'
-import {createRenderer, h, nextTick, provide, ref, ssrContextKey} from 'vue'
+import React, {act} from 'react'
+import {createRoot} from 'react-dom/client'
+import {JSDOM} from 'jsdom'
 
-const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, plugins: [vuePlugin()], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
 const {createSchemaTypescript} = await server.ssrLoadModule('/src/core/openapi/schemaTypescript.ts')
-const {default: SchemaExamples} = await server.ssrLoadModule('/src/components/OpenApi/SchemaExamples.vue')
-const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
-// SSR loading supplies setup; compile the client template for event/copy checks.
-for (const [filename, component] of [
-  ['SchemaExamples.vue', SchemaExamples],
-  ['ReferenceDiagnostics.vue', (await server.ssrLoadModule('/src/components/OpenApi/ReferenceDiagnostics.vue')).default],
-  ['HighlightedCode.vue', (await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.vue')).default],
-]) {
-  const {descriptor} = parse(await readFile(new URL(`../src/components/OpenApi/${filename}`, import.meta.url), 'utf8'))
-  const script = compileScript(descriptor, {id: 'typescript-test'})
-  const template = compileTemplate({source: descriptor.template.content, filename, id: 'typescript-test', compilerOptions: {bindingMetadata: script.bindings}})
-  assert.deepEqual(template.errors, [])
-  const renderCode = template.code.replace(/import \{([^}]+)\} from "vue"/, (_, imports) => `const {${imports.replace(/ as /g, ': ')}} = Vue`)
-    .replace('export function render', 'return function render')
-  component.render = new Function('Vue', renderCode)(Vue)
-}
+const {default: SchemaExamples} = await server.ssrLoadModule('/src/components/OpenApi/SchemaExamples.tsx')
+const {DocumentContext} = await server.ssrLoadModule('/src/react/context.tsx')
+const h = React.createElement
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+const nextTick = () => act(async () => {})
 
 function checkTypes(code, assignments = '') {
   const path = '/fabric-generated-types.ts'
@@ -420,58 +407,46 @@ test('unrepresentable recursion and excessive nesting report an unavailable outp
 })
 
 test('TypeScript tab renders and copies types, switches back, and disables unresolved copies', async () => {
-  const nodes = []
-  const renderer = createRenderer({
-    createElement: tag => { const node = {tag, props: {}, text: '', children: []}; nodes.push(node); return node },
-    createText: text => ({text}), createComment: () => ({}),
-    insert(node, parent, anchor) {
-      if (node.parent) node.parent.children.splice(node.parent.children.indexOf(node), 1)
-      const children = parent.children ??= []
-      const index = anchor ? children.indexOf(anchor) : -1
-      children.splice(index < 0 ? children.length : index, 0, node)
-      node.parent = parent
-    },
-    remove(node) { node.parent?.children.splice(node.parent.children.indexOf(node), 1); node.parent = undefined },
-    setText(node, text) {node.text = text},
-    setElementText(node, text) {node.text = text; node.children = []}, patchProp(node, key, previous, value) {node.props[key] = value},
-    parentNode: node => node.parent, nextSibling: node => node.parent?.children[node.parent.children.indexOf(node) + 1],
-  })
-  const textContent = node => (node.text ?? '') + (node.children ?? []).map(textContent).join('')
-  const schema = ref({oneOf: [{type: 'string'}, {type: 'number'}]})
-  const app = renderer.createApp({setup() {
-    provide(documentKey, ref({components: {}}))
-    provide(ssrContextKey, {modules: new Set()})
-    return () => h(SchemaExamples, {schema: schema.value, components: {}, name: 'Choice'})
-  }})
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', {url: 'https://example.com/'})
+  const root = createRoot(dom.window.document.querySelector('#root'))
+  let schema = {oneOf: [{type: 'string'}, {type: 'number'}]}
+  const render = () => act(() => root.render(h(DocumentContext.Provider, {value: {components: {}}}, h(SchemaExamples, {schema, components: {}, name: 'Choice'}))))
   const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  const originalDocument = globalThis.document
   const originalWindow = globalThis.window
   let copied
   Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {clipboard: {writeText: async code => {copied = code}}}})
-  globalThis.window = {setTimeout() {}}
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.HTMLElement = dom.window.HTMLElement
   try {
-    app.mount({})
-    const tab = nodes.find(node => node.props.id === 'schema-example-typescript')
-    tab.props.onClick()
+    render()
+    const tabNamed = label => [...dom.window.document.querySelectorAll('[role="tab"]')].find(tab => tab.textContent === label)
+    const tab = tabNamed('TypeScript')
+    await act(async () => tab.click())
     await nextTick()
-    const code = nodes.find(node => node.tag === 'code')
-    assert.equal(textContent(code), 'export type Choice = string | number;')
-    assert.equal(tab.props['aria-selected'], true)
-    const copy = nodes.find(node => node.props['aria-label'] === 'Copy schema example')
-    await copy.props.onClick()
-    assert.equal(copied, textContent(code))
-    nodes.find(node => node.props.id === 'schema-example-example').props.onClick()
+    const code = () => dom.window.document.querySelector('[role="tabpanel"]:not([hidden]) code')
+    assert.equal(code().textContent, 'export type Choice = string | number;')
+    assert.equal(tab.getAttribute('aria-selected'), 'true')
+    const copy = dom.window.document.querySelector('[aria-label="Copy schema example"]')
+    await act(async () => copy.click())
+    assert.equal(copied, code().textContent)
+    await act(async () => tabNamed('Example').click())
     await nextTick()
-    assert.equal(textContent(code), '"string"')
-    schema.value = {properties: {missing: {$ref: '#/components/schemas/Missing'}}}
-    tab.props.onClick()
+    assert.equal(code().textContent, '"string"')
+    schema = {properties: {missing: {$ref: '#/components/schemas/Missing'}}}
+    render()
+    await act(async () => tabNamed('TypeScript').click())
     await nextTick()
-    assert.equal(textContent(code), '')
-    assert.equal(copy.props.disabled, true)
-    assert.ok(nodes.some(node => node.text.includes('TypeScript output is unavailable')))
+    assert.equal(code().textContent, '')
+    assert.equal(copy.disabled, true)
+    assert.match(dom.window.document.body.textContent, /TypeScript output is unavailable/)
   } finally {
-    app.unmount()
+    act(() => root.unmount())
+    dom.window.close()
     if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
     else delete globalThis.navigator
+    if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument
     if (originalWindow === undefined) delete globalThis.window
     else globalThis.window = originalWindow
   }

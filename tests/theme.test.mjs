@@ -20,7 +20,7 @@ function loadTheme({storage = new Map(), pageDark = false, systemDark = false, b
   const exports = {}
   runInNewContext(outputText, {
     exports,
-    require: () => ({ref: value => ({value})}),
+    require: () => ({useSyncExternalStore: () => { throw new Error('useTheme is not used by these utility tests') }}),
     document: {documentElement: root},
     window: {
       matchMedia: () => ({matches: systemDark}),
@@ -38,30 +38,30 @@ test('dark theme survives a fresh page load after toggling', () => {
   const storage = new Map()
   loadTheme({storage}).setTheme('dark')
   const reloaded = loadTheme({storage})
-  assert.equal(reloaded.theme.value, 'dark')
+  assert.equal(reloaded.getTheme(), 'dark')
   assert.equal(reloaded.root.classList.contains('dark'), true)
   assert.equal(reloaded.root.style.colorScheme, 'dark')
 })
 
 test('saved light preference overrides a dark page and system', () => {
   const result = loadTheme({storage: new Map([['fabric-theme', 'light']]), pageDark: true, systemDark: true})
-  assert.equal(result.theme.value, 'light')
+  assert.equal(result.getTheme(), 'light')
   assert.equal(result.root.classList.contains('dark'), false)
   assert.equal(result.root.style.colorScheme, 'light')
 })
 
 test('system fallback does not persist a preference', () => {
   const storage = new Map()
-  assert.equal(loadTheme({storage, systemDark: true}).theme.value, 'dark')
+  assert.equal(loadTheme({storage, systemDark: true}).getTheme(), 'dark')
   assert.equal(storage.has('fabric-theme'), false)
-  assert.equal(loadTheme({storage, systemDark: false}).theme.value, 'light')
+  assert.equal(loadTheme({storage, systemDark: false}).getTheme(), 'light')
 })
 
 test('invalid or unavailable storage falls back safely and the switch still works', () => {
-  assert.equal(loadTheme({storage: new Map([['fabric-theme', 'invalid']]), systemDark: true}).theme.value, 'dark')
+  assert.equal(loadTheme({storage: new Map([['fabric-theme', 'invalid']]), systemDark: true}).getTheme(), 'dark')
   const result = loadTheme({blocked: true, pageDark: true})
-  assert.equal(result.theme.value, 'dark')
+  assert.equal(result.getTheme(), 'dark')
   result.setTheme('light')
-  assert.equal(result.theme.value, 'light')
+  assert.equal(result.getTheme(), 'light')
   assert.equal(result.root.classList.contains('dark'), false)
 })

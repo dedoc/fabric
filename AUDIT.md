@@ -21,7 +21,7 @@ This assessment combines code review, targeted rendering probes, and automated c
 - Sanitized Markdown/HTML descriptions and API branding with logo fallbacks.
 - Stable scrollbar space in the left navigation.
 
-The active demo is bundled at `public/specs/redocly-petstore.yaml`. `HelloWorld.vue` accepts `specUrl` and `showSchemas`; commented source URLs remain available for development testing. Spotify and Converterer proxies are development-only.
+The active demo is bundled at `public/specs/fabric-reference.yaml`. `HelloWorld.tsx` accepts `specUrl`; the shared playground catalog supplies the viewer's existing options. Spotify and Converterer proxies are development-only.
 
 ## Verification
 
@@ -29,9 +29,7 @@ Latest checks on 2026-10-29:
 
 | Check | Result |
 | --- | --- |
-| JavaScript behavior and regression suites | 174 passed |
-| Schema, form, XML, and request-example suites through Vite SSR | 30 passed |
-| Total automated tests | 204 passed |
+| `yarn test` (React behavior suites and TypeScript core suites) | 204 passed |
 | `yarn build` (TypeScript checks and playground bundle) | Passed |
 | `yarn build:lib` | Passed |
 | Browser smoke checks | Passed: navigation/history, search, schema tabs/copying, media selection, webhooks, themes, 390px mobile navigation, and CDN embedding/retry/destroy/remount |
@@ -46,11 +44,11 @@ Each checkbox is a separately reviewable task. Complete sets 1–5 before a scop
 
 **Status:** The production build passes, including TypeScript checks.
 
-- [x] B1 — Handle unresolved/optional schemas explicitly and correct property-name typing in `Schema.vue`.
+- [x] B1 — Handle unresolved/optional schemas explicitly and correct property-name typing in `Schema.tsx`.
 - [x] B2 — Type the parameter-property accumulator and pass parameter/reference unions consistently through request components.
 - [x] B3 — Treat response status keys consistently as strings, including `default` and ranges; correct status-label lookup and response grouping types.
 - [x] B4 — Resolve response-header references and handle schema-based and content-based Header Objects explicitly.
-- [x] B5 — Correct operation method/key typing in `Paths.vue`; rerun the full build after reference and request changes.
+- [x] B5 — Correct operation method/key typing in `Paths.tsx`; rerun the full build after reference and request changes.
 
 **Done when:** `yarn build` passes without disabling type checks or concealing errors with broad casts.
 

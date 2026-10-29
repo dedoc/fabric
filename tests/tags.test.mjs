@@ -2,16 +2,16 @@ import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
 import {createServer as createHttpServer} from 'node:http'
 import {createServer} from 'vite'
-import {createSSRApp, h} from 'vue'
-import {renderToString} from 'vue/server-renderer'
+import React from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
 
-const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': new URL('../src', import.meta.url).pathname}}, server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
 const {groupOperationsByTags, tagGroupOperations} = await server.ssrLoadModule('/src/core/openapi/tags.ts')
 const {getInlineOperations} = await server.ssrLoadModule('/src/core/openapi/utils.ts')
 const {parseSpecification} = await server.ssrLoadModule('/src/core/openapi/specification.ts')
 const {resolveReference} = await server.ssrLoadModule('/src/core/openapi/references.ts')
-const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.vue')
+const {default: Pages} = await server.ssrLoadModule('/src/components/Layouts/Pages.tsx')
 const info = {title: 'Tags API', version: '1'}
 const paths = {'/pets': {get: {operationId: 'pets', summary: 'List pets', tags: ['pets', 'animals'], responses: {}}}}
 const operations = getInlineOperations(paths)
@@ -19,7 +19,7 @@ const operations = getInlineOperations(paths)
 async function render(document, hash = '#overview', guides) {
   const previousWindow = globalThis.window
   globalThis.window = {location: {href: `https://example.com/${hash}`}}
-  try { return await renderToString(createSSRApp({render: () => h(Pages, {document, guides})})) }
+  try { return renderToStaticMarkup(React.createElement(Pages, {document, guides})) }
   finally {
     if (previousWindow === undefined) delete globalThis.window
     else globalThis.window = previousWindow
