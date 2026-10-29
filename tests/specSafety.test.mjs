@@ -1,41 +1,24 @@
 import assert from 'node:assert/strict'
-import {existsSync, readFileSync} from 'node:fs'
 import {createServer as createHttpServer} from 'node:http'
 import {after, test} from 'node:test'
 import {fileURLToPath} from 'node:url'
-import {createServer, transformWithEsbuild} from 'vite'
-import {compileScript, compileTemplate, parse as parseVue, registerTS} from '@vue/compiler-sfc'
-import {createRenderer, h, nextTick, provide, ref} from 'vue'
-import ts from 'typescript'
+import {createServer} from 'vite'
+import React, {act} from 'react'
+import {createRoot} from 'react-dom/client'
+import {JSDOM} from 'jsdom'
 
-registerTS(() => ts)
-
-// Compile client render functions so the lightweight host can exercise mounted UI states.
-const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, plugins: [{
-  name: 'client-components-for-tests',
-  async transform(source, id) {
-    if (!id.endsWith('.vue')) return
-    const {descriptor} = parseVue(source, {filename: id})
-    if (!descriptor.script && !descriptor.scriptSetup) {
-      return compileTemplate({source: descriptor.template.content, filename: id, id}).code + '\nexport default {render}'
-    }
-    const compiled = compileScript(descriptor, {id, inlineTemplate: true, fs: {
-      fileExists: existsSync,
-      readFile: file => readFileSync(file, 'utf8'),
-    }})
-    return transformWithEsbuild(compiled.content, id, {loader: 'ts'})
-  },
-}], server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': fileURLToPath(new URL('../src', import.meta.url))}}, server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
 const {renderDescription} = await server.ssrLoadModule('/src/core/openapi/descriptionHtml.ts')
 const {parseSpecification, fetchSpecification} = await server.ssrLoadModule('/src/core/openapi/specification.ts')
 const {parseGuides} = await server.ssrLoadModule('/src/core/guides.ts')
-const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.vue')
-const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.vue')
-const {theme} = await server.ssrLoadModule('/src/utils/theme.ts')
-const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.vue')
-const {documentKey} = await server.ssrLoadModule('/src/utils/symbols.ts')
-const {provideMediaTypeSelections} = await server.ssrLoadModule('/src/components/OpenApi/useMediaType.ts')
+const {default: Viewer} = await server.ssrLoadModule('/src/components/FabricViewer.tsx')
+const {default: ApiBrand} = await server.ssrLoadModule('/src/components/OpenApi/ApiBrand.tsx')
+const {getTheme, setTheme} = await server.ssrLoadModule('/src/utils/theme.ts')
+const {default: Examples} = await server.ssrLoadModule('/src/components/OpenApi/Examples.tsx')
+const {DocumentContext, OperationSelectionsProvider} = await server.ssrLoadModule('/src/react/context.tsx')
+const nextTick = () => act(async () => {})
+const h = React.createElement
 const valid = {openapi: '3.0.3', info: {title: 'Recovered API', version: '1.0'}, paths: {}}
 
 test('guides use frontmatter titles, order, and groups while retaining Markdown', () => {
@@ -249,73 +232,80 @@ test('viewer passes selected API logo config through and resolves paths against 
 })
 
 test('branding switches theme images and resets failures when the selected API or config changes', async () => {
-  const originalTheme = theme.value
-  theme.value = 'light'
-  const info = ref({title: 'First API'})
-  const logo = ref({image: {src: '/light.svg', srcDark: '/dark.svg', alt: 'Acme', height: 32}})
-  const viewer = mountViewer({}, '#overview', {render: () => h(ApiBrand, {info: info.value, logo: logo.value})})
+  const originalTheme = getTheme()
+  act(() => setTheme('light'))
+  let info = {title: 'First API'}
+  let logo = {image: {src: '/light.svg', srcDark: '/dark.svg', alt: 'Acme', height: 32}}
+  const viewer = mountViewer({}, '#overview', () => h(ApiBrand, {info, logo}))
   try {
     assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/light.svg')
-    theme.value = 'dark'
+    act(() => setTheme('dark'))
     await nextTick()
     assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/dark.svg')
     viewer.find(el => el.type === 'img').props.onError()
     await nextTick()
     assert.equal(viewer.find(el => el.type === 'img'), undefined)
     assert.match(viewer.text(), /First API/)
-    info.value = {title: 'Second API'}
+    info = {title: 'Second API'}
+    viewer.rerender()
     await nextTick()
     assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/dark.svg')
     viewer.find(el => el.type === 'img').props.onError()
     await nextTick()
-    logo.value = {image: {src: '/normal.svg', alt: 'Other', height: 24}}
+    logo = {image: {src: '/normal.svg', alt: 'Other', height: 24}}
+    viewer.rerender()
     await nextTick()
     assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/normal.svg')
-    theme.value = 'light'
+    act(() => setTheme('light'))
     await nextTick()
     assert.equal(viewer.find(el => el.type === 'img').props.src, 'https://example.com/normal.svg')
-  } finally { viewer.close(); theme.value = originalTheme }
+  } finally { viewer.close(); setTheme(originalTheme) }
 })
 
 function mountViewer(options = {openApiDocumentUrl: '/spec.json'}, hash = '#overview', component) {
   const originalWindow = globalThis.window
-  globalThis.window = {location: {href: `https://example.com/${hash}`}, history: {pushState() {}}, scrollTo() {}, addEventListener() {}, removeEventListener() {},
-    matchMedia: () => ({addEventListener() {}, removeEventListener() {}})}
-  const node = (type, text = '') => ({type, tagName: type.toUpperCase(), text, children: [], props: {}, parent: null,
-    get options() { return this.children.filter(child => child.type === 'option') },
-    addEventListener() {}, removeEventListener() {}, getAttribute(key) { return this.props[key] }})
-  const renderer = createRenderer({
-    createElement: type => node(type), createText: text => node('#text', text), createComment: text => node('#comment', text),
-    insertStaticContent(content, parent, anchor) {
-      const el = node('#static', content)
-      el.parent = parent
-      const index = anchor ? parent.children.indexOf(anchor) : -1
-      if (index < 0) parent.children.push(el); else parent.children.splice(index, 0, el)
-      return [el, el]
-    },
-    setText: (el, text) => { el.text = text }, setElementText: (el, text) => { el.text = text; el.children = [] },
-    patchProp: (el, key, previous, value) => { el.props[key] = value; if (key === 'value') el.value = value },
-    insert(el, parent, anchor) {
-      if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1)
-      el.parent = parent
-      const index = anchor ? parent.children.indexOf(anchor) : -1
-      if (index < 0) parent.children.push(el); else parent.children.splice(index, 0, el)
-    },
-    remove(el) { if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1) },
-    parentNode: el => el.parent,
-    nextSibling: el => el.parent?.children[el.parent.children.indexOf(el) + 1],
-  })
-  const root = node('root')
-  const source = ref(typeof options === 'string' ? {openApiDocumentUrl: options} : options)
-  const app = renderer.createApp(component ?? {render: () => h(Viewer, {key: source.value, ...source.value})})
-  app.config.warnHandler = () => {}
-  app.mount(root)
-  const text = el => el.text + el.children.map(text).join(' ')
-  const find = (el, type) => el.type === type ? el : el.children.map(child => find(child, type)).find(Boolean)
-  const matching = (el, predicate) => predicate(el) ? el : el.children.map(child => matching(child, predicate)).find(Boolean)
-  return {source, text: () => text(root), button: () => find(root, 'button'), find: predicate => matching(root, predicate), close() {
-    app.unmount()
+  const originalDocument = globalThis.document
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  const originalDomGlobals = new Map(['HTMLElement', 'Element', 'Node', 'ShadowRoot', 'MutationObserver'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', {url: `https://example.com/${hash}`})
+  dom.window.matchMedia = () => ({matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}})
+  dom.window.scrollTo = () => {}
+  if (originalNavigator?.value?.clipboard) Object.defineProperty(dom.window.navigator, 'clipboard', {configurable: true, value: originalNavigator.value.clipboard})
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: dom.window.navigator})
+  for (const key of ['HTMLElement', 'Element', 'Node', 'ShadowRoot', 'MutationObserver']) globalThis[key] = dom.window[key]
+  const rootElement = dom.window.document.querySelector('#root')
+  const root = createRoot(rootElement)
+  let sourceValue = typeof options === 'string' ? {openApiDocumentUrl: options} : options
+  const render = () => act(() => root.render(component ? (typeof component === 'function' ? h(component) : component) : h(Viewer, sourceValue)))
+  const source = Object.defineProperty({}, 'value', {get: () => sourceValue, set: value => { sourceValue = value; render() }})
+  render()
+  const wrap = element => {
+    if (!element || element.nodeType !== 1) return undefined
+    const props = Object.fromEntries([...element.attributes].map(({name, value}) => [name, ['aria-expanded', 'aria-current', 'disabled'].includes(name) && ['true', 'false'].includes(value) ? value === 'true' : value]))
+    if (element.classList.contains('prose')) props.innerHTML = element.innerHTML
+    props.onClick = () => act(() => element.dispatchEvent(new dom.window.MouseEvent('click', {bubbles: true, cancelable: true})))
+    props.onError = () => act(() => element.dispatchEvent(new dom.window.Event('error')))
+    props.onChange = value => act(() => {
+      if (value !== undefined) element.value = value
+      element.dispatchEvent(new dom.window.Event('change', {bubbles: true}))
+    })
+    props['onUpdate:modelValue'] = props.onChange
+    return {type: element.tagName.toLowerCase(), tagName: element.tagName, text: [...element.childNodes].filter(node => node.nodeType === 3).map(node => node.textContent).join(''), children: [...element.children].map(wrap), props,
+      get options() { return [...element.querySelectorAll(':scope > option')].map(wrap) }}
+  }
+  const find = predicate => [...rootElement.querySelectorAll('*')].map(wrap).find(predicate)
+  return {source, text: () => rootElement.textContent, button: () => find(el => el.type === 'button'), find, rerender: render, close() {
+    act(() => root.unmount())
+    dom.window.close()
     if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow
+    if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument
+    if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator); else delete globalThis.navigator
+    for (const [key, descriptor] of originalDomGlobals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]
+    }
   }}
 }
 
@@ -335,11 +325,9 @@ test('copied request examples match the displayed authorization placeholders', a
   try {
     for (const scheme of [{type: 'http', scheme: 'basic'}, {type: 'http', scheme: 'bearer'}, {type: 'oauth2', flows: {}}, {type: 'openIdConnect', openIdConnectUrl: 'https://example.com/.well-known/openid-configuration'}]) {
       const document = {security: [{Auth: []}], components: {securitySchemes: {Auth: scheme}}}
-      const viewer = mountViewer('/spec.json', '#overview', {setup() {
-        provide(documentKey, ref(document))
-        provideMediaTypeSelections()
-        return () => h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {}, components: document.components})
-      }})
+      const RequestExample = () => h(DocumentContext.Provider, {value: document},
+        h(OperationSelectionsProvider, null, h(Examples, {base: 'https://example.com', path: '/files', method: 'get', operation: {}, components: document.components})))
+      const viewer = mountViewer('/spec.json', '#overview', RequestExample)
       globalThis.window.setTimeout = () => 0
       try {
         assert.equal(viewer.find(el => el.props['aria-haspopup'] === 'dialog'), undefined)

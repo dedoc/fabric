@@ -2,15 +2,16 @@ import assert from 'node:assert/strict'
 import {after, test} from 'node:test'
 import {createServer as createHttpServer} from 'node:http'
 import {createServer} from 'vite'
-import {createSSRApp, h} from 'vue'
-import {renderToString} from 'vue/server-renderer'
+import React from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
 import sanitizeHtml from 'sanitize-html'
 
-const server = await createServer({server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
+const server = await createServer({configFile: false, resolve: {alias: {'@': new URL('../src', import.meta.url).pathname}}, server: {middlewareMode: true, hmr: {server: createHttpServer()}}})
 after(() => server.close())
-const {default: HighlightedCode} = await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.vue')
+const {default: HighlightedCode} = await server.ssrLoadModule('/src/components/OpenApi/HighlightedCode.tsx')
 const text = html => sanitizeHtml(html, {allowedTags: [], allowedAttributes: {}})
-const render = props => renderToString(createSSRApp({render: () => h(HighlightedCode, props)}))
+const render = props => renderToStaticMarkup(React.createElement(HighlightedCode, props))
+const renderCode = code => renderToStaticMarkup(React.createElement('code', null, code))
 
 test('highlighting preserves code and whitespace across supported languages', async () => {
   for (const [language, code] of [
@@ -21,10 +22,10 @@ test('highlighting preserves code and whitespace across supported languages', as
     ['typescript', 'interface Pet {\n  name: string;\n  active: boolean;\n}'],
   ]) {
     const html = await render({code, language})
-    assert.equal(text(html), text(await renderToString(h('code', code))), language)
+    assert.equal(text(html), text(renderCode(code)), language)
   }
   for (const code of ['', '\n\n', 'a\r\nb\r\n', 'plain <text> & "quotes"']) {
-    assert.equal(text(await render({code, language: 'text'})), text(await renderToString(h('code', code))))
+    assert.equal(text(await render({code, language: 'text'})), text(renderCode(code)))
   }
 })
 
@@ -32,5 +33,5 @@ test('untrusted example markup renders as escaped code', async () => {
   const code = '<script>alert(1)</script><img src=x onerror=alert(1)>'
   const html = await render({code, language: 'xml'})
   assert.doesNotMatch(html, /<script|<img/)
-  assert.equal(text(html), text(await renderToString(h('code', code))))
+  assert.equal(text(html), text(renderCode(code)))
 })

@@ -1,7 +1,8 @@
-import { createApp } from 'vue'
+import {createElement} from 'react'
+import {createRoot} from 'react-dom/client'
 import '@/style.css'
-import App from '@/App.vue'
+import App from '@/App'
 import {initializeTheme} from '@/utils/theme'
 
 initializeTheme()
-createApp(App).mount('#app')
+createRoot(document.getElementById('app')!).render(createElement(App))

@@ -1,6 +1,6 @@
 # Fabric API reference
 
-A Vue API reference viewer for OpenAPI 3.0, 3.1 and 3.2 documents.
+A React API reference viewer for OpenAPI 3.0, 3.1 and 3.2 documents, using Base UI controls.
 
 Tags use OpenAPI 3.2 `parent` for nesting and `summary` for display labels. Tags with no `kind`, or `kind: nav`, organize navigation into collapsible groups. Fabric also supports `kind: nav-section` for always-visible navigation sections with headings styled like “Reference”; their operations and child groups appear beneath the heading without an extra level of indentation. Other kinds (including `badge` and `audience`) appear as operation labels. Operations appear under every navigation tag they declare. Tag order only orders siblings; it never implies a parent. The overview uses the same groups and counts each operation once per group.
 
@@ -23,8 +23,8 @@ Fabric Reference Lab is the default test specification, loaded from `public/spec
 yarn build:lib
 ```
 
-This bundles the viewer and its dependencies (including Vue) into `dist/fabric.js`,
-with styles in `dist/fabric.css`. The JavaScript exposes `window.Fabric`; no Vue
+This bundles the viewer and its dependencies (including React and Base UI) into `dist/fabric.js`,
+with styles in `dist/fabric.css`. The JavaScript exposes `window.Fabric`; no React
 installation or module loader is needed in the host page. The playground and
 public fixtures are excluded. This command builds the bundle without running
 TypeScript checks; `yarn build` remains the playground build with type checking.
@@ -59,7 +59,7 @@ Add or update specifications in `src/playground/specs.ts`; the first entry is th
 
 The URL can serve JSON or YAML. Spotify and Converterer use development proxies configured in `vite.config.ts`. Other cross-origin sources must allow browser requests through CORS. These proxies are for local testing; production source hosting remains a separate deployment concern.
 
-When embedding the viewer, pass `specUrl` and optionally `showSchemas` to `src/components/HelloWorld.vue`. Omitting `specUrl` uses the selected test URL. Changing the prop cancels the previous load.
+The playground's `src/components/HelloWorld.tsx` accepts `specUrl`; omitting it uses the default test URL. Changing the prop cancels the previous load. When embedding, pass the document source and options such as `showSchemas` to `Fabric.init`.
 
 `info.x-logo` displays a logo above navigation, with support for `url`, `altText`, hexadecimal `backgroundColor`, and `href` (defaulting to `info.contact.url`). Relative URLs resolve against the specification URL. Images and links accept HTTP(S) URLs; missing, invalid, or failed images fall back to the API title.
 
@@ -96,9 +96,9 @@ For programmatic use, `resolveReference(document, entry, kind)` in `src/core/ope
 See [Schema support](./SCHEMA_SUPPORT.md) for the supported display subset, regression fixtures, and limitations such as unimplemented discriminators and constraint-aware example generation. Unsupported schema keywords are documented there without new UI warnings.
 
 ```sh
-node --test tests/*.test.mjs
-yarn vite build
+yarn test
 yarn build
+yarn build:lib
 ```
 
 `yarn build` also runs TypeScript checks. Remaining launch gaps are recorded in [AUDIT.md](./AUDIT.md).
