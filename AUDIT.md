@@ -29,9 +29,9 @@ Latest checks on 2026-10-29:
 
 | Check | Result |
 | --- | --- |
-| JavaScript suites, including core dependency-boundary checks | 181 passed |
-| Schema, form, XML, and request-example suites through Vite SSR | 31 passed |
-| Total automated tests | 212 passed |
+| JavaScript behavior and regression suites | 174 passed |
+| Schema, form, XML, and request-example suites through Vite SSR | 30 passed |
+| Total automated tests | 204 passed |
 | `yarn build` (TypeScript checks and playground bundle) | Passed |
 | `yarn build:lib` | Passed |
 | Browser smoke checks | Passed: navigation/history, search, schema tabs/copying, media selection, webhooks, themes, 390px mobile navigation, and CDN embedding/retry/destroy/remount |

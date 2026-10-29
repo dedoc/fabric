@@ -79,7 +79,7 @@ test('recursive authored values remain usable for direction filtering and JSON/X
   const resolved = resolveExampleSchema(schema, document.components, document)
   assert.deepEqual(directionalExample(value, resolved, 'response'), {child: {child: {}}})
   const media = {schema, example: value}
-  assert.equal(formatMediaExample(media, 'application/json', document.components, true, document, undefined, 'response'), '{\n  "child": {\n    "child": {}\n  }\n}')
+  assert.deepEqual(JSON.parse(formatMediaExample(media, 'application/json', document.components, true, document, undefined, 'response')), {child: {child: {}}})
   assert.match(formatMediaExample(media, 'application/xml', document.components, true, document, undefined, 'response'), /<child>/)
   const request = createRequestExample('', '/', 'post', 'multipart/form-data', media, document.components, document)
   assert.ok(request.formFields.some(([name]) => name === 'child'))

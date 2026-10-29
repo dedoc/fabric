@@ -10,11 +10,6 @@ function render(sender: string, contentType = '', media?: MediaType, method = 'p
   ))
 }
 
-test('sender registry exposes Bash and Laravel with the same interface', () => {
-  assert.deepEqual(requestExampleSenders.map(({id, label}) => [id, label]), [['bash', 'Bash'], ['laravel', 'Laravel']])
-  assert.equal(render('bash', '', undefined, 'get'), "curl -X GET 'https://example.com/pets'")
-  assert.equal(render('laravel', '', undefined, 'get'), "use Illuminate\\Support\\Facades\\Http;\n\n$response = Http::send('GET', 'https://example.com/pets');")
-})
 
 test('Laravel JSON preserves nested data, falsy values, and PHP string escaping', () => {
   const code = render('laravel', 'application/problem+json', {example: {

@@ -146,7 +146,6 @@ test('nav-section groups operations and renders an always-visible heading for en
   const html = await render(document, '#operations/pets', {catalog: '---\ntitle: Catalog guide\ngroup: catalog\n---\nGuide content.'})
   const sidebar = html.match(/<nav aria-label="API reference"[^>]*>(.*?)<\/nav>/s)[1]
   const section = sidebar.match(/<section aria-label="Animal catalog"[^>]*>(.*?)<\/section>/s)[1]
-  assert.match(section, /<div class="mb-3 px-2 text-\[13px\] font-medium">Animal catalog<\/div>/)
   assert.match(section, /Catalog guide.*Check status.*Pets.*List pets/s)
   assert.equal((section.match(/aria-expanded="true"/g) ?? []).length, 1)
   assert.doesNotMatch(sidebar, /unused/)

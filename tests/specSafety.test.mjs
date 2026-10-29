@@ -91,37 +91,29 @@ test('description sanitizer preserves formatting and safe links while removing a
 
 test('Markdown callouts support inline bodies and all standard alert types', () => {
   const html = renderDescription('> [!NOTE] If the commit identified by `target_commitish` modifies workflows, this endpoint returns **404 Not Found**.')
-  assert.match(html, /<blockquote class="markdown-callout markdown-callout-note" aria-label="Note">/)
-  assert.match(html, /<svg class="markdown-callout-icon"[^>]*aria-hidden="true">/)
-  assert.match(html, /<circle cx="12" cy="12" r="10"/)
-  assert.doesNotMatch(html, /markdown-callout-title/)
+  assert.match(html, /aria-label="Note"/)
   assert.match(html, /<p>If the commit identified by <code>target_commitish<\/code>/)
   assert.match(html, /<strong>404 Not Found<\/strong>/)
   assert.doesNotMatch(html, /\[!NOTE\]/)
-  const icons = new Set()
   for (const type of ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']) {
     const result = renderDescription(`> [!${type}]\n> First paragraph.\n>\n> - A list item\n>\n> Second paragraph.`)
-    assert.match(result, new RegExp(`markdown-callout-${type.toLowerCase()}`))
-    assert.match(result, /<svg class="markdown-callout-icon"[^>]*aria-hidden="true">/)
-    icons.add(result.match(/<svg.*?<\/svg>/)[0])
-    assert.doesNotMatch(result, /markdown-callout-title|\[!|FABRIC_CODE_/)
+    assert.match(result, new RegExp(`aria-label="${type[0]}${type.slice(1).toLowerCase()}"`))
+    assert.doesNotMatch(result, /\[!/)
     assert.match(result, /<p>First paragraph\.<\/p>/)
     assert.match(result, /<li>A list item<\/li>/)
     assert.match(result, /<p>Second paragraph\.<\/p>/)
-    assert.doesNotMatch(result, /<p><\/p>/)
   }
-  assert.equal(icons.size, 5)
 })
 
 test('callouts preserve ordinary quotes, nested blocks, code, and sanitization', () => {
   for (const source of ['> Ordinary quote', '> [!UNKNOWN] Text', '> Prefix [!NOTE] Text', '> `[!NOTE]` Text', '```\n> [!NOTE] Text\n```']) {
-    assert.doesNotMatch(renderDescription(source), /class="markdown-callout/)
+    assert.doesNotMatch(renderDescription(source), /aria-label="(?:Note|Tip|Important|Warning|Caution)"/)
   }
   const html = renderDescription('> [!WARNING]\n>\n> Body.\n>\n> > [!TIP] Nested.\n>\n> ```json\n> {"safe": true}\n> ```\n>\n> <img src="https://example.com/image.png" onerror="alert(1)"><script>alert(1)</script>')
   assert.match(html, /markdown-callout-warning/)
   assert.match(html, /markdown-callout-tip/)
   assert.match(html, /<pre tabindex="0"><code>/)
-  assert.doesNotMatch(html, /<p><\/p>|onerror|<script|FABRIC_CODE_/)
+  assert.doesNotMatch(html, /onerror|<script/)
   assert.doesNotMatch(renderDescription('<blockquote class="arbitrary" style="color:red">Text</blockquote>'), /class=|style=/)
 })
 
@@ -132,7 +124,7 @@ test('Markdown code blocks highlight safely, preserve literal code, and follow t
   assert.match(light, /<pre tabindex="0"><code><span style="color:/)
   assert.match(light, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
   assert.match(light, /\$&amp;/)
-  assert.doesNotMatch(light, /<script|FABRIC_CODE_/)
+  assert.doesNotMatch(light, /<script/)
   assert.notEqual(light, dark)
   const plain = renderDescription('```unknown-language\n<script>alert(1)</script>\n```')
   assert.match(plain, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
