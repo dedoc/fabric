@@ -1,10 +1,40 @@
 # Fabric
-
-<img src=".github/screenshot.png">
-
 Modern and fast API reference viewer for OpenAPI with custom navigation and guides support.
 
-## Run
+<img src=".github/screenshot-a.png">
+
+> [!NOTE]
+> Fabric is work in progress and its API may change.
+
+## Use
+
+The simplest way to start with Fabric, is to embed it from CDN and init:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API Reference</title>
+  </head>
+  <body>
+    <div id="fabric"></div>
+    <script src="https://main.fabric-preview.pages.dev/fabric.js"></script>
+    <script>
+      Fabric.init('#fabric', {
+        openApiDocumentUrl: '/openapi.yaml',
+      });
+    </script>
+  </body>
+</html>
+```
+
+Replace `/openapi.yaml` with your OpenAPI document URL. 
+
+Full documentation is available at https://fabric.dedoc.co.
+
+## Develop
 
 ```sh
 yarn install
@@ -17,8 +47,5 @@ yarn dev
 yarn build
 ```
 
-This builds only `dist/fabric.js` and `dist/fabric.css`. The JavaScript exposes `window.Fabric`.
+This builds only `dist/fabric.js`, including its styles. The JavaScript exposes `window.Fabric` and adds the styles to the page when initialized.
 
-For Cloudflare Pages, use `yarn build` as the build command and `dist` as the output directory.
-
-To build the demo site instead, run `yarn build:demo`. `yarn build:lib` is also available for a library build without type checking.

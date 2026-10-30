@@ -21,7 +21,6 @@ export default defineConfig(({ mode }) => ({
       output: {
         exports: 'named',
         inlineDynamicImports: true,
-        assetFileNames: asset => asset.name?.endsWith('.css') ? 'fabric.css' : '[name][extname]',
       },
     },
   } : undefined,
