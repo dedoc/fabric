@@ -9,6 +9,7 @@ type FabricRootOptions = FabricOptions
 type FabricOptions = {
 	openApiDocument: string | () => Promise<string>,
 	showSchemas: bool,
+	overview?: boolean, // default: true; false hides Overview and opens the first guide or endpoint
 	referenceLabel?: boolean, // default: true; show the sidebar's Reference heading
 	logo?: LogoConfig | false,
 }
@@ -25,6 +26,7 @@ Fabric.init({
 Fabric.init({
 	openApiDocument: string(json or yaml) | url (will be fetched) | async function that returns string (yaml json),
 	showSchemas: false, // enable or disable schemas section. when disabled, references to schema objects across documentation are rendered as text, not as links to schema pages
+	overview: false, // hide Overview; open the first guide or endpoint
 	referenceLabel: false, // hide only the Reference heading; navigation, Webhooks, and Schemas stay unchanged
 	logo?: LogoConfig | false,
 });
@@ -76,7 +78,7 @@ type LogoImage = {
 type LogoConfig = {
   title?: string
   image?: LogoImage
-  href?: string | false // default: selected API overview; false: no link
+  href?: string | false // default: selected API default page; false: no link
   target?: '_self' | '_blank' // default: _self
 }
 ```

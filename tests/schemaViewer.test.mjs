@@ -921,6 +921,37 @@ async function renderPages(components, hash = '', options = {}) {
   }
 }
 
+test('disabled overview falls back to guides, endpoints, webhooks, then visible schemas', async () => {
+  const paths = {'/pets': {get: {operationId: 'listPets', summary: 'List pets', responses: {}}}}
+  const webhooks = {created: {post: {summary: 'Pet created', responses: {}}}}
+  const schemas = {Pet: {type: 'object'}}
+  const guides = {start: '---\ntitle: Getting started\n---\nStart here.'}
+  for (const hash of ['', '#overview', '#overview/auth']) {
+    for (const [options, title, href] of [
+      [{guides, paths}, 'Getting started', '#guides/start'],
+      [{paths}, 'List pets', '#operations/listPets'],
+      [{document: {webhooks}}, 'Pet created', '#webhooks/created/post'],
+      [{}, 'Pet', '#schemas/Pet'],
+    ]) {
+      const dom = parseHtml(await renderPages({schemas}, hash, {overview: false, logo: {title: 'API'}, ...options}))
+      assert.equal(dom.querySelector('a[href="#overview"]'), null)
+      assert.equal(dom.querySelector('.overview'), null)
+      assert.equal(dom.querySelector('h1')?.textContent, title)
+      assert.equal(dom.querySelector('header a')?.getAttribute('href'), href)
+    }
+  }
+  const empty = parseHtml(await renderPages({schemas}, '', {overview: false, showSchemas: false, logo: {title: 'API'}}))
+  assert.equal(empty.querySelector('header a'), null)
+  assert.equal(empty.querySelector('nav[aria-label="Introduction"]'), null)
+})
+
+test('disabling overview preserves explicit page links', async () => {
+  const guides = {first: 'First guide', second: 'Second guide'}
+  const dom = parseHtml(await renderPages({}, '#guides/second', {overview: false, guides}))
+  assert.equal(dom.querySelector('h1')?.textContent, 'second')
+  assert.match(dom.querySelector('main').textContent, /Second guide/)
+})
+
 test('only shows schema navigation when component schemas exist', async () => {
   assert.doesNotMatch(await renderPages({}), /aria-label="Schemas"/)
   assert.doesNotMatch(await renderPages({schemas: {}}), /aria-label="Schemas"/)

@@ -376,6 +376,27 @@ test('viewer config can hide schema navigation while keeping it visible by defau
   }
 })
 
+test('overview config defaults to true and handles hash navigation when disabled', async () => {
+  const guides = {start: '---\ntitle: Getting started\n---\nWelcome aboard.'}
+  for (const overview of ['omitted', undefined, true, false]) {
+    const viewer = mountViewer({openApiDocument: JSON.stringify(valid), guides, ...(overview === 'omitted' ? {} : {overview})})
+    try {
+      await until(() => viewer.text().includes('Recovered API'))
+      assert.equal(!!viewer.find(el => el.props.href === '#overview'), overview !== false)
+      assert.equal(viewer.find(el => el.type === 'h1').text, overview === false ? 'Getting started' : 'Overview')
+      if (overview === false) {
+        act(() => {
+          window.history.pushState({}, '', '#overview')
+          window.dispatchEvent(new window.HashChangeEvent('hashchange'))
+        })
+        assert.equal(viewer.find(el => el.type === 'h1').text, 'Getting started')
+        viewer.source.value = {...viewer.source.value, overview: true}
+        assert.equal(viewer.find(el => el.type === 'h1').text, 'Overview')
+      }
+    } finally { viewer.close() }
+  }
+})
+
 test('reference heading is visible when config is omitted and can be disabled', async () => {
   for (const referenceLabel of ['omitted', true, false]) {
     const viewer = mountViewer({openApiDocument: JSON.stringify(valid), ...(referenceLabel === 'omitted' ? {} : {referenceLabel})})

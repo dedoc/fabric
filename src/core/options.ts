@@ -21,7 +21,7 @@ export type LogoImage = {
 export type LogoConfig = {
     title?: string,
     image?: LogoImage,
-    /** Omitted: selected API overview. false: no link. */
+    /** Omitted: selected API default page. false: no link. */
     href?: string | false,
     target?: '_self' | '_blank',
 }
@@ -30,6 +30,8 @@ export type FabricOptions = FabricOpenApiDocumentLink & {
     /** Replaces spec branding. Omitted: use info.x-logo. false: hide branding. */
     logo?: LogoConfig | false,
     guides?: Record<string, string>,
+    /** Show the overview page. Defaults to true; false opens the first guide or endpoint. */
+    overview?: boolean,
     /** Show schema navigation and links. Defaults to true. */
     showSchemas?: boolean,
     referenceLabel?: boolean,

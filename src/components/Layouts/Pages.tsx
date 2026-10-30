@@ -29,6 +29,7 @@ type Props = {
   documentUrl?: string
   document: Document
   guides?: Record<string, string>
+  overview?: boolean
   showSchemas?: boolean
   referenceLabel?: boolean
   logo?: LogoConfig | false
@@ -74,8 +75,8 @@ function buildNavigationTree(document: Document, operations: InlineOperation[], 
   return [...guideFolders.filter(guide => !usedGuides.has(guide)), ...folders, ...untagged.map(entry)]
 }
 
-export default function Pages({base, documentUrl, document, guides: guideSources, showSchemas = true, referenceLabel = true, logo}: Props) {
-  const [selectedPageId, setSelectedPageId] = useState<string | undefined>(() => getPageIdFromUrl() || 'overview')
+export default function Pages({base, documentUrl, document, guides: guideSources, overview = true, showSchemas = true, referenceLabel = true, logo}: Props) {
+  const [requestedPageId, setSelectedPageId] = useState<string | undefined>(getPageIdFromUrl)
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const paths = document.paths ?? {}
   const components = document.components ?? {}
@@ -87,8 +88,10 @@ export default function Pages({base, documentUrl, document, guides: guideSources
   const operations = navigation.operations
   const webhooks = navigation.webhooks
   const guides = useMemo(() => parseGuides(guideSources), [guideSources])
-  const selectedGuide = guides.find(guide => guide.id === selectedPageId)
   const schemas = useMemo(() => Object.entries(components.schemas ?? {}).map(([name, schema]) => ({id: `schemas/${encodeURIComponent(name)}`, name, schema})), [components.schemas])
+  const defaultPageId = overview ? 'overview' : (guides.find(guide => !guide.group) ?? guides[0])?.id ?? operations[0]?.id ?? webhooks[0]?.id ?? (showSchemas ? schemas[0]?.id : undefined)
+  const selectedPageId = !requestedPageId || (!overview && requestedPageId === 'overview') ? defaultPageId : requestedPageId
+  const selectedGuide = guides.find(guide => guide.id === selectedPageId)
   const selectedSchema = showSchemas ? schemas.find(schema => schema.id === selectedPageId) : undefined
   const selectedOperation = selectedPageId ? operations.find(operation => operation.id === selectedPageId) : undefined
   const selectedWebhook = webhooks.find(item => item.id === selectedPageId)
@@ -104,7 +107,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
   const introductionGuides = guides.filter(guide => !guide.group)
   const operationNavigation = useMemo(() => buildNavigationTree(document, operations, false, guides.filter(guide => guide.group)), [document, operations, guides])
   const webhookNavigation = useMemo(() => buildNavigationTree(document, webhooks, true), [document, webhooks])
-  const searchEntries = useMemo(() => buildSearchEntries(document, operations, webhooks, guides, showSchemas), [document, operations, webhooks, guides, showSchemas])
+  const searchEntries = useMemo(() => buildSearchEntries(document, operations, webhooks, guides, showSchemas, overview), [document, operations, webhooks, guides, showSchemas, overview])
 
   function handlePageSelect(pageId: string) {
     setSelectedPageId(pageId)
@@ -113,7 +116,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
     setMobileNavigationOpen(false)
   }
   function syncLocation() {
-    setSelectedPageId(getPageIdFromUrl() || 'overview')
+    setSelectedPageId(getPageIdFromUrl())
     window.scrollTo(0, 0)
     setMobileNavigationOpen(false)
   }
@@ -134,7 +137,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
     <ShowSchemasContext.Provider value={showSchemas}>
       <div className="isolate bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-gray-500 [&_select:focus-visible]:outline [&_select:focus-visible]:outline-2 [&_select:focus-visible]:outline-offset-2 [&_select:focus-visible]:outline-gray-500">
         <header className="sticky md:pt-2 top-0 z-30 flex h-16 w-full items-center gap-4 border-b border-[#eeeeef] dark:border-gray-800 bg-white dark:bg-gray-950 px-5 md:fixed md:h-14 md:w-[248px] md:gap-0 md:border-0 md:px-6 min-[1200px]:w-[296px]">
-          <ApiBrand info={document.info} documentUrl={documentUrl} logo={logo} />
+          <ApiBrand info={document.info} documentUrl={documentUrl} logo={logo} homeHref={defaultPageId ? `#${defaultPageId}` : false} />
           <Button className="min-h-9 rounded-[--radius] border border-gray-950/10 dark:border-gray-700 px-3 py-2 text-sm md:hidden" aria-expanded={mobileNavigationOpen} aria-controls="docs-navigation" onClick={() => setMobileNavigationOpen(open => !open)}>
             {mobileNavigationOpen ? 'Close menu' : 'Menu'}
           </Button>
@@ -144,10 +147,10 @@ export default function Pages({base, documentUrl, document, guides: guideSources
             <div className="flex h-full flex-col overflow-y-auto [scrollbar-gutter:stable] overscroll-contain px-5 pt-4 md:px-6 md:pt-2">
               <div className="flex-1 shrink-0 pb-6">
                 <SearchPalette entries={searchEntries} onNavigate={handlePageSelect} />
-                <nav aria-label="Introduction" className="-mx-2 mb-6">
-                  <NavigationItem label="Overview" href="#overview" active={selectedPageId === 'overview'} aria-current={selectedPageId === 'overview' ? 'page' : undefined} onClick={event => {event.preventDefault(); handlePageSelect('overview')}} />
+                {(overview || introductionGuides.length > 0) && <nav aria-label="Introduction" className="-mx-2 mb-6">
+                  {overview && <NavigationItem label="Overview" href="#overview" active={selectedPageId === 'overview'} aria-current={selectedPageId === 'overview' ? 'page' : undefined} onClick={event => {event.preventDefault(); handlePageSelect('overview')}} />}
                   {introductionGuides.map(guide => <NavigationItem key={guide.id} label={guide.title} href={`#${guide.id}`} active={selectedPageId === guide.id} aria-current={selectedPageId === guide.id ? 'page' : undefined} onClick={event => {event.preventDefault(); handlePageSelect(guide.id)}} />)}
-                </nav>
+                </nav>}
                 {referenceLabel && <div className="-mx-2 mb-3 px-2 text-[13px] font-medium">Reference</div>}
                 <nav aria-label="API reference" className="-mx-2">
                   {operationNavigation.map(item => <Navigation key={item.id} navigation={item} selectedId={selectedPageId} onNavigate={handlePageSelect} />)}
@@ -175,7 +178,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
           </aside>
           <main inert={mobileNavigationOpen} className="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
             <ReferenceDiagnostics issues={navigation.issues} />
-            {selectedPageId === 'overview' && <Overview document={document} paths={paths} components={components} documentUrl={documentUrl} onNavigate={handlePageSelect} />}
+            {overview && selectedPageId === 'overview' && <Overview document={document} paths={paths} components={components} documentUrl={documentUrl} onNavigate={handlePageSelect} />}
             {selectedGuide && <article key={selectedGuide.id} className="guide mx-auto grid min-w-0 max-w-[72ch] grid-cols-1 gap-4 pt-6 [overflow-wrap:anywhere]">
               <h1 className="text-balance text-[clamp(2rem,4vw,3rem)] font-medium tracking-tight">{selectedGuide.title}</h1>
               <Description content={selectedGuide.content} className="max-w-[70ch]" />

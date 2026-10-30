@@ -47,6 +47,11 @@ test('disabled schemas are excluded and legacy tag groups remain searchable', ()
   }
 })
 
+test('disabled overview is excluded from search without removing other pages', () => {
+  const limited = buildSearchEntries(document, getInlineOperations(document.paths), getWebhookOperations(document), guides, true, false)
+  assert.deepEqual(limited, entries.filter(entry => entry.id !== 'overview'))
+})
+
 test('tag parent cycles terminate when building search entries', () => {
   const cyclic = {...document, tags: [{name: 'pets', parent: 'pets'}]}
   assert.doesNotThrow(() => buildSearchEntries(cyclic, getInlineOperations(document.paths), [], [], false))

@@ -13,7 +13,7 @@ export type SearchEntry = {
   method?: string,
 }
 
-export function buildSearchEntries(document: Document, operations: InlineOperation[], webhooks: InlineOperation[], guides: ReturnType<typeof parseGuides>, showSchemas: boolean): SearchEntry[] {
+export function buildSearchEntries(document: Document, operations: InlineOperation[], webhooks: InlineOperation[], guides: ReturnType<typeof parseGuides>, showSchemas: boolean, overview = true): SearchEntry[] {
   const tags = new Map((document.tags ?? []).map(tag => [tag.name, tag]))
   function tagLabels(names: string[]) {
     const labels = new Set<string>()
@@ -45,7 +45,7 @@ export function buildSearchEntries(document: Document, operations: InlineOperati
     tags: tagLabels(item.operation.tags ?? []),
   }))
   return [
-    {id: 'overview', title: 'Overview', kind: 'Overview', detail: document.info?.title ?? '', content: document.info?.description ?? ''},
+    ...(overview ? [{id: 'overview', title: 'Overview', kind: 'Overview' as const, detail: document.info?.title ?? '', content: document.info?.description ?? ''}] : []),
     ...guides.map(guide => ({id: guide.id, title: guide.title, kind: 'Guide' as const, detail: guide.group ?? 'Introduction', content: guide.content})),
     ...operationEntries(operations, 'Operation'),
     ...operationEntries(webhooks, 'Webhook'),

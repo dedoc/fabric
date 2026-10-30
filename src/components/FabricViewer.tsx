@@ -47,5 +47,5 @@ export default function FabricViewer({showSchemas = true, referenceLabel = true,
   useEffect(() => {void load(); return () => controller.current?.abort()}, [load])
   if (state === 'error') return <SpecError message={message} onRetry={() => void load()} />
   if (state === 'loading') return <main className="grid min-h-dvh place-items-center px-6" role="status"><p className="text-sm text-gray-500 dark:text-gray-400">Loading API reference…</p></main>
-  return <RenderingBoundary onRetry={() => void load()}>{specification && <Pages document={specification} documentUrl={documentUrl} guides={options.guides} showSchemas={showSchemas} referenceLabel={referenceLabel} logo={options.logo} />}</RenderingBoundary>
+  return <RenderingBoundary onRetry={() => void load()}>{specification && <Pages document={specification} documentUrl={documentUrl} guides={options.guides} overview={options.overview} showSchemas={showSchemas} referenceLabel={referenceLabel} logo={options.logo} />}</RenderingBoundary>
 }

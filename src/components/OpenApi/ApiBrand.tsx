@@ -3,7 +3,7 @@ import type {Document} from '@/core/openapi/types'
 import type {LogoConfig} from '@/types'
 import {useTheme} from '@/utils/theme'
 
-export default function ApiBrand({info, documentUrl, logo}: {info?: Document['info']; documentUrl?: string; logo?: LogoConfig | false}) {
+export default function ApiBrand({info, documentUrl, logo, homeHref = '#overview'}: {info?: Document['info']; documentUrl?: string; logo?: LogoConfig | false; homeHref?: string | false}) {
   const theme = useTheme()
   const [failed, setFailed] = useState(false)
   const configured = logo !== undefined
@@ -20,7 +20,7 @@ export default function ApiBrand({info, documentUrl, logo}: {info?: Document['in
   const alt = configured ? config?.image?.alt ?? info?.title ?? '' : specLogo?.altText ?? 'logo'
   const imageHeight = config?.image?.height
   const height = typeof imageHeight === 'number' && Number.isFinite(imageHeight) && imageHeight > 0 ? imageHeight : 36
-  const href = !configured ? safeUrl(specLogo?.href ?? info?.contact?.url) : config?.href === false ? undefined : config?.href === undefined ? '#overview' : safeUrl(config.href, hostUrl)
+  const href = !configured ? safeUrl(specLogo?.href ?? info?.contact?.url) : config?.href === false ? undefined : config?.href === undefined ? homeHref || undefined : safeUrl(config.href, hostUrl)
   const target = href ? configured ? config?.target ?? '_self' : '_blank' : undefined
   const color = !configured ? specLogo?.backgroundColor : undefined
   const backgroundColor = typeof color === 'string' && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(color) ? color : undefined
