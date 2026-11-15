@@ -176,7 +176,7 @@ export default function Pages({base, documentUrl, document, guides: guideSources
               </div>
             </div>
           </aside>
-          <main inert={mobileNavigationOpen} className="min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
+          <main inert={mobileNavigationOpen} className="mx-auto min-w-0 flex-1 px-5 pb-12 pt-6 md:px-6 md:pb-20 md:pt-8 min-[1200px]:px-8 min-[1600px]:max-w-[1400px]">
             <ReferenceDiagnostics issues={navigation.issues} />
             {overview && selectedPageId === 'overview' && <Overview document={document} paths={paths} components={components} documentUrl={documentUrl} onNavigate={handlePageSelect} />}
             {selectedGuide && <article key={selectedGuide.id} className="guide mx-auto grid min-w-0 max-w-[72ch] grid-cols-1 gap-4 pt-6 [overflow-wrap:anywhere]">
