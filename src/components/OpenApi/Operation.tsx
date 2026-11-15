@@ -10,17 +10,20 @@ import {OperationSelectionsProvider, DocumentContext} from '@/react/context'
 import {WebhookIcon} from '@/components/Icons'
 import {isNavigationTag} from '@/core/openapi/tags'
 import Tag from '@/components/OpenApi/Partials/Tag'
+import {isOptionalPathParameter} from '@/core/openapi/parameters'
 
 export default function Operation({base, components, path, method, operation, webhook, webhookName}: {base: string; components: Components; path: string; method: string; operation: OperationType; webhook?: boolean; webhookName?: string}) {
   const document = useContext(DocumentContext)
   const labels = (document?.tags ?? []).filter(tag => !isNavigationTag(tag) && operation.tags?.includes(tag.name))
   const summary = operation.summary ?? operation.operationId
+  const optionalNames = new Set(operation.parameters?.flatMap(parameter => 'in' in parameter && isOptionalPathParameter(parameter) ? [parameter.name] : []))
+  const displayPath = path.replace(/\{([^{}]+)\}/g, (placeholder, name) => optionalNames.has(name) ? `{${name}?}` : placeholder)
   return <OperationSelectionsProvider>
     <div className={`grid grid-cols-1 gap-[--sections-gap] min-[1200px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] ${operation.description ? 'min-[1200px]:gap-y-3' : ''}`}>
       <div className="col-start-1 min-w-0 space-y-3">
         {summary && <h1 className="text-balance text-2xl font-medium tracking-tight md:text-3xl">{summary}</h1>}
         {!!labels.length && <ul aria-label="Operation tags" className="flex flex-wrap items-center gap-2">{labels.map(tag => <li key={tag.name}><Tag tag={tag} /></li>)}</ul>}
-        <div className="space-y-0.5"><div className="flex items-baseline gap-2.5 text-base"><MethodChip method={method} className="shrink-0" />{webhook ? <div className="inline-flex min-w-0 items-center gap-1.5 text-gray-900 dark:text-gray-100"><WebhookIcon className="size-4 shrink-0" /><span className="min-w-0">Webhook · {webhookName}</span></div> : <div className="min-w-0 text-gray-900 dark:text-gray-100"><span className="text-gray-500 dark:text-gray-400">{base.replace(/\/$/, '')}</span>/{path.replace(/^\//, '')}</div>}</div><OperationDatums operation={operation} /></div>
+        <div className="space-y-0.5"><div className="flex items-baseline gap-2.5 text-base"><MethodChip method={method} className="shrink-0" />{webhook ? <div className="inline-flex min-w-0 items-center gap-1.5 text-gray-900 dark:text-gray-100"><WebhookIcon className="size-4 shrink-0" /><span className="min-w-0">Webhook · {webhookName}</span></div> : <div className="min-w-0 text-gray-900 dark:text-gray-100"><span className="text-gray-500 dark:text-gray-400">{base.replace(/\/$/, '')}</span>/{displayPath.replace(/^\//, '')}</div>}</div><OperationDatums operation={operation} /></div>
         {operation.description && <Description className="leading-normal text-gray-800 dark:text-gray-200 [&_pre]:text-xs [&_pre]:leading-4 sm:text-base min-[1200px]:hidden" content={operation.description} />}
       </div>
       <div className="col-start-1 flex min-w-0 flex-col gap-[--sections-gap]">
@@ -28,7 +31,7 @@ export default function Operation({base, components, path, method, operation, we
         {!!(operation.parameters?.length || operation.requestBody) && <Request components={components} parameters={operation.parameters} requestBody={operation.requestBody} />}
         {operation.responses && <Responses responses={operation.responses} components={components} />}
       </div>
-      <Examples base={base} components={components} path={path} method={method} operation={operation} webhookName={webhookName} />
+      <Examples base={base} components={components} path={path} displayPath={displayPath} method={method} operation={operation} webhookName={webhookName} />
     </div>
   </OperationSelectionsProvider>
 }

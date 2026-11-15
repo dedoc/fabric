@@ -20,6 +20,8 @@ info:
 
     [Example Lab](#operations/exampleLab) demonstrates copyable snippets with
     encoded parameters, constrained generated values and named media examples.
+    [List project activity](#operations/listProjectActivity) shows how Scramble
+    documents a Laravel route with an optional path parameter.
 servers:
   - url: https://reference.example.com/v1
     description: Illustrative server only; no live requests are sent by the viewer.
@@ -123,6 +125,25 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/ProjectResponse'
+  /projects/{projectId}/activity/{period}:
+    get:
+      operationId: listProjectActivity
+      tags: [Projects]
+      summary: List project activity
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdAlias'
+        - name: period
+          in: path
+          required: true
+          x-optional: true
+          description: '**Optional**. The time period to include.'
+          schema:
+            type: [string, 'null']
+            default: week
+          example: week
+      responses:
+        '200':
+          description: Project activity for the selected period.
   /projects/search:
     get:
       operationId: searchProjects

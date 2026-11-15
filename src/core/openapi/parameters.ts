@@ -2,6 +2,10 @@ import type {Document, Parameter, Reference} from '@/core/openapi/types'
 import {resolveReference} from '@/core/openapi/references'
 import type {ReferenceIssue} from '@/core/openapi/references'
 
+export function isOptionalPathParameter(parameter: Parameter): boolean {
+  return parameter.in === 'path' && parameter['x-optional'] === true
+}
+
 /** Operations replace inherited parameters by the case-sensitive (name, in) pair. */
 export function effectiveParameters(
   inherited: (Parameter | Reference)[] = [],

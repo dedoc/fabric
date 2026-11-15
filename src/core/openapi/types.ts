@@ -109,6 +109,7 @@ export type Parameter = {
     in: 'query'|'path'|'header'|'cookie',
     description?: string,
     required?: boolean,
+    'x-optional'?: boolean,
     deprecated?: boolean,
     allowEmptyValue?: boolean,
     style?: 'matrix'|'label'|'form'|'simple'|'spaceDelimited'|'pipeDelimited'|'deepObject',
