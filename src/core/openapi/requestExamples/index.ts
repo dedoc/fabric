@@ -21,7 +21,9 @@ function isBinary(schema: Schema | undefined, visited = new Set<Schema>()): bool
 
 export function createRequestExample(base: string, path: string, method: string, contentType: string, media: MediaType | undefined, components: Components, document: Document = {components}, parameters: (Parameter | Reference)[] = []): RequestExample {
   const inputs = requestParameters(path, parameters, document)
-  const url = `${base.replace(/\/$/, '')}/${inputs.path.replace(/^\//, '')}${inputs.query ? '?' + inputs.query : ''}`
+  const endpoint = `${base.replace(/\/$/, '')}/${inputs.path.replace(/^\//, '')}`
+  const url = inputs.query ? endpoint + '?' + inputs.query : endpoint
+  const query = inputs.query && !/[?#]/.test(endpoint) ? {url: endpoint, parts: inputs.queryParts} : undefined
   const schema = resolveExampleSchema(media?.schema, components, document)
   const type = contentType.split(';')[0].trim().toLowerCase()
   const bodyFile = media && type !== 'multipart/form-data' && (isBinary(schema) || type === 'application/octet-stream') ? fileName(type) : undefined
@@ -50,12 +52,12 @@ export function createRequestExample(base: string, path: string, method: string,
   }
   if (type === 'multipart/form-data' && schema) media = {...media, schema: withoutFiles(schema)}
   if (bodyFile) return {
-    url,
+    url, query,
     headers: inputs.headers, method: method.toUpperCase(), contentType, body: '', value: undefined, formFields: [], bodyFile,
   }
   const value = getMediaExample(media, components, true, document, undefined, 'request')
   return {
-    url,
+    url, query,
     headers: inputs.headers,
     method: method.toUpperCase(),
     contentType: media ? contentType : '',

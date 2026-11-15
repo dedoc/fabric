@@ -22,6 +22,8 @@ info:
     encoded parameters, constrained generated values and named media examples.
     [List project activity](#operations/listProjectActivity) shows how Scramble
     documents a Laravel route with an optional path parameter.
+    [Filter projects](#operations/filterProjects) shows a nested query parameter
+    marked with Scramble's `x-deepObject-style: qs` extension.
 servers:
   - url: https://reference.example.com/v1
     description: Illustrative server only; no live requests are sent by the viewer.
@@ -144,6 +146,49 @@ paths:
       responses:
         '200':
           description: Project activity for the selected period.
+  /projects/filter:
+    get:
+      operationId: filterProjects
+      tags: [Search]
+      summary: Filter projects
+      parameters:
+        - name: filter
+          in: query
+          description: |
+            Filter clauses use Laravel's indexed bracket syntax, for example
+            `filter[0][id][_eq]=42&filter[1][status][_eq]=active`.
+          x-deepObject-style: qs
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: object
+                  properties:
+                    _eq: {type: integer, minimum: 1, description: Match the project ID.}
+                    _neq: {type: integer, minimum: 1, description: Exclude the project ID.}
+                status:
+                  type: object
+                  properties:
+                    _eq: {type: string, enum: [active, archived], description: Match the project status.}
+                createdAt:
+                  type: object
+                  properties:
+                    _gte: {type: string, format: date, description: Include projects created on or after this date.}
+          example:
+            - id: {_eq: 42}
+            - status: {_eq: active}
+              createdAt: {_gte: '2026-01-01'}
+      responses:
+        '200':
+          description: Projects matching the supplied filters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
   /projects/search:
     get:
       operationId: searchProjects

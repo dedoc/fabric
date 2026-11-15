@@ -1,5 +1,13 @@
+export interface RequestQueryPart {
+  pairs: string[]
+  native?: [string, unknown]
+  repeated?: boolean
+  delimited?: {name: string, items: string[], separator: ',' | ' ' | '|'}
+}
+
 export interface RequestExample {
   url: string
+  query?: {url: string, parts: RequestQueryPart[]}
   method: string
   contentType: string
   body: string

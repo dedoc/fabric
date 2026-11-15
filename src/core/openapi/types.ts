@@ -110,6 +110,7 @@ export type Parameter = {
     description?: string,
     required?: boolean,
     'x-optional'?: boolean,
+    'x-deepObject-style'?: string,
     deprecated?: boolean,
     allowEmptyValue?: boolean,
     style?: 'matrix'|'label'|'form'|'simple'|'spaceDelimited'|'pipeDelimited'|'deepObject',

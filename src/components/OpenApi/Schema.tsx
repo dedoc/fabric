@@ -17,6 +17,7 @@ type Props = {
   shouldHideMainType?: boolean
   shouldHideDescription?: boolean
   shouldHideExamples?: boolean
+  formatExample?: (value: unknown) => unknown
   shouldDisablePropertiesPadding?: boolean
   propertyTitle?: string
   propertyRequired?: boolean
@@ -39,6 +40,7 @@ export default function Schema({
   shouldHideMainType = false,
   shouldHideDescription = false,
   shouldHideExamples = false,
+  formatExample,
   shouldDisablePropertiesPadding = false,
   propertyTitle,
   propertyRequired = false,
@@ -81,7 +83,10 @@ export default function Schema({
       ...(source.examples ?? []),
     ].map(example => typeof example === 'object' && example !== null && 'value' in example ? example : {value: example})
     const exampleSchema = direction === 'neutral' ? undefined : resolveExampleSchema(schema, components, references.document)
-    return examples.map(example => ({...example, value: directionalExample(example.value, exampleSchema, direction)}))
+    return examples.map(example => {
+      const value = directionalExample(example.value, exampleSchema, direction)
+      return {...example, value: formatExample ? formatExample(value) : value}
+    })
   }
 
   const normalizedExamples = examplesFor(resolvedSchema)
@@ -138,7 +143,7 @@ export default function Schema({
           {layer.schema.const !== undefined && <SchemaAttribute title="Const" value={layer.schema.const} />}
           {layer.schema.default !== undefined && <SchemaAttribute title="Default" value={layer.schema.default} />}
           {!shouldHideExamples && examplesFor(layer.schema).map((example, exampleIndex) => <SchemaAttribute key={exampleIndex} title="Example" value={example.value} description={example.description} />)}
-          {!recursive && (layer.schema.oneOf?.length || layer.schema.anyOf?.length) ? <Schema schema={{oneOf: layer.schema.oneOf, anyOf: layer.schema.anyOf}} schemaPath={layer.path} components={components} level={level} shouldHideMainType shouldHideExamples={shouldHideExamples} /> : null}
+          {!recursive && (layer.schema.oneOf?.length || layer.schema.anyOf?.length) ? <Schema schema={{oneOf: layer.schema.oneOf, anyOf: layer.schema.anyOf}} schemaPath={layer.path} components={components} level={level} shouldHideMainType shouldHideExamples={shouldHideExamples} formatExample={formatExample} /> : null}
         </div>)}
         {display.recursive.length > 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Recursive schema.</p>}
 
@@ -163,7 +168,7 @@ export default function Schema({
           <Schema propertyTitle="[key: string]" schema={display.additionalProperties.schema} schemaPath={display.additionalProperties.path} allOfPaths={display.additionalProperties.allOfPaths} components={components} level={level + 1} arePropertiesInitiallyVisible={false} shouldHideExamples={shouldHideExamples} />
         </div>}
         {!recursive && compositionKind && <div id={panelId} role="tabpanel" aria-labelledby={`${panelId}-tab-${selectedMember}`}>
-          <Schema key={`${compositionKind}:${selectedMember}`} propertiesExpanded={areMemberPropertiesVisible} onPropertiesExpandedChange={setAreMemberPropertiesVisible} schema={members[selectedMember]} schemaPath={[...schemaPath, compositionKind, selectedMember]} components={components} level={level + 1} shouldHideMainType shouldHideExamples={shouldHideExamples} collapsible />
+          <Schema key={`${compositionKind}:${selectedMember}`} propertiesExpanded={areMemberPropertiesVisible} onPropertiesExpandedChange={setAreMemberPropertiesVisible} schema={members[selectedMember]} schemaPath={[...schemaPath, compositionKind, selectedMember]} components={components} level={level + 1} shouldHideMainType shouldHideExamples={shouldHideExamples} formatExample={formatExample} collapsible />
         </div>}
         {!recursive && (arePropertiesVisible || !canHideNestedProperties) && display.items && <div className="contents">
           <Schema components={components} schema={display.items.schema} schemaPath={display.items.path} allOfPaths={display.items.allOfPaths} shouldHideMainType shouldHideExamples={shouldHideExamples} level={level + 1} />

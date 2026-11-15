@@ -356,16 +356,16 @@ test('parameter display preserves content alternatives and named examples', asyn
     const parameter = parameters.find(p => p.name === name)
     const html = await renderWithDocument(ParameterDetails, {components, parameter}, requestFixture)
     if (name === 'tags') {
-      assert.match(html, /design/)
-      assert.match(html, /review/)
+      assert.ok(textContent(html).includes('tags=design&tags=review'))
       assert.doesNotMatch(html, /schema-fallback/)
     }
+    if (name === 'fields') assert.ok(textContent(html).includes('fields=name,status'))
     if (name === 'filter') {
       assert.match(html, /application\/json/)
       assert.match(html, /aria-expanded="false"[^>]*>\+ Show properties<\/button>/)
       assert.match(html, /Active projects/)
       assert.match(html, /JSON-encode this object/)
-      assert.match(html, /&quot;status&quot;:&quot;active&quot;/)
+      assert.ok(textContent(html).includes('filter=%7B%22status%22%3A%22active%22%7D'))
     }
     if (name === 'region') {
       assert.match(html, /European region/)
@@ -376,6 +376,19 @@ test('parameter display preserves content alternatives and named examples', asyn
   }
 })
 
+test('Scramble query parameter examples display a readable bracketed query fragment', async () => {
+  const components = requestFixture.components
+  const parameter = requestFixture.paths['/projects/filter'].get.parameters[0]
+  const fragment = 'filter[0][id][_eq]=42&filter[1][status][_eq]=active&filter[1][createdAt][_gte]=2026-01-01'
+  const {example, ...definition} = parameter
+  for (const entry of [parameter, {...definition, examples: {active: {value: example}}}, {...definition, schema: {...definition.schema, examples: [example]}}]) {
+    const html = await renderWithDocument(ParameterDetails, {components, parameter: entry}, requestFixture)
+    assert.ok(textContent(html).includes(fragment))
+  }
+  const html = await renderWithDocument(ParameterDetails, {components, parameter: {...parameter, in: 'header'}}, requestFixture)
+  assert.ok(textContent(html).includes('{"id":{"_eq":42}}'))
+})
+
 test('parameter examples preserve falsy values and precedence over referenced schema examples', async () => {
   for (const example of [false, 0, '', null]) {
     const document = {openapi: '3.0.3', components: {schemas: {Value: {type: 'string', example: 'schema-fallback'}}}}
@@ -383,12 +396,28 @@ test('parameter examples preserve falsy values and precedence over referenced sc
       name: 'value', in: 'query', schema: {$ref: '#/components/schemas/Value'}, example,
     }}, document)
     assert.doesNotMatch(html, /schema-fallback/)
-    assert.ok(textContent(html).includes(example === '' ? "''" : String(example)))
+    assert.ok(textContent(html).includes(`value=${example ?? ''}`))
   }
   const html = await renderWithDocument(ParameterDetails, {components: {}, parameter: {
     name: 'flag', in: 'query', schema: {type: 'boolean'}, examples: {missing: {$ref: '#/missing'}},
   }}, {})
   assert.match(html, /Reference target was not found/)
+})
+
+test('query examples preserve style punctuation and encode values', async () => {
+  for (const [parameter, fragment] of [
+    [{example: 'a&b=c'}, 'filter=a%26b%3Dc'],
+    [{style: 'form', example: {id: 42, status: 'active'}}, 'id=42&status=active'],
+    [{style: 'deepObject', example: {id: 42}}, 'filter[id]=42'],
+    [{style: 'pipeDelimited', example: ['a|b', 'c']}, 'filter=a%7Cb|c'],
+    [{style: 'spaceDelimited', example: ['a/b', 'c']}, 'filter=a%2Fb%20c'],
+    [{name: 'filter[id][_eq]', example: 42}, 'filter[id][_eq]=42'],
+  ]) {
+    const html = await renderWithDocument(ParameterDetails, {
+      components: {}, parameter: {name: 'filter', in: 'query', ...parameter},
+    }, {})
+    assert.ok(textContent(html).includes(fragment))
+  }
 })
 
 async function renderWithDocument(component, props, document) {

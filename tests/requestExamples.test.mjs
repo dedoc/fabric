@@ -46,8 +46,23 @@ test('encoded effective parameters feed both senders, including cookies and JSON
   assert.deepEqual(request.headers, [['X-Region', 'eu'], ['Cookie', 'session=a%3Bb']])
   for (const sender of requestExampleSenders) {
     const code = sender.generate(request)
-    for (const value of [request.url, 'X-Region', 'eu', 'session=a%3Bb']) assert.ok(code.includes(value), code)
+    for (const value of ['X-Region', 'eu', 'session=a%3Bb']) assert.ok(code.includes(value), code)
   }
+  assert.ok(requestExampleSenders[0].generate(request).includes(request.url))
+  const laravel = requestExampleSenders[1].generate(request)
+  assert.match(laravel, /->get\('https:\/\/example\.com\/projects\/design%2Freview%20%3F%23', implode\('&', \[/)
+  assert.match(laravel, /Query::build\(\[/)
+  assert.match(laravel, /'fields=' \. implode\(',', \[/)
+  assert.doesNotMatch(laravel, /rawurlencode/)
+  assert.match(laravel, /'filter=%7B%22status%22%3A%22active%22%7D'/)
+})
+
+test('Laravel encodes delimited items when a value contains the delimiter', () => {
+  const model = createRequestExample('', '/', 'get', '', undefined, {}, {}, [
+    {in: 'query', name: 'tags', explode: false, example: ['a,b', 'c']},
+  ])
+  assert.equal(model.url, '/?tags=a%2Cb,c')
+  assert.match(requestExampleSenders[1].generate(model), /implode\(',', array_map\('rawurlencode', \[/)
 })
 
 test('styles preserve punctuation while encoding data and reject unsupported nested shapes', () => {
@@ -65,6 +80,22 @@ test('styles preserve punctuation while encoding data and reject unsupported nes
   assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{in: 'query', name: 'filter', style: 'deepObject', example: {nested: {a: 1}}}]), /Nested/)
 })
 
+test('Scramble qs query parameters serialize nested keys and array indices for both senders', () => {
+  const parameter = {
+    in: 'query', name: 'filter', 'x-deepObject-style': 'qs',
+    example: [{id: {_eq: 42}}, {'status&group': {_eq: 'active&archived'}, flags: [false, 0]}],
+  }
+  const model = createRequestExample('https://example.com', '/projects/filter', 'get', '', undefined, {}, {}, [parameter])
+  assert.equal(model.url, 'https://example.com/projects/filter?filter%5B0%5D%5Bid%5D%5B_eq%5D=42&filter%5B1%5D%5Bstatus%26group%5D%5B_eq%5D=active%26archived&filter%5B1%5D%5Bflags%5D%5B0%5D=false&filter%5B1%5D%5Bflags%5D%5B1%5D=0')
+  assert.ok(requestExampleSenders[0].generate(model).includes(model.url))
+  const laravel = requestExampleSenders[1].generate(model)
+  assert.match(laravel, /Http::get\('https:\/\/example\.com\/projects\/filter', \[/)
+  assert.match(laravel, /'filter' => \[/)
+  assert.match(laravel, /'_eq' => 42/)
+  assert.match(laravel, /'false',/)
+  assert.doesNotMatch(laravel, /Query::build|withQueryParameters|%5B/)
+})
+
 test('Stripe expand deepObject arrays produce bracketed query names for both senders', () => {
   const parameter = {in: 'query', name: 'expand', required: false, style: 'deepObject', explode: true,
     schema: {type: 'array', items: {type: 'string', maxLength: 5000}},
@@ -75,13 +106,31 @@ test('Stripe expand deepObject arrays produce bracketed query names for both sen
     {...parameter, example: ['customer', 'payment_intent.customer', 'a&b=c/#']},
   ])
   assert.equal(model.url, 'https://api.stripe.com/v1/account?expand%5B%5D=customer&expand%5B%5D=payment_intent.customer&expand%5B%5D=a%26b%3Dc%2F%23')
-  for (const sender of requestExampleSenders) {
-    assert.ok(sender.generate(generated).includes(generated.url))
-    assert.ok(sender.generate(model).includes(model.url))
-  }
+  assert.ok(requestExampleSenders[0].generate(generated).includes(generated.url))
+  assert.ok(requestExampleSenders[0].generate(model).includes(model.url))
+  assert.match(requestExampleSenders[1].generate(generated), /'expand\[\]' => 'string'/)
+  assert.match(requestExampleSenders[1].generate(model), /'expand\[\]' => \[/)
+  assert.match(requestExampleSenders[1].generate(model), /'a&b=c\/#'/)
   assert.equal(createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: []}]).url, '/')
   assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: [{nested: 'value'}]}]), /Nested/)
   assert.throws(() => createRequestExample('', '/', 'get', '', undefined, {}, {}, [{...parameter, example: 'customer'}]), /flat object or array/)
+})
+
+test('Laravel uses a query array for scalars and space delimiters alongside a request body', () => {
+  const parameters = [
+    {in: 'query', name: 'page', example: 2},
+    {in: 'query', name: 'fields', style: 'spaceDelimited', example: ['a/b', 'c']},
+    {in: 'query', name: 'label', example: null},
+  ]
+  const model = createRequestExample('', '/projects', 'post', 'application/json', {example: {enabled: true}}, {}, {}, parameters)
+  const laravel = requestExampleSenders[1].generate(model)
+  assert.match(laravel, /withQueryParameters\(\[/)
+  assert.match(laravel, /'page' => 2/)
+  assert.match(laravel, /'fields' => implode\(' ', \[/)
+  assert.match(laravel, /'label' => ''/)
+  assert.match(laravel, /->send\('POST', '\/projects', \[/)
+  assert.match(laravel, /'enabled' => true/)
+  assert.doesNotMatch(laravel, /Query::build/)
 })
 
 test('Stripe expand form arrays retain bracketed names and encoded values in both senders', () => {
